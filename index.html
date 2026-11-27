@@ -110,32 +110,62 @@
         </div>
 
         <div class="sheet-body">
-          <!-- PANE 1: CHỈ ĐƯỜNG AN TOÀN NÉ NGẬP (INLINE NGAY CẠNH BẢN ĐỒ — KHÔNG CẦN MODAL CHẮN MÀN HÌNH) -->
+          <!-- PANE 1: CHỈ ĐƯỜNG AN TOÀN NÉ NGẬP (CHỌN ĐIỂM BẤT KỲ · XE MÁY / ĐI BỘ · CHỈ DẪN TỪNG ĐƯỜNG) -->
           <div id="sb-pane-route">
+            <div class="travel-mode-pills" role="group" aria-label="Chọn phương tiện di chuyển">
+              <button type="button" class="travel-pill is-active" data-rmode="bike">Đi xe máy</button>
+              <button type="button" class="travel-pill" data-rmode="foot">Đi bộ</button>
+            </div>
+
             <div class="field">
-              <label for="route-origin-select">Đi từ</label>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <label for="route-origin-select" style="margin:0;">Đi từ</label>
+                <button type="button" id="btn-pick-route-orig" class="btn-link" style="padding:0;">Chấm trên bản đồ</button>
+              </div>
               <select id="route-origin-select"></select>
             </div>
+
             <div class="field">
-              <label for="route-dest-select">Đến</label>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <label for="route-dest-select" style="margin:0;">Đến</label>
+                <button type="button" id="btn-pick-route-dest" class="btn-link" style="padding:0;">Chấm trên bản đồ</button>
+              </div>
               <select id="route-dest-select"></select>
             </div>
+
             <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button type="button" id="btn-run-route" class="btn btn-primary btn-compact">Kiểm tra đường đi</button>
+              <button type="button" id="btn-run-route" class="btn btn-primary btn-compact">Tìm đường an toàn</button>
               <button type="button" id="btn-swap-route" class="btn btn-secondary btn-compact">Đổi chiều</button>
-              <button type="button" id="btn-clear-route-map" class="btn btn-secondary btn-compact">Xóa đường vẽ</button>
+              <button type="button" id="btn-clear-route-map" class="btn btn-secondary btn-compact">Xóa vệt</button>
             </div>
             <div id="route-result-container"></div>
+          </div>
+
+          <!-- PANE 1B: DỰ BÁO MƯA & NẮNG TỪNG GIỜ (24 GIỜ TỚI TẠI ĐÔNG NGẠC) -->
+          <div id="sb-pane-weather" hidden>
+            <div id="weather-now-card" style="padding:12px 14px;border-radius:12px;background:var(--color-panel-alt);border:1px solid var(--color-border-subtle);margin-bottom:12px;">
+              Đang tải dữ liệu khí tượng trực tiếp...
+            </div>
+            <button type="button" id="btn-sync-live-weather" class="btn btn-primary btn-compact" style="width:100%;margin-bottom:14px;">
+              Áp dụng mức mưa dự báo hôm nay lên Bản đồ
+            </button>
+            <div class="section-head">
+              <h3>Diễn biến 24 giờ tới quanh ĐH Mỏ</h3>
+            </div>
+            <div id="hourly-24h-list" class="hourly-list"></div>
           </div>
 
           <!-- PANE 2: HỎI TRỢ LÝ AI & GỌI KHẨN CẤP -->
           <div id="sb-pane-ai" hidden>
             <div class="pane-section">
               <p style="margin:0 0 10px;font-size:0.86rem;color:var(--color-muted);">
-                Đặt câu hỏi tự nhiên, Trợ lý AI sẽ chỉ rõ ngõ cần tránh và điểm trú ngay bên cạnh bản đồ:
+                Đặt câu hỏi bằng chữ hoặc giọng nói, Trợ lý AI sẽ chỉ rõ ngõ cần tránh và điểm trú ngay cạnh bản đồ:
               </p>
               <div class="search-box">
-                <input type="search" id="sb-ai-input" placeholder="VD: Mưa to ở Ngõ 43 Cổ Nhuế đi lối nào?">
+                <input type="text" id="sb-ai-input" placeholder="VD: Mưa to ở Ngõ 43 Cổ Nhuế đi lối nào?">
+                <button type="button" id="btn-sb-ai-voice" class="btn btn-secondary btn-compact" title="Hỏi bằng giọng nói tiếng Việt" aria-label="Hỏi bằng giọng nói tiếng Việt" hidden>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8"></path></svg>
+                </button>
                 <button type="button" id="btn-sb-ai-send" class="btn btn-primary btn-compact">Hỏi</button>
               </div>
               <div class="inline-ai-prompt-chips">
@@ -311,6 +341,9 @@
           <div class="menu-brand-note">
             <strong>Bản đồ An toàn Đông Ngạc</strong><br>Đề tài 08 · ĐH Mỏ - Địa chất
           </div>
+          <button type="button" class="js-open-sheet" data-sheet="weather">
+            <span>Dự báo mưa &amp; nắng 24 giờ tới</span>
+          </button>
           <button type="button" id="btn-toggle-expert" aria-pressed="false">
             <span>Bật Chế độ Nghiên cứu GIS</span>
           </button>
@@ -337,7 +370,7 @@
 
     <!-- 3. CẠNH DƯỚI GIỮA: THANH THỜI TIẾT & CHỌN MỨC MƯA KIỂU WINDY / APPLE WEATHER -->
     <div class="floating-weather-dock" role="region" aria-label="Thời tiết và thử mức mưa">
-      <span id="live-weather-pill" class="live-pill live-pill-ok">Đang tải...</span>
+      <button type="button" id="live-weather-pill" class="live-pill live-pill-ok js-open-sheet" data-sheet="weather" title="Bấm xem dự báo chi tiết 24 giờ tới">Đang tải...</button>
       <span class="dock-divider" aria-hidden="true"></span>
       <div class="rain-preset-pills" role="group" aria-label="Xem vùng ngập theo lượng mưa">
         <button type="button" class="rain-pill" data-rain="0">Tạnh ráo</button>
