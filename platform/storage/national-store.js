@@ -123,10 +123,37 @@ export function detectStorageBackend() {
   if (supaUrl && supaKey) {
     return 'supabase_postgis';
   }
+  if (process.env.CF_EDGE_API_URL && process.env.CF_EDGE_AUTH_TOKEN) {
+    return 'cloudflare_d1_edge';
+  }
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     return 'vercel_private_blob';
   }
   return 'local_file_dev';
+}
+
+async function readCloudflareD1Collections() {
+  const baseUrl = String(process.env.CF_EDGE_API_URL || '').replace(/\/+$/, '');
+  const token = String(process.env.CF_EDGE_AUTH_TOKEN || '').trim();
+  const res = await fetch(`${baseUrl}/collections`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+  });
+  if (!res.ok) throw new Error(`Cloudflare D1 read error (${res.status})`);
+  return await res.json();
+}
+
+async function writeCloudflareD1Collection(collectionKey, payload) {
+  const baseUrl = String(process.env.CF_EDGE_API_URL || '').replace(/\/+$/, '');
+  const token = String(process.env.CF_EDGE_AUTH_TOKEN || '').trim();
+  const res = await fetch(`${baseUrl}/collections/${encodeURIComponent(collectionKey)}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ payload })
+  });
+  if (!res.ok) throw new Error(`Cloudflare D1 write error (${res.status}) for ${collectionKey}`);
 }
 
 function getSupabaseRestConfig() {
@@ -314,6 +341,16 @@ export async function loadNationalCollections() {
       publications: [...(Array.isArray(customPubs) ? customPubs : []), ...SEED_NATIONAL_PUBLICATIONS]
     };
   }
+  if (backend === 'cloudflare_d1_edge') {
+    const d1 = await readCloudflareD1Collections();
+    const customPubs = Array.isArray(d1.publications) ? d1.publications : [];
+    return {
+      backend,
+      researchers: Array.isArray(d1.researchers) ? d1.researchers : [],
+      submissions: Array.isArray(d1.submissions) ? d1.submissions : [],
+      publications: [...customPubs, ...SEED_NATIONAL_PUBLICATIONS]
+    };
+  }
   if (backend === 'vercel_private_blob') {
     const [researchers, submissions, customPubs] = await Promise.all([
       readBlobJson(RESEARCHERS_BLOB, []),
@@ -342,6 +379,10 @@ export async function saveResearchers(list) {
     await writeSupabaseCollection('researchers', list);
     return;
   }
+  if (backend === 'cloudflare_d1_edge') {
+    await writeCloudflareD1Collection('researchers', list);
+    return;
+  }
   if (backend === 'vercel_private_blob') {
     await writeBlobJson(RESEARCHERS_BLOB, list);
     return;
@@ -355,6 +396,10 @@ export async function saveSubmissions(list) {
   const backend = detectStorageBackend();
   if (backend === 'supabase_postgis') {
     await writeSupabaseCollection('submissions', list);
+    return;
+  }
+  if (backend === 'cloudflare_d1_edge') {
+    await writeCloudflareD1Collection('submissions', list);
     return;
   }
   if (backend === 'vercel_private_blob') {
@@ -372,6 +417,10 @@ export async function saveCustomPublications(list) {
   const onlyCustom = (Array.isArray(list) ? list : []).filter((p) => p && !seedIds.has(p.id));
   if (backend === 'supabase_postgis') {
     await writeSupabaseCollection('publications', onlyCustom);
+    return;
+  }
+  if (backend === 'cloudflare_d1_edge') {
+    await writeCloudflareD1Collection('publications', onlyCustom);
     return;
   }
   if (backend === 'vercel_private_blob') {

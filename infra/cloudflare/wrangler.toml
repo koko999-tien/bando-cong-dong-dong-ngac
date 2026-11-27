@@ -1,0 +1,15 @@
+# Cloudflare Workers + D1 SQL (APAC) + KV Cache — Free Tier ($0/tháng)
+name = "vn-resilience-api"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "vn-resilience-db"
+database_id = "0dc3df92-68b0-4964-9494-68ba2af151c5"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "92bd1928079a4291ad52516107570f99"
+
+# Thiết lập bí mật bằng: npx wrangler secret put EDGE_API_TOKEN
