@@ -152,26 +152,32 @@ async function runGeminiInteractionWithFallback(apiKey, { models = FAST_MODELS, 
 
 async function loadCloudCommunitySnapshot() {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return { extraReports: [], broadcast: null };
+    return { extraReports: [], broadcast: null, livePulse: [] };
   }
   try {
-    const [reportPage, broadcast] = await Promise.all([
+    const [reportPage, broadcast, livePulseRaw] = await Promise.all([
       list({ prefix: 'reports/', limit: 60 }),
-      readPrivateJson('config/broadcast.json', null)
+      readPrivateJson('config/broadcast.json', null),
+      readPrivateJson('config/live-pulse.json', [])
     ]);
     const loaded = await Promise.all(
       (reportPage.blobs || []).slice(0, 25).map((b) => readPrivateJson(b.pathname, null))
     );
+    const now = Date.now();
+    const livePulse = (Array.isArray(livePulseRaw) ? livePulseRaw : [])
+      .filter((x) => x && x.pointId && now - Number(x.tsMs || 0) <= 6 * 60 * 60 * 1000)
+      .slice(0, 10);
     return {
       extraReports: loaded.filter((r) => r && r.status !== 'hidden'),
-      broadcast
+      broadcast,
+      livePulse
     };
   } catch {
-    return { extraReports: [], broadcast: null };
+    return { extraReports: [], broadcast: null, livePulse: [] };
   }
 }
 
-function buildGroundedContextString(extraReports = [], liveWeather = null, broadcast = null, spotContext = null) {
+function buildGroundedContextString(extraReports = [], liveWeather = null, broadcast = null, spotContext = null, liveAqi = null, livePulse = []) {
   const ptsSummary = [...SAMPLE_HUMG_POINTS, ...extraReports]
     .filter((p) => p.status !== 'hidden')
     .map(
@@ -213,9 +219,23 @@ function buildGroundedContextString(extraReports = [], liveWeather = null, broad
       ? `VỊ TRÍ NGƯỜI DÙNG ĐANG CHẤM CHẨN ĐOÁN TRỰC TIẾP TRÊN BẢN ĐỒ: ${cleanText(spotContext.label || 'Điểm chọn', 140)} (${Number(spotContext.lat || 0).toFixed(5)}°N, ${Number(spotContext.lng || 0).toFixed(5)}°E), cao độ vệ tinh Copernicus DEM: ${spotContext.dem ?? '?'}m DSM, chỉ số nhạy cảm ngập thủy văn: ${spotContext.score ?? '?'}/100 (${cleanText(spotContext.levelLabel || '', 80)}), nơi trú an toàn gần nhất: ${cleanText(spotContext.nearestSafeName || '', 120)} (${spotContext.nearestSafeDistM ?? '?'}m).`
       : '';
 
+  const aqiStr =
+    liveAqi && Number.isFinite(Number(liveAqi.usAqi))
+      ? `CHẤT LƯỢNG KHÔNG KHÍ TRỰC TIẾP (OPEN-METEO CAMS TẠI ĐH MỎ): US AQI = ${liveAqi.usAqi}, bụi mịn PM2.5 = ${liveAqi.pm25 ?? '?'} µg/m³, PM10 = ${liveAqi.pm10 ?? '?'} µg/m³.`
+      : '';
+
+  const pulseStr =
+    Array.isArray(livePulse) && livePulse.length > 0
+      ? `CẬP NHẬT HIỆN TRƯỜNG NGAY LÚC NÀY TỪ CỘNG ĐỒNG (<6 GIỜ): ${livePulse
+          .map((p) => `[${p.pointId}] ${p.pointName}: ${p.status === 'flooding' ? 'ĐANG NGẬP' : p.status === 'receding' ? 'ĐANG RÚT' : 'ĐÃ KHÔ RÁO'}`)
+          .join(' | ')}`
+      : '';
+
   return [
     `TÂM KHẢO SÁT: ${HUMG_CENTER.label} (${HUMG_CENTER.lat}°N, ${HUMG_CENTER.lng}°E, bán kính 2,0 km; 78,5% diện tích 2km có cao độ Copernicus DEM GLO-30 ≤ 12,0 m DSM, riêng Khu A ĐH Mỏ nằm trên gò cao ~17 m DSM).`,
     liveStr,
+    aqiStr,
+    pulseStr,
     bcStr,
     spotStr,
     '--- CHUỖI KHÍ TƯỢNG THỰC TẾ ECMWF ERA5 (2024–2026) ---',
@@ -305,8 +325,15 @@ export async function POST(request) {
         return Response.json({ ok: false, error: 'Vui lòng nhập câu hỏi cụ thể hơn.' }, { status: 400 });
       }
 
-      const { extraReports, broadcast } = await loadCloudCommunitySnapshot();
-      const groundedContext = buildGroundedContextString(extraReports, body.liveWeather || null, broadcast, body.spotContext || null);
+      const { extraReports, broadcast, livePulse } = await loadCloudCommunitySnapshot();
+      const groundedContext = buildGroundedContextString(
+        extraReports,
+        body.liveWeather || null,
+        broadcast,
+        body.spotContext || null,
+        body.liveAqi || null,
+        livePulse
+      );
 
       const sysPrompt = [
         'Bạn là Trợ lý AI Thực chứng của dự án "Bản đồ Cộng đồng Mở Thích ứng Nắng nóng & Ngập cục bộ khu vực Trường ĐH Mỏ - Địa chất (Phường Đông Ngạc, Hà Nội — Đề tài 08)".',

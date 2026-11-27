@@ -10,6 +10,8 @@ import {
   summarizeTransectProfile,
   evaluateWeatherScenario,
   computeHydrologicalSpotRisk,
+  computeAddressClimateScorecard,
+  classifyUsAqi,
   findNearestSafePoint,
   findNearbyDuplicatePoint,
   exportToGeoJSON,
@@ -48,6 +50,15 @@ const VOTES_KEY = 'humg_dongngac_resident_votes_v3';
 const API_URL_KEY = 'humg_dongngac_api_url_v3';
 const BROADCAST_KEY = 'humg_dongngac_broadcast_v1';
 const LAST_SUBMIT_KEY = 'humg_dongngac_last_submit_ms';
+const MY_PLACES_KEY = 'humg_dongngac_my_places_v1';
+
+function formatRelativeVi(tsMs) {
+  const diffMin = Math.max(1, Math.round((Date.now() - Number(tsMs || 0)) / 60000));
+  if (diffMin < 60) return `${diffMin} phút trước`;
+  const hrs = Math.floor(diffMin / 60);
+  const rem = diffMin % 60;
+  return rem > 0 ? `${hrs}h${rem}p trước` : `${hrs} giờ trước`;
+}
 
 function debounce(fn, waitMs = 140) {
   let timer = null;
@@ -649,6 +660,18 @@ function initApp() {
     pendingPhotoDataUrl: '',
     pendingPhotoQualityFlag: 'ok',
     liveWeatherSnapshot: null,
+    liveAqiSnapshot: null,
+    livePulse: { byPoint: {}, recentFeed: [] },
+    myPlaces: (() => {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(MY_PLACES_KEY) || '[]');
+        return Array.isArray(parsed) ? parsed.slice(0, 6) : [];
+      } catch {
+        return [];
+      }
+    })(),
+    activeScorecard: null,
+    radarActive: false,
     lastCloudSyncMs: 0
   };
 
@@ -755,6 +778,7 @@ function initApp() {
     btnZoomIn: document.getElementById('btn-zoom-in'),
     btnZoomOut: document.getElementById('btn-zoom-out'),
     btnMenuRecenter: document.getElementById('btn-menu-recenter'),
+    btnMenuScorecard: document.getElementById('btn-menu-scorecard'),
     menuBmBtns: document.querySelectorAll('.menu-bm-btn'),
     btnMobMapHome: document.getElementById('btn-mob-map-home'),
     qcatCountAll: document.getElementById('qcat-count-all'),
@@ -772,8 +796,22 @@ function initApp() {
     sbPaneRoute: document.getElementById('sb-pane-route'),
     sbPaneWeather: document.getElementById('sb-pane-weather'),
     weatherNowCard: document.getElementById('weather-now-card'),
+    aqiNowCard: document.getElementById('aqi-now-card'),
     btnSyncLiveWeather: document.getElementById('btn-sync-live-weather'),
+    btnToggleRadar: document.getElementById('btn-toggle-radar'),
+    radarStatusNote: document.getElementById('radar-status-note'),
     hourly24hList: document.getElementById('hourly-24h-list'),
+    myPlacesSection: document.getElementById('my-places-section'),
+    myPlacesList: document.getElementById('my-places-list'),
+    btnAddMyPlace: document.getElementById('btn-add-my-place'),
+    livePulseSection: document.getElementById('live-pulse-section'),
+    livePulseList: document.getElementById('live-pulse-list'),
+    scorecardDialog: document.getElementById('scorecard-dialog'),
+    btnCloseScorecard: document.getElementById('btn-close-scorecard'),
+    scorecardBody: document.getElementById('scorecard-body'),
+    btnScorecardZalo: document.getElementById('btn-scorecard-zalo'),
+    btnScorecardSave: document.getElementById('btn-scorecard-save'),
+    btnScorecardRoute: document.getElementById('btn-scorecard-route'),
     travelPills: document.querySelectorAll('.travel-pill'),
     btnPickRouteOrig: document.getElementById('btn-pick-route-orig'),
     btnPickRouteDest: document.getElementById('btn-pick-route-dest'),
@@ -1154,6 +1192,15 @@ function initApp() {
         renderAdminBroadcast();
       }
 
+      // 4. Đồng bộ Nhịp đập Cộng đồng Trực tiếp 6 giờ (Đang ngập / Đang rút / Đã khô)
+      if (data.livePulse && typeof data.livePulse === 'object') {
+        state.livePulse = {
+          byPoint: data.livePulse.byPoint || {},
+          recentFeed: Array.isArray(data.livePulse.recentFeed) ? data.livePulse.recentFeed : []
+        };
+        renderLivePulseFeed();
+      }
+
       recomputeAndRender(false);
       persistState();
       els.syncStatusMsg.textContent = `Đã đồng bộ Cloud toàn vùng lúc ${new Date().toLocaleTimeString('vi-VN')} (${state.points.filter((p) => p.status !== 'hidden').length} điểm hiển thị).`;
@@ -1407,6 +1454,12 @@ function initApp() {
     } else if (nextMode === 'transect') {
       state.transectFirstPt = null;
       els.modeBannerText.textContent = 'Bước 1/2: Chạm chọn Điểm đầu A trên bản đồ để đo mặt cắt địa hình';
+      els.modeBanner.hidden = false;
+    } else if (nextMode === 'scorecard') {
+      els.modeBannerText.textContent = 'Chạm vào vị trí nhà trọ / ngõ bạn muốn thẩm định an toàn (Hạng A–D)';
+      els.modeBanner.hidden = false;
+    } else if (nextMode === 'save_my_place') {
+      els.modeBannerText.textContent = 'Chạm vào vị trí nhà trọ, trường học hoặc bến xe buýt để lưu vào Địa điểm của tôi';
       els.modeBanner.hidden = false;
     } else {
       els.modeBanner.hidden = true;
@@ -1681,30 +1734,68 @@ function initApp() {
       ? `Nơi trú mưa &amp; Y tế gần nhất: <strong>${escapeHtml(diag.nearestSafe.point.name)}</strong> (đi bộ ~${diag.nearestSafe.walkingMinutes} phút · ${diag.nearestSafe.distanceMeters}m).`
       : '';
 
+    const cardPreview = computeAddressClimateScorecard(
+      turf,
+      lat,
+      lng,
+      dem,
+      FLOOD_STREET_CORRIDORS,
+      state.points,
+      state.lastInspectedSpot.label
+    );
+
     els.inspTitle.textContent = 'Kiểm tra nhanh vị trí này';
     els.inspBody.innerHTML = `
       <div id="insp-addr-line" style="font-size:0.78rem;color:#475569;margin-bottom:8px;">
         Đang tìm tên ngõ / đường...
       </div>
-      <div style="padding:9px 11px;border-radius:9px;background:${diag.bgHex};border:1px solid ${diag.colorHex}40;margin-bottom:8px;">
-        <strong style="display:block;font-size:0.86rem;color:${diag.colorHex};margin-bottom:2px;">${escapeHtml(plainVerdict)}</strong>
-        <span style="font-size:0.75rem;color:#334155;">${escapeHtml(plainTerrainNote)}</span>
-        <div class="expert-only" style="margin-top:6px;padding-top:5px;border-top:1px dashed ${diag.colorHex}40;font-size:0.72rem;color:#475569;">
-          Copernicus DEM: <strong class="mono-num">${diag.dem !== null ? `~${diag.dem} m DSM` : '—'}</strong> · Chỉ số nhạy cảm thủy văn: <strong class="mono-num">${diag.score}/100</strong>
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:10px;background:${diag.bgHex};border:1px solid ${diag.colorHex}40;margin-bottom:8px;">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:44px;height:44px;border-radius:11px;background:${cardPreview.gradeColor};color:#fff;font-family:var(--font-mono);flex-shrink:0;">
+          <strong style="font-size:1.15rem;line-height:1;">${cardPreview.grade}</strong>
+          <span style="font-size:0.62rem;">${cardPreview.overallScore}đ</span>
         </div>
+        <div style="min-width:0;">
+          <strong style="display:block;font-size:0.85rem;color:${diag.colorHex};margin-bottom:2px;">${escapeHtml(plainVerdict)}</strong>
+          <span style="font-size:0.75rem;color:#334155;">${escapeHtml(plainTerrainNote)}</span>
+        </div>
+      </div>
+      <div class="expert-only" style="margin:-2px 0 8px;font-size:0.72rem;color:#475569;">
+        Copernicus DEM: <strong class="mono-num">${diag.dem !== null ? `~${diag.dem} m DSM` : '—'}</strong> · Chỉ số thủy văn: <strong class="mono-num">${diag.score}/100</strong>
       </div>
       ${corrText ? `<p style="margin:0 0 5px;font-size:0.76rem;color:#334155;line-height:1.45;">• ${corrText}</p>` : ''}
       ${safeText ? `<p style="margin:0 0 10px;font-size:0.76rem;color:#14532d;line-height:1.45;">• ${safeText}</p>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:6px;">
-        ${diag.nearestSafe ? `<button type="button" class="btn btn-primary btn-compact js-insp-walk">Tới nơi trú gần nhất</button>` : ''}
+        <button type="button" class="btn btn-primary btn-compact js-insp-scorecard">Thẩm định phòng trọ</button>
+        <button type="button" class="btn btn-secondary btn-compact js-insp-save">Lưu điểm</button>
+        <button type="button" class="btn btn-secondary btn-compact js-insp-zalo">Ảnh gửi Zalo</button>
+        ${diag.nearestSafe ? `<button type="button" class="btn btn-secondary btn-compact js-insp-walk">Tới nơi trú</button>` : ''}
         <button type="button" class="btn btn-secondary btn-compact js-insp-from">Đi từ đây</button>
-        <button type="button" class="btn btn-secondary btn-compact js-insp-to">Chỉ đường tới đây</button>
+        <button type="button" class="btn btn-secondary btn-compact js-insp-to">Chỉ đường tới</button>
         <button type="button" class="btn btn-secondary btn-compact js-insp-report">+ Báo điểm</button>
         <button type="button" class="btn btn-secondary btn-compact js-insp-ai">Hỏi AI</button>
       </div>
     `;
     els.spotInspectorCard.hidden = false;
     syncMobileMapHomeActive();
+
+    els.inspBody.querySelector('.js-insp-scorecard')?.addEventListener('click', () => {
+      openAddressScorecard(lat, lng, state.lastInspectedSpot?.label || 'Địa chỉ đang xem', dem);
+    });
+    els.inspBody.querySelector('.js-insp-save')?.addEventListener('click', () => {
+      saveMyPlace({ label: state.lastInspectedSpot?.label || 'Nhà trọ / Địa điểm đã lưu', lat, lng, dem });
+    });
+    els.inspBody.querySelector('.js-insp-zalo')?.addEventListener('click', () => {
+      const sc = computeAddressClimateScorecard(
+        turf,
+        lat,
+        lng,
+        dem,
+        FLOOD_STREET_CORRIDORS,
+        state.points,
+        state.lastInspectedSpot?.label || 'Vị trí trên bản đồ Đông Ngạc'
+      );
+      exportSafetyCardPng(sc);
+    });
 
     els.inspBody.querySelector('.js-insp-from')?.addEventListener('click', () => {
       setCustomRoutePoint('orig', lat, lng, state.lastInspectedSpot?.label || 'Điểm chọn trên bản đồ');
@@ -1785,6 +1876,15 @@ function initApp() {
       setMode('pan');
       const name = (await reverseGeocodeVN(e.latlng.lat, e.latlng.lng)) || `Điểm đến (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`;
       setCustomRoutePoint('dest', e.latlng.lat, e.latlng.lng, name);
+    } else if (state.mode === 'scorecard') {
+      setMode('pan');
+      const name = (await reverseGeocodeVN(e.latlng.lat, e.latlng.lng)) || `Vị trí (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`;
+      openAddressScorecard(e.latlng.lat, e.latlng.lng, name);
+    } else if (state.mode === 'save_my_place') {
+      setMode('pan');
+      const name = (await reverseGeocodeVN(e.latlng.lat, e.latlng.lng)) || `Địa điểm đã lưu (${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)})`;
+      saveMyPlace({ label: name, lat: e.latlng.lat, lng: e.latlng.lng, dem: sampleDemBilinear(e.latlng.lat, e.latlng.lng) });
+      openContextSheet('list');
     } else if (state.mode === 'inspect' || (state.mode === 'pan' && !isPopupOpen)) {
       inspectSpotAt(e.latlng.lat, e.latlng.lng);
     } else if (state.mode === 'mark') {
@@ -2320,10 +2420,12 @@ function initApp() {
           ? 'scenario-active-marker'
           : 'scenario-dim-marker'
         : '';
+      const pulseInfo = state.livePulse?.byPoint?.[pt.id] || null;
+      const liveFloodCls = pulseInfo?.status === 'flooding' ? 'is-live-flooding' : '';
 
       const marker = L.marker([pt.lat, pt.lng], {
         icon: L.divIcon({
-          className: `flood-marker-wrap ${pt.insideBuffer ? 'inside-marker' : 'outside-marker'} ${scenCls}`,
+          className: `flood-marker-wrap ${pt.insideBuffer ? 'inside-marker' : 'outside-marker'} ${scenCls} ${liveFloodCls}`,
           iconSize: [markerSizePx + 2, markerSizePx + 2],
           iconAnchor: [(markerSizePx + 2) / 2, (markerSizePx + 2) / 2],
           popupAnchor: [0, -12],
@@ -2331,6 +2433,27 @@ function initApp() {
         }),
         title: `[Hạng ${pt.confidenceTier}] ${pt.name}`
       }).addTo(targetGroup);
+
+      const pulseBadgeHtml = pulseInfo
+        ? `<span class="live-pulse-pill live-pulse-${escapeHtml(pulseInfo.status)}">${
+            pulseInfo.status === 'flooding' ? 'Đang ngập' : pulseInfo.status === 'receding' ? 'Đang rút' : 'Đã khô ráo'
+          } · ${escapeHtml(formatRelativeVi(pulseInfo.tsMs))}</span>`
+        : '';
+
+      const liveCheckinHtml =
+        pt.layerGroup === 'risk'
+          ? `<div class="live-checkin-box">
+              <div class="live-checkin-head">
+                <span>Tình trạng NGAY LÚC NÀY?</span>
+                ${pulseBadgeHtml}
+              </div>
+              <div class="live-checkin-btns">
+                <button type="button" class="live-checkin-btn ${pulseInfo?.status === 'flooding' ? 'is-active' : ''}" data-st="flooding">Đang ngập</button>
+                <button type="button" class="live-checkin-btn ${pulseInfo?.status === 'receding' ? 'is-active' : ''}" data-st="receding">Đang rút</button>
+                <button type="button" class="live-checkin-btn ${pulseInfo?.status === 'clear' ? 'is-active' : ''}" data-st="clear">Đã khô</button>
+              </div>
+            </div>`
+          : '';
 
       marker.bindTooltip(`${pt.name}`, {
         direction: 'top',
@@ -2360,6 +2483,7 @@ function initApp() {
           ${demVal !== null ? `<span class="dem-pill ${demVal <= 12 ? 'is-low' : ''} expert-only">DEM ~${demVal}m</span>` : ''}
         </div>
         ${photoHtml}
+        ${liveCheckinHtml}
         ${pt.layerGroup === 'risk' ? `<p class="popup-meta"><strong>Tình trạng:</strong> ${escapeHtml(pt.waterScaleLabel)}</p>` : ''}
         ${hazardHtml}
         <p class="popup-meta" style="font-size:0.75rem;">Đã có <strong class="mono-num">${pt.confirmCount}</strong> người xác nhận · Cách ĐH Mỏ <span class="mono-num">${pt.distanceMeters} m</span></p>
@@ -2374,10 +2498,15 @@ function initApp() {
           </button>
           <button type="button" class="btn btn-primary btn-compact js-route-to">Chỉ đường tới đây</button>
           ${pt.layerGroup === 'risk' ? `<button type="button" class="btn btn-secondary btn-compact js-find-shelter">Nơi trú gần đây</button>` : ''}
-          <button type="button" class="btn btn-secondary btn-compact js-share-pt" title="Sao chép đường link dẫn thẳng tới điểm này">Chia sẻ</button>
+          <button type="button" class="btn btn-secondary btn-compact js-save-pt">Lưu điểm</button>
+          <button type="button" class="btn btn-secondary btn-compact js-zalo-pt">Ảnh Zalo</button>
+          <button type="button" class="btn btn-secondary btn-compact js-share-pt" title="Sao chép đường link dẫn thẳng tới điểm này">Link</button>
         </div>
       `;
 
+      popupEl.querySelectorAll('.live-checkin-btn').forEach((btn) => {
+        btn.addEventListener('click', () => submitLiveCheckin(pt, btn.dataset.st));
+      });
       popupEl.querySelector('.js-upvote-pt').addEventListener('click', () => handleResidentUpvote(pt.id));
       popupEl.querySelector('.js-route-to')?.addEventListener('click', () => {
         marker.closePopup();
@@ -2386,6 +2515,13 @@ function initApp() {
       popupEl.querySelector('.js-find-shelter')?.addEventListener('click', () => {
         marker.closePopup();
         highlightNearestSafeFrom(pt.lat, pt.lng, pt.name);
+      });
+      popupEl.querySelector('.js-save-pt')?.addEventListener('click', () => {
+        saveMyPlace({ label: pt.name, lat: pt.lat, lng: pt.lng, dem: demVal });
+      });
+      popupEl.querySelector('.js-zalo-pt')?.addEventListener('click', () => {
+        const sc = computeAddressClimateScorecard(turf, pt.lat, pt.lng, demVal, FLOOD_STREET_CORRIDORS, state.points, pt.name);
+        exportSafetyCardPng(sc, pulseInfo);
       });
       popupEl.querySelector('.js-share-pt').addEventListener('click', async () => {
         const shareUrl = `${window.location.origin}${window.location.pathname}?point=${encodeURIComponent(pt.id)}`;
@@ -3025,6 +3161,7 @@ function initApp() {
           action: 'ask_copilot',
           question: q,
           liveWeather: state.liveWeatherSnapshot,
+          liveAqi: state.liveAqiSnapshot,
           spotContext
         })
       });
@@ -3216,7 +3353,8 @@ function initApp() {
         body: JSON.stringify({
           action: 'ask_copilot',
           question: q,
-          liveWeather: state.liveWeatherSnapshot
+          liveWeather: state.liveWeatherSnapshot,
+          liveAqi: state.liveAqiSnapshot
         })
       });
       const data = await res.json();
@@ -3951,12 +4089,582 @@ function initApp() {
     });
   }
 
+  // ================= TÍNH NĂNG NÂNG CẤP SÂU V19: AQI PM2.5 · RADAR MƯA · LIVE CHECK-IN · ĐỊA ĐIỂM CỦA TÔI · THẨM ĐỊNH TRỌ & ẢNH ZALO =================
+  let rainRadarLayer = null;
+
+  async function loadLiveAirQualityAtHUMG() {
+    if (!els.aqiNowCard) return;
+    const AQI_CACHE_KEY = 'humg_live_aqi_cache_v1';
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(AQI_CACHE_KEY) || 'null');
+      if (cached && Date.now() - cached.ts < 15 * 60 * 1000) {
+        renderLiveAqi(cached.payload);
+        return;
+      }
+    } catch { /* ignore */ }
+
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 4500);
+      const url =
+        'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=21.072514&longitude=105.773870&current=pm2_5,pm10,us_aqi,uv_index&timezone=Asia%2FBangkok';
+      const res = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(t);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      sessionStorage.setItem(AQI_CACHE_KEY, JSON.stringify({ ts: Date.now(), payload: data }));
+      renderLiveAqi(data);
+    } catch {
+      els.aqiNowCard.innerHTML = `<span style="color:#64748b;">Chưa tải được dữ liệu bụi mịn PM2.5 trực tiếp (Open-Meteo CAMS).</span>`;
+    }
+  }
+
+  function renderLiveAqi(data) {
+    const cur = data?.current;
+    if (!cur || !els.aqiNowCard) return;
+    const usAqi = cur.us_aqi ?? null;
+    const pm25 = cur.pm2_5 ?? null;
+    const pm10 = cur.pm10 ?? null;
+    const uvIndex = cur.uv_index ?? null;
+    state.liveAqiSnapshot = { usAqi, pm25, pm10, uvIndex };
+
+    const meta = classifyUsAqi(usAqi);
+    els.aqiNowCard.style.background = meta.bgHex;
+    els.aqiNowCard.style.borderColor = `${meta.colorHex}45`;
+    els.aqiNowCard.innerHTML = `
+      <div class="aqi-head">
+        <strong style="color:#0f172a;">Không khí &amp; Bụi mịn PM2.5</strong>
+        <span class="aqi-badge mono-num" style="background:${meta.colorHex};color:#ffffff;">AQI ${usAqi ?? '—'} · ${escapeHtml(meta.label)}</span>
+      </div>
+      <div class="aqi-metrics-row">
+        <span>PM2.5: <strong class="mono-num">${pm25 !== null ? `${pm25} µg/m³` : '—'}</strong></span>
+        <span>PM10: <strong class="mono-num">${pm10 !== null ? `${pm10} µg/m³` : '—'}</strong></span>
+        <span>UV: <strong class="mono-num">${uvIndex !== null ? uvIndex : '—'}</strong></span>
+      </div>
+      <div style="font-size:0.76rem;color:#334155;line-height:1.45;">${escapeHtml(meta.advice)}</div>
+    `;
+  }
+
+  async function toggleRainViewerRadar() {
+    if (!els.btnToggleRadar) return;
+    if (state.radarActive && rainRadarLayer) {
+      map.removeLayer(rainRadarLayer);
+      rainRadarLayer = null;
+      state.radarActive = false;
+      els.btnToggleRadar.setAttribute('aria-pressed', 'false');
+      els.btnToggleRadar.classList.remove('btn-primary');
+      els.btnToggleRadar.classList.add('btn-secondary');
+      els.btnToggleRadar.textContent = 'Radar mây mưa (Live)';
+      if (els.radarStatusNote) els.radarStatusNote.hidden = true;
+      showToast('Đã tắt lớp Radar mây mưa trực tiếp.');
+      return;
+    }
+
+    els.btnToggleRadar.disabled = true;
+    els.btnToggleRadar.textContent = 'Đang tải radar...';
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 5000);
+      const res = await fetch('https://api.rainviewer.com/public/weather-maps.json', { signal: ctrl.signal });
+      clearTimeout(t);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      const frames = json?.radar?.past;
+      const latest = Array.isArray(frames) && frames.length > 0 ? frames[frames.length - 1] : null;
+      if (!json?.host || !latest?.path) throw new Error('Không có khung ảnh radar mới');
+
+      const tileUrl = `${json.host}${latest.path}/512/{z}/{x}/{y}/2/1_1.png`;
+      rainRadarLayer = L.tileLayer(tileUrl, {
+        maxNativeZoom: 7,
+        maxZoom: 19,
+        opacity: 0.48,
+        zIndex: 240,
+        attribution: 'Radar &copy; RainViewer'
+      }).addTo(map);
+
+      const frameTime = new Date(Number(latest.time) * 1000).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      state.radarActive = true;
+      els.btnToggleRadar.setAttribute('aria-pressed', 'true');
+      els.btnToggleRadar.classList.remove('btn-secondary');
+      els.btnToggleRadar.classList.add('btn-primary');
+      els.btnToggleRadar.textContent = 'Đang bật Radar mưa';
+      if (els.radarStatusNote) {
+        els.radarStatusNote.hidden = false;
+        els.radarStatusNote.innerHTML = `<strong>Radar mây mưa lúc ${escapeHtml(frameTime)} (RainViewer):</strong> Thu nhỏ bản đồ để quan sát dải mây mưa tiến vào Tây Hồ – Đông Ngạc – Bắc Từ Liêm.`;
+      }
+      showToast(`Đã bật lớp Radar mây mưa lúc ${frameTime} trên bản đồ!`);
+    } catch {
+      els.btnToggleRadar.textContent = 'Radar mây mưa (Live)';
+      showToast('Máy chủ Radar RainViewer tạm bận, vui lòng thử lại sau ít phút.');
+    } finally {
+      els.btnToggleRadar.disabled = false;
+    }
+  }
+  els.btnToggleRadar?.addEventListener('click', toggleRainViewerRadar);
+
+  function renderLivePulseFeed() {
+    if (!els.livePulseSection || !els.livePulseList) return;
+    const feed = state.livePulse?.recentFeed || [];
+    if (feed.length === 0) {
+      els.livePulseSection.hidden = true;
+      return;
+    }
+    els.livePulseSection.hidden = false;
+    els.livePulseList.innerHTML = feed
+      .slice(0, 6)
+      .map((item) => {
+        const stLabel = item.status === 'flooding' ? 'Đang ngập' : item.status === 'receding' ? 'Đang rút' : 'Đã khô ráo';
+        return `<button type="button" class="live-feed-item js-live-jump" data-ptid="${escapeHtml(item.pointId)}">
+          <div style="min-width:0;flex:1;">
+            <strong style="display:block;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(item.pointName)}</strong>
+            <span style="font-size:0.71rem;color:#64748b;">Cập nhật ${escapeHtml(formatRelativeVi(item.tsMs))}</span>
+          </div>
+          <span class="live-pulse-pill live-pulse-${escapeHtml(item.status)}">${stLabel}</span>
+        </button>`;
+      })
+      .join('');
+  }
+
+  els.livePulseList?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.js-live-jump');
+    if (btn?.dataset.ptid) flyToAndOpenPoint(btn.dataset.ptid);
+  });
+
+  async function submitLiveCheckin(pt, status) {
+    const nowMs = Date.now();
+    const optimistic = {
+      id: `LP-LOC-${nowMs}`,
+      pointId: pt.id,
+      pointName: pt.name,
+      status,
+      tsMs: nowMs,
+      updatedAt: new Date(nowMs).toISOString(),
+      recentCount: (state.livePulse?.byPoint?.[pt.id]?.recentCount || 0) + 1
+    };
+    state.livePulse.byPoint[pt.id] = optimistic;
+    state.livePulse.recentFeed = [optimistic, ...(state.livePulse.recentFeed || []).filter((x) => x.pointId !== pt.id)].slice(0, 15);
+    renderLivePulseFeed();
+    renderMarkersAndTable();
+    setTimeout(() => markerMap.get(pt.id)?.openPopup(), 80);
+
+    const statusVi = status === 'flooding' ? 'Đang ngập' : status === 'receding' ? 'Đang rút nước' : 'Đã khô ráo';
+    showToast(`Đã ghi nhận "${pt.name}": ${statusVi} lúc này!`);
+
+    const res = await postToCloudApi({
+      action: 'live_checkin',
+      pointId: pt.id,
+      pointName: pt.name,
+      status
+    });
+    if (res?.ok && res.livePulse) {
+      state.livePulse = res.livePulse;
+      renderLivePulseFeed();
+    }
+  }
+
+  function persistMyPlaces() {
+    try {
+      localStorage.setItem(MY_PLACES_KEY, JSON.stringify(state.myPlaces.slice(0, 6)));
+    } catch { /* ignore */ }
+  }
+
+  function saveMyPlace({ label, lat, lng, dem }) {
+    const cleanLabel = String(label || 'Địa điểm của tôi').trim().slice(0, 80);
+    const exists = state.myPlaces.find(
+      (p) => Math.abs(p.lat - Number(lat)) < 0.00025 && Math.abs(p.lng - Number(lng)) < 0.00025
+    );
+    if (exists) {
+      exists.label = cleanLabel;
+      persistMyPlaces();
+      renderMyPlacesList();
+      showToast(`Đã cập nhật "${cleanLabel}" trong Địa điểm của tôi.`);
+      return;
+    }
+    state.myPlaces.unshift({
+      id: `MP-${Date.now().toString(36).slice(-5)}`,
+      label: cleanLabel,
+      lat: Number(Number(lat).toFixed(6)),
+      lng: Number(Number(lng).toFixed(6)),
+      dem: dem !== undefined && dem !== null ? Number(dem) : sampleDemBilinear(lat, lng)
+    });
+    state.myPlaces = state.myPlaces.slice(0, 6);
+    persistMyPlaces();
+    renderMyPlacesList();
+    showToast(`Đã lưu "${cleanLabel}" vào Địa điểm của tôi (100% riêng tư trên máy).`);
+  }
+
+  function removeMyPlace(id) {
+    state.myPlaces = state.myPlaces.filter((p) => p.id !== id);
+    persistMyPlaces();
+    renderMyPlacesList();
+  }
+
+  function renderMyPlacesList() {
+    if (!els.myPlacesList) return;
+    if (!state.myPlaces.length) {
+      els.myPlacesList.innerHTML = `<p class="my-places-empty">Chạm vào bất kỳ ngõ/nhà trọ nào trên bản đồ rồi bấm <strong>Lưu điểm</strong> để theo dõi cảnh báo riêng và chỉ đường về nhà 1 chạm.</p>`;
+      return;
+    }
+    els.myPlacesList.innerHTML = state.myPlaces
+      .map((mp) => {
+        const sc = computeAddressClimateScorecard(turf, mp.lat, mp.lng, mp.dem, FLOOD_STREET_CORRIDORS, state.points, mp.label);
+        return `<div class="my-place-row">
+          <div class="my-place-info">
+            <button type="button" class="my-place-title js-mp-open" data-id="${escapeHtml(mp.id)}">${escapeHtml(mp.label)}</button>
+            <span class="my-place-meta">
+              <strong style="color:${sc.gradeColor};">Hạng ${sc.grade} (${sc.overallScore}đ)</strong> · ${
+                sc.hydro.score >= 45 ? 'Cần đề phòng mưa ≥50mm' : 'Nền khá cao ráo'
+              }
+            </span>
+          </div>
+          <div class="my-place-actions">
+            <button type="button" class="btn btn-secondary btn-compact js-mp-route" data-id="${escapeHtml(mp.id)}" title="Chỉ đường né ngập về điểm này">Đi tới</button>
+            <button type="button" class="icon-close-btn js-mp-del" data-id="${escapeHtml(mp.id)}" style="width:28px;height:28px;font-size:0.95rem;" aria-label="Xóa địa điểm đã lưu">×</button>
+          </div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  els.btnAddMyPlace?.addEventListener('click', () => {
+    closeContextSheet();
+    setMode('save_my_place');
+  });
+
+  els.myPlacesList?.addEventListener('click', (e) => {
+    const delBtn = e.target.closest('.js-mp-del');
+    if (delBtn) {
+      removeMyPlace(delBtn.dataset.id);
+      return;
+    }
+    const routeBtn = e.target.closest('.js-mp-route');
+    if (routeBtn) {
+      const mp = state.myPlaces.find((p) => p.id === routeBtn.dataset.id);
+      if (mp) setCustomRoutePoint('dest', mp.lat, mp.lng, mp.label);
+      return;
+    }
+    const openBtn = e.target.closest('.js-mp-open');
+    if (openBtn) {
+      const mp = state.myPlaces.find((p) => p.id === openBtn.dataset.id);
+      if (mp) {
+        if (window.innerWidth <= 860) closeContextSheet();
+        map.flyTo([mp.lat, mp.lng], 16, { duration: 0.45 });
+        openAddressScorecard(mp.lat, mp.lng, mp.label, mp.dem);
+      }
+    }
+  });
+
+  async function openAddressScorecard(lat, lng, label = 'Địa chỉ đang kiểm tra', demOverride = null) {
+    if (!els.scorecardDialog || !els.scorecardBody) return;
+    let dem = demOverride !== null && demOverride !== undefined ? Number(demOverride) : sampleDemBilinear(lat, lng);
+    if (dem === null) dem = await fetchElevationM(lat, lng);
+
+    const sc = computeAddressClimateScorecard(turf, lat, lng, dem, FLOOD_STREET_CORRIDORS, state.points, label);
+    state.activeScorecard = sc;
+
+    const axisBar = (title, scoreVal, note) => {
+      const barCol = scoreVal >= 72 ? '#15803d' : scoreVal >= 48 ? '#d97706' : '#dc2626';
+      return `<div class="score-axis-card">
+        <div class="score-axis-head">
+          <span>${title}</span>
+          <span class="mono-num" style="color:${barCol};">${scoreVal}/100</span>
+        </div>
+        <div class="score-bar-bg"><div class="score-bar-fill" style="width:${scoreVal}%;background:${barCol};"></div></div>
+        <span style="font-size:0.74rem;color:#475569;line-height:1.35;display:block;">${escapeHtml(note)}</span>
+      </div>`;
+    };
+
+    const floodNote =
+      sc.hydro.nearestCorridor && sc.hydro.nearestCorridor.distanceMeters <= 250
+        ? `Cách tuyến ngập ${sc.hydro.nearestCorridor.name} khoảng ${sc.hydro.nearestCorridor.distanceMeters}m.`
+        : sc.hydro.diffVsHumgM !== null
+          ? `Cao độ Copernicus DEM ~${sc.hydro.dem}m (${sc.hydro.diffVsHumgM >= 0 ? 'cao tương đương' : `thấp hơn ${Math.abs(sc.hydro.diffVsHumgM)}m so với`} gò ĐH Mỏ).`
+          : 'Đánh giá theo mô hình địa hình khu vực 2km.';
+
+    const heatNote =
+      sc.nearestHeatName && sc.nearestHeatDistM <= 400
+        ? `Cách vùng nắng gắt ${sc.nearestHeatName} ~${sc.nearestHeatDistM}m (nền ERA5 2026: 76 ngày ≥40°C).`
+        : 'Nằm ngoài trục phơi nắng gắt mạnh nhất; vẫn cần thông gió phòng trọ mùa hè.';
+
+    const safeNote = sc.hydro.nearestSafe
+      ? `Cách ${sc.hydro.nearestSafe.point.name} ~${sc.hydro.nearestSafe.distanceMeters}m (đi bộ ${sc.hydro.nearestSafe.walkingMinutes} phút).`
+      : 'Cần lưu sẵn tuyến ra Bệnh viện Đa khoa Phương Đông (Số 9 Phố Viên).';
+
+    els.scorecardBody.innerHTML = `
+      <div class="scorecard-hero" style="background:${sc.gradeBg};border-color:${sc.gradeColor}55;">
+        <div class="score-grade-circle" style="background:${sc.gradeColor};">
+          <strong>${sc.grade}</strong>
+          <span>${sc.overallScore}/100</span>
+        </div>
+        <div style="min-width:0;">
+          <strong style="display:block;font-size:0.98rem;color:${sc.gradeColor};margin-bottom:2px;">${escapeHtml(sc.gradeTitle)}</strong>
+          <div style="font-size:0.86rem;font-weight:600;color:#0f172a;margin-bottom:2px;">${escapeHtml(sc.label)}</div>
+          <div class="mono-num" style="font-size:0.74rem;color:#475569;">Tọa độ: ${sc.hydro.lat}, ${sc.hydro.lng}${sc.hydro.dem !== null ? ` · Cao độ vệ tinh DEM ~${sc.hydro.dem}m` : ''}</div>
+        </div>
+      </div>
+
+      <div class="score-axes-grid">
+        ${axisBar('An toàn Ngập', sc.floodSafetyScore, floodNote)}
+        ${axisBar('Dịu mát & Bóng cây', sc.heatComfortScore, heatNote)}
+        ${axisBar('Y tế & Điểm trú', sc.accessScore, safeNote)}
+      </div>
+
+      <div class="era5-mini-box" style="margin-bottom:12px;">
+        <strong style="display:block;margin-bottom:6px;">Checklist 60 giây thực địa trước khi cọc phòng trọ / thuê nhà tại đây:</strong>
+        <ol class="score-checklist">
+          ${sc.checklist.map((c) => `<li>${escapeHtml(c)}</li>`).join('')}
+        </ol>
+      </div>
+      <p style="margin:0;font-size:0.76rem;color:#64748b;">
+        <em>Căn cứ thẩm định 100% thực chứng: Copernicus DEM GLO-30, 18 tuyến ngập xác thực OpenStreetMap, 60 điểm khảo sát cộng đồng và chuỗi ECMWF ERA5 2024–2026 tại ĐH Mỏ - Địa chất.</em>
+      </p>
+    `;
+
+    els.scorecardDialog.showModal();
+  }
+
+  els.btnMenuScorecard?.addEventListener('click', () => {
+    if (els.topMoreMenu) els.topMoreMenu.open = false;
+    closeContextSheet();
+    setMode('scorecard');
+  });
+  els.btnCloseScorecard?.addEventListener('click', () => els.scorecardDialog?.close());
+  els.btnScorecardSave?.addEventListener('click', () => {
+    if (!state.activeScorecard) return;
+    saveMyPlace({
+      label: state.activeScorecard.label,
+      lat: state.activeScorecard.hydro.lat,
+      lng: state.activeScorecard.hydro.lng,
+      dem: state.activeScorecard.hydro.dem
+    });
+  });
+  els.btnScorecardRoute?.addEventListener('click', () => {
+    if (!state.activeScorecard) return;
+    els.scorecardDialog?.close();
+    state.customOrigin = {
+      lat: state.activeScorecard.hydro.lat,
+      lng: state.activeScorecard.hydro.lng,
+      label: state.activeScorecard.label
+    };
+    rebuildRouteSelects(true);
+    els.routeOriginSelect.value = 'custom';
+    els.routeDestSelect.value = '0';
+    openContextSheet('route');
+    evaluateSelectedRoute(true);
+  });
+  els.btnScorecardZalo?.addEventListener('click', () => {
+    if (state.activeScorecard) exportSafetyCardPng(state.activeScorecard);
+  });
+
+  function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines = 3) {
+    const words = String(text || '').split(/\s+/);
+    let line = '';
+    let curY = y;
+    let linesDrawn = 0;
+    for (let n = 0; n < words.length; n++) {
+      const test = line ? `${line} ${words[n]}` : words[n];
+      if (ctx.measureText(test).width > maxWidth && line) {
+        linesDrawn++;
+        if (linesDrawn >= maxLines) {
+          ctx.fillText(line.slice(0, -1) + '…', x, curY);
+          return curY + lineHeight;
+        }
+        ctx.fillText(line, x, curY);
+        line = words[n];
+        curY += lineHeight;
+      } else {
+        line = test;
+      }
+    }
+    if (line) {
+      ctx.fillText(line, x, curY);
+      curY += lineHeight;
+    }
+    return curY;
+  }
+
+  async function exportSafetyCardPng(sc, pulseInfo = null) {
+    const W = 1080;
+    const H = 1350;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Nền sáng sạch chuẩn thiết kế civic poster
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, W, H);
+
+    // Header thương hiệu
+    const grad = ctx.createLinearGradient(0, 0, W, 210);
+    grad.addColorStop(0, '#0f766e');
+    grad.addColorStop(1, '#115e59');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, 210);
+
+    ctx.fillStyle = '#99f6e4';
+    ctx.font = '700 24px "Be Vietnam Pro", sans-serif';
+    ctx.fillText('BẢN ĐỒ AN TOÀN CỘNG ĐỒNG · ĐH MỎ - ĐỊA CHẤT', 64, 72);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 44px "Be Vietnam Pro", sans-serif';
+    ctx.fillText('PHIẾU THẨM ĐỊNH & CẢNH BÁO KHU VỰC', 64, 134);
+
+    ctx.fillStyle = '#ccfbf1';
+    ctx.font = '500 23px "Be Vietnam Pro", sans-serif';
+    const stampStr = new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+    ctx.fillText(`Phường Đông Ngạc, Hà Nội  ·  Xuất lúc ${stampStr}`, 64, 178);
+
+    // Khối tên địa chỉ & Hạng A-D
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(56, 246, W - 112, 236, 28);
+    ctx.fill();
+    ctx.stroke();
+
+    // Huy hiệu Hạng
+    ctx.fillStyle = sc.gradeColor;
+    ctx.beginPath();
+    ctx.roundRect(88, 282, 148, 164, 24);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = '800 78px "JetBrains Mono", monospace';
+    ctx.fillText(sc.grade, 162, 376);
+    ctx.font = '700 24px "JetBrains Mono", monospace';
+    ctx.fillText(`${sc.overallScore}/100đ`, 162, 422);
+    ctx.textAlign = 'left';
+
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '800 34px "Be Vietnam Pro", sans-serif';
+    const nextY = wrapCanvasText(ctx, sc.label, 268, 326, W - 350, 44, 2);
+
+    ctx.fillStyle = sc.gradeColor;
+    ctx.font = '700 25px "Be Vietnam Pro", sans-serif';
+    wrapCanvasText(ctx, sc.gradeTitle, 268, Math.max(nextY + 8, 396), W - 350, 34, 2);
+
+    // Trạng thái thực tế (nếu có live check-in hoặc thời tiết / AQI)
+    let curY = 516;
+    if (pulseInfo || state.liveWeatherSnapshot || state.liveAqiSnapshot) {
+      ctx.fillStyle = pulseInfo?.status === 'flooding' ? '#fef2f2' : '#f0f9ff';
+      ctx.strokeStyle = pulseInfo?.status === 'flooding' ? '#fca5a5' : '#bae6fd';
+      ctx.beginPath();
+      ctx.roundRect(56, curY, W - 112, 92, 20);
+      ctx.fill();
+      ctx.stroke();
+
+      const liveParts = [];
+      if (pulseInfo) {
+        const stTxt = pulseInfo.status === 'flooding' ? 'ĐANG NGẬP' : pulseInfo.status === 'receding' ? 'ĐANG RÚT' : 'ĐÃ KHÔ RÁO';
+        liveParts.push(`Cộng đồng báo: ${stTxt} (${formatRelativeVi(pulseInfo.tsMs)})`);
+      }
+      if (state.liveWeatherSnapshot) {
+        liveParts.push(`Thời tiết: ${Math.round(state.liveWeatherSnapshot.temp)}°C · Mưa hôm nay ${state.liveWeatherSnapshot.dailyRainMm}mm`);
+      }
+      if (state.liveAqiSnapshot?.usAqi) {
+        liveParts.push(`AQI ${state.liveAqiSnapshot.usAqi} (PM2.5: ${state.liveAqiSnapshot.pm25} µg/m³)`);
+      }
+      ctx.fillStyle = pulseInfo?.status === 'flooding' ? '#991b1b' : '#0369a1';
+      ctx.font = '700 24px "Be Vietnam Pro", sans-serif';
+      wrapCanvasText(ctx, liveParts.join('  ·  '), 84, curY + 54, W - 168, 32, 2);
+      curY += 120;
+    }
+
+    // 3 Cột Chỉ số thực chứng
+    const cols = [
+      { title: 'AN TOÀN NGẬP', val: `${sc.floodSafetyScore}/100`, sub: sc.hydro.dem !== null ? `Cao độ DEM ~${sc.hydro.dem}m` : 'Theo mô hình 2km' },
+      { title: 'ĐỘ DỊU MÁT', val: `${sc.heatComfortScore}/100`, sub: 'Nền ERA5: 76 ngày ≥40°C' },
+      { title: 'Y TẾ & ĐIỂM TRÚ', val: `${sc.accessScore}/100`, sub: sc.hydro.nearestSafe ? `Đi bộ ~${sc.hydro.nearestSafe.walkingMinutes} phút` : 'Quanh 18 Phố Viên' }
+    ];
+    const colW = (W - 112 - 36) / 3;
+    cols.forEach((c, idx) => {
+      const cx = 56 + idx * (colW + 18);
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.beginPath();
+      ctx.roundRect(cx, curY, colW, 172, 22);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '700 21px "Be Vietnam Pro", sans-serif';
+      ctx.fillText(c.title, cx + 24, curY + 46);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = '800 44px "JetBrains Mono", monospace';
+      ctx.fillText(c.val, cx + 24, curY + 106);
+
+      ctx.fillStyle = '#475569';
+      ctx.font = '500 20px "Be Vietnam Pro", sans-serif';
+      ctx.fillText(c.sub, cx + 24, curY + 146);
+    });
+    curY += 204;
+
+    // Checklist Khuyến nghị thực địa
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.beginPath();
+    ctx.roundRect(56, curY, W - 112, H - curY - 190, 24);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#0f766e';
+    ctx.font = '800 26px "Be Vietnam Pro", sans-serif';
+    ctx.fillText('LƯU Ý AN TOÀN & KIỂM TRA THỰC TẾ:', 86, curY + 50);
+
+    let listY = curY + 98;
+    ctx.fillStyle = '#1e293b';
+    ctx.font = '500 23px "Be Vietnam Pro", sans-serif';
+    for (const item of sc.checklist.slice(0, 4)) {
+      listY = wrapCanvasText(ctx, `•  ${item}`, 86, listY, W - 172, 34, 2) + 14;
+    }
+
+    // Footer Hotline Khẩn cấp & Link
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, H - 156, W, 156);
+    ctx.fillStyle = '#fca5a5';
+    ctx.font = '700 24px "Be Vietnam Pro", sans-serif';
+    ctx.fillText('KHẨN CẤP:  Y tế 115  ·  Cứu nạn 114  ·  Điện lực EVN 1900 1288  ·  Thoát nước HN 024 3976 2245', 56, H - 96);
+    ctx.fillStyle = '#5eead4';
+    ctx.font = '600 23px "JetBrains Mono", monospace';
+    ctx.fillText('Xem trực tiếp: https://bando-cong-dong-dong-ngac.vercel.app', 56, H - 44);
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const safeFile = new File([blob], `ThamDinh_DongNgac_${sc.grade}.png`, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [safeFile] })) {
+        try {
+          await navigator.share({
+            title: `Thẩm định an toàn: ${sc.label}`,
+            text: `${sc.label} — ${sc.gradeTitle} (${sc.overallScore}/100đ). Xem bản đồ: https://bando-cong-dong-dong-ngac.vercel.app`,
+            files: [safeFile]
+          });
+          return;
+        } catch { /* fallback to download */ }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ThamDinh_DongNgac_${sc.grade}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1200);
+      showToast('Đã tải Thẻ Ảnh (.PNG) — sẵn sàng gửi lên Zalo / Nhóm Trọ!');
+    }, 'image/png');
+  }
+
   renderAlertBulletin('red');
   renderQuiz();
   renderNotebookSearch('');
   evaluateSelectedRoute(false);
   renderAdminBroadcast();
   loadLiveWeatherAtHUMG();
+  loadLiveAirQualityAtHUMG();
+  renderMyPlacesList();
+  renderLivePulseFeed();
   updateQrPreview();
   recomputeAndRender(false);
   updateCenterElevation();

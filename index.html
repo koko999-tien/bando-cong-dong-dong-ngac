@@ -94,7 +94,10 @@
                 </div>
 
                 <button type="button" class="js-open-sheet" data-sheet="weather">
-                  <span>Dự báo mưa &amp; nắng 24 giờ tới</span>
+                  <span>Dự báo 24h, AQI &amp; Radar mưa</span>
+                </button>
+                <button type="button" id="btn-menu-scorecard">
+                  <span>Thẩm định An toàn Nhà trọ / Địa chỉ</span>
                 </button>
                 <button type="button" id="btn-menu-recenter">
                   <span>Về cổng ĐH Mỏ (18 Phố Viên)</span>
@@ -245,14 +248,26 @@
                 <div id="route-result-container"></div>
               </div>
 
-              <!-- PANE 1B: DỰ BÁO MƯA & NẮNG TỪNG GIỜ (24 GIỜ TỚI TẠI ĐÔNG NGẠC) -->
+              <!-- PANE 1B: DỰ BÁO MƯA & NẮNG 24H, CHẤT LƯỢNG KHÔNG KHÍ PM2.5 & RADAR MÂY MƯA -->
               <div id="sb-pane-weather" hidden>
                 <div id="weather-now-card" class="weather-hero-card">
                   Đang tải dữ liệu khí tượng trực tiếp...
                 </div>
-                <button type="button" id="btn-sync-live-weather" class="btn btn-primary btn-compact" style="width:100%;margin-bottom:14px;">
-                  Áp dụng thời tiết thực tế hôm nay lên Bản đồ
-                </button>
+
+                <div id="aqi-now-card" class="aqi-card">
+                  Đang tải chỉ số bụi mịn PM2.5 &amp; US AQI...
+                </div>
+
+                <div class="weather-action-grid">
+                  <button type="button" id="btn-sync-live-weather" class="btn btn-primary btn-compact">
+                    Áp dụng mưa hôm nay
+                  </button>
+                  <button type="button" id="btn-toggle-radar" class="btn btn-secondary btn-compact" aria-pressed="false">
+                    Radar mây mưa (Live)
+                  </button>
+                </div>
+                <div id="radar-status-note" class="radar-note" hidden></div>
+
                 <div class="section-head">
                   <h3>Diễn biến 24 giờ tới quanh ĐH Mỏ</h3>
                 </div>
@@ -288,8 +303,28 @@
                 </div>
               </div>
 
-              <!-- PANE 3: DANH SÁCH 60 ĐỊA ĐIỂM & ĐIỂM NÓNG NỔI BẬT -->
+              <!-- PANE 3: DANH SÁCH 60 ĐỊA ĐIỂM, ĐỊA ĐIỂM CỦA TÔI & NHỊP ĐẬP HIỆN TRƯỜNG -->
               <div id="sb-pane-list" hidden>
+                <!-- Địa điểm của tôi (100% riêng tư trên thiết bị, không cần đăng nhập) -->
+                <div id="my-places-section" class="my-places-box">
+                  <div class="my-places-head">
+                    <strong>Địa điểm của tôi (Nhà trọ · Trường · Bến buýt)</strong>
+                    <button type="button" id="btn-add-my-place" class="btn-link" style="padding:0;">+ Chấm lưu</button>
+                  </div>
+                  <div id="my-places-list" class="my-places-list">
+                    <p class="my-places-empty">Chạm vào bất kỳ ngõ/nhà trọ nào trên bản đồ rồi bấm <strong>Lưu</strong> để theo dõi cảnh báo riêng và chỉ đường về nhà 1 chạm.</p>
+                  </div>
+                </div>
+
+                <!-- Nhịp đập Cộng đồng Trực tiếp (6 giờ qua) -->
+                <div id="live-pulse-section" class="live-feed-box" hidden>
+                  <div class="my-places-head">
+                    <strong>Cập nhật hiện trường (6 giờ qua)</strong>
+                    <span class="live-dot-tag">TRỰC TIẾP</span>
+                  </div>
+                  <div id="live-pulse-list" class="live-feed-list"></div>
+                </div>
+
                 <div class="hotspot-quick-strip">
                   <span class="hotspot-strip-title">Điểm nóng xem nhanh:</span>
                   <div class="hotspot-pills-row">
@@ -954,6 +989,23 @@
       <button type="button" id="btn-export-notebooklm" class="btn btn-primary">
         Xuất Gói Nguồn cho Google NotebookLM (.MD)
       </button>
+      <form method="dialog"><button value="close" class="btn btn-secondary">Đóng</button></form>
+    </div>
+  </dialog>
+
+  <!-- Hộp thoại 8: Thẩm định An toàn Địa chỉ / Phòng trọ (3 trục thực chứng + Checklist 60 giây + Thẻ ảnh Zalo PNG) -->
+  <dialog id="scorecard-dialog" class="dialog-wide" aria-labelledby="scorecard-dialog-title" closedby="any">
+    <div class="dialog-header">
+      <h1 id="scorecard-dialog-title">Thẩm định An toàn Khí hậu &amp; Phòng trọ (Đông Ngạc – ĐH Mỏ)</h1>
+      <button type="button" class="icon-close-btn" command="close" commandfor="scorecard-dialog" id="btn-close-scorecard" aria-label="Đóng">×</button>
+    </div>
+    <div id="scorecard-body" class="drill-body"></div>
+    <div class="dialog-footer" style="justify-content:space-between;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="button" id="btn-scorecard-zalo" class="btn btn-primary">Tạo Thẻ Ảnh gửi Zalo (.PNG)</button>
+        <button type="button" id="btn-scorecard-save" class="btn btn-secondary">Lưu vào Địa điểm của tôi</button>
+        <button type="button" id="btn-scorecard-route" class="btn btn-secondary">Chỉ đường tới ĐH Mỏ</button>
+      </div>
       <form method="dialog"><button value="close" class="btn btn-secondary">Đóng</button></form>
     </div>
   </dialog>

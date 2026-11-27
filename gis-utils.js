@@ -996,3 +996,125 @@ export function computeHydrologicalSpotRisk(turfLib, lat, lng, demM, floodCorrid
     nearestSafe
   };
 }
+
+/**
+ * Phân loại chỉ số chất lượng không khí US AQI theo ngưỡng EPA (phục vụ cảnh báo bụi mịn PM2.5 quanh năm tại Hà Nội)
+ */
+export function classifyUsAqi(aqiRaw) {
+  const aqi = Number(aqiRaw);
+  if (!Number.isFinite(aqi)) {
+    return { level: 'unknown', label: 'Đang cập nhật', colorHex: '#475569', bgHex: '#f8fafc', advice: 'Đang tải dữ liệu bụi mịn PM2.5.' };
+  }
+  if (aqi <= 50) {
+    return { level: 'good', label: 'Tốt', colorHex: '#15803d', bgHex: '#f0fdf4', advice: 'Không khí trong lành, thuận lợi đi bộ và hoạt động ngoài trời.' };
+  }
+  if (aqi <= 100) {
+    return { level: 'moderate', label: 'Trung bình', colorHex: '#a16207', bgHex: '#fefce8', advice: 'Chấp nhận được; người nhạy cảm hô hấp nên mang khẩu trang khi đi qua trục Phạm Văn Đồng.' };
+  }
+  if (aqi <= 150) {
+    return { level: 'sensitive', label: 'Kém (Nhạy cảm)', colorHex: '#c2410c', bgHex: '#fff7ed', advice: 'Đeo khẩu trang lọc bụi PM2.5 khi đi xe máy/đi bộ, hạn chế vận động mạnh ngoài trời.' };
+  }
+  if (aqi <= 200) {
+    return { level: 'unhealthy', label: 'Xấu (Hại sức khỏe)', colorHex: '#b91c1c', bgHex: '#fef2f2', advice: 'Nên đeo khẩu trang N95/KF94 khi ra đường và đóng kín cửa phòng trọ hướng đường lớn.' };
+  }
+  return { level: 'very_unhealthy', label: 'Rất xấu / Nguy hại', colorHex: '#7e22ce', bgHex: '#faf5ff', advice: 'Hạn chế tối đa ra ngoài trời, sử dụng khẩu trang lọc bụi mịn chuyên dụng.' };
+}
+
+/**
+ * Thẩm định An toàn Khí hậu & Phòng trọ / Địa chỉ (3 trục thực chứng: Ngập thủy văn · Nắng nóng · Tiếp cận Y tế/Trú ẩn)
+ * Phục vụ sinh viên ĐH Mỏ - HV Tài chính - ĐH Y tế Công cộng và người dân trước khi chọn phòng trọ / nhà ở.
+ */
+export function computeAddressClimateScorecard(turfLib, lat, lng, demM, floodCorridors = [], points = [], label = 'Địa chỉ đang kiểm tra') {
+  const hydro = computeHydrologicalSpotRisk(turfLib, lat, lng, demM, floodCorridors, points);
+  const ptGeo = turfLib.point([Number(lng), Number(lat)]);
+
+  // Trục 1: An toàn chống ngập (0–100, càng cao càng khô ráo)
+  const floodSafetyScore = Math.max(5, Math.min(98, 100 - hydro.score));
+
+  // Trục 2: Độ dịu mát / tránh nắng gắt (dựa trên khoảng cách tới điểm nắng nóng xác thực & bóng mát cây xanh/điểm an toàn)
+  let nearestHeatM = Infinity;
+  let nearestHeatPt = null;
+  for (const p of points) {
+    if (p.status === 'hidden') continue;
+    if (p.category === 'heat' || (p.hazardFlags || []).includes('lack_shade_heat')) {
+      const d = Math.round(turfLib.distance(ptGeo, turfLib.point([Number(p.lng), Number(p.lat)]), { units: 'meters' }));
+      if (d < nearestHeatM) {
+        nearestHeatM = d;
+        nearestHeatPt = p;
+      }
+    }
+  }
+  let heatComfortScore = 76;
+  if (nearestHeatM <= 180) heatComfortScore = 38;
+  else if (nearestHeatM <= 360) heatComfortScore = 56;
+  else if (nearestHeatM <= 550) heatComfortScore = 68;
+  if (hydro.nearestSafe && hydro.nearestSafe.distanceMeters <= 320) {
+    heatComfortScore = Math.min(94, heatComfortScore + 10);
+  }
+
+  // Trục 3: Khả năng tiếp cận Cơ sở Y tế & Điểm trú an toàn gần nhất
+  const safeDistM = hydro.nearestSafe ? hydro.nearestSafe.distanceMeters : 2500;
+  let accessScore = 45;
+  if (safeDistM <= 300) accessScore = 96;
+  else if (safeDistM <= 600) accessScore = 86;
+  else if (safeDistM <= 1000) accessScore = 74;
+  else if (safeDistM <= 1500) accessScore = 60;
+
+  const overallScore = Math.round(floodSafetyScore * 0.55 + heatComfortScore * 0.2 + accessScore * 0.25);
+
+  let grade = 'A';
+  let gradeTitle = 'Hạng A · Nền cao, rất an toàn để ở & thuê trọ';
+  let gradeColor = '#15803d';
+  let gradeBg = '#f0fdf4';
+  if (overallScore < 44) {
+    grade = 'D';
+    gradeTitle = 'Hạng D · Rủi ro ngập cao — cân nhắc kỹ trước khi cọc';
+    gradeColor = '#b91c1c';
+    gradeBg = '#fef2f2';
+  } else if (overallScore < 62) {
+    grade = 'C';
+    gradeTitle = 'Hạng C · Cần kiểm tra kỹ nền nhà & lối ra vào khi mưa';
+    gradeColor = '#c2410c';
+    gradeBg = '#fff7ed';
+  } else if (overallScore < 78) {
+    grade = 'B';
+    gradeTitle = 'Hạng B · Khá an toàn — lưu ý ngõ phụ khi mưa cực lớn';
+    gradeColor = '#0f766e';
+    gradeBg = '#f0fdfa';
+  }
+
+  // Checklist 60 giây thực địa may đo theo đúng đặc điểm thủy văn/nhiệt tại tọa độ này
+  const checklist = [];
+  if (hydro.score >= 45) {
+    checklist.push('Kiểm tra vệt ố nước trên chân tường đầu ngõ và hỏi hàng xóm về mực nước đợt mưa lớn tháng 8/2026.');
+    checklist.push('Ưu tiên phòng từ tầng 2 trở lên; kiểm tra sân để xe tầng 1 phải cao hơn mặt ngõ tối thiểu 25–30 cm.');
+    checklist.push('Kiểm tra vị trí aptomat tổng và ổ cắm tầng 1 có lắp cao ≥ 1,2 m tránh rò điện khi ngập hay không.');
+  } else {
+    checklist.push('Khu vực nằm trên nền địa hình tương đối cao, tuy nhiên vẫn nên kiểm tra độ dốc thoát nước của riêng con ngõ vào nhà.');
+    checklist.push('Xác định sẵn 1 lối đi vòng nền cao tới cổng ĐH Mỏ / trục đường lớn nếu các trục ngoài ngập.');
+  }
+  if (heatComfortScore <= 60) {
+    checklist.push('Khu vực dễ chịu nắng bức xạ hướng Tây / mặt đường ít cây: tránh phòng mái tôn không trần chống nóng.');
+  } else {
+    checklist.push('Kiểm tra thông gió 2 chiều (cửa sổ/giếng trời) để thoát hơi nóng tích tụ sau 17h30 mùa hè.');
+  }
+  if (hydro.nearestSafe) {
+    checklist.push(`Ghi nhớ điểm hỗ trợ gần nhất: ${hydro.nearestSafe.point.name} (đi bộ ~${hydro.nearestSafe.walkingMinutes} phút).`);
+  }
+
+  return {
+    label,
+    hydro,
+    floodSafetyScore,
+    heatComfortScore,
+    accessScore,
+    overallScore,
+    grade,
+    gradeTitle,
+    gradeColor,
+    gradeBg,
+    nearestHeatName: nearestHeatPt ? nearestHeatPt.name : null,
+    nearestHeatDistM: Number.isFinite(nearestHeatM) ? nearestHeatM : null,
+    checklist
+  };
+}

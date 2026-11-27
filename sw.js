@@ -1,4 +1,4 @@
-const CACHE_NAME = 'humg-community-gis-v18';
+const CACHE_NAME = 'humg-community-gis-v19';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -48,7 +48,9 @@ self.addEventListener('fetch', (event) => {
     url.pathname.startsWith('/api/') ||
     url.hostname.includes('script.google.com') ||
     url.hostname.includes('nominatim.openstreetmap.org') ||
-    url.hostname.includes('api.open-meteo.com')
+    url.hostname.includes('api.open-meteo.com') ||
+    url.hostname.includes('air-quality-api.open-meteo.com') ||
+    url.hostname.includes('rainviewer.com')
   ) {
     return;
   }

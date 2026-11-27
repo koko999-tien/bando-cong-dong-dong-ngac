@@ -13,6 +13,8 @@ import {
   buildTransectSamples,
   evaluateWeatherScenario,
   computeHydrologicalSpotRisk,
+  computeAddressClimateScorecard,
+  classifyUsAqi,
   computePrePostEvaluation,
   findDuplicatePairs,
   auditPointsQuality,
@@ -98,6 +100,19 @@ assert.ok(spotLow.nearestSafe && spotLow.nearestSafe.point.id === 'S-01');
 
 const spotHigh = computeHydrologicalSpotRisk(turf, HUMG_CENTER.lat, HUMG_CENTER.lng, 17.0, FLOOD_STREET_CORRIDORS, SAMPLE_HUMG_POINTS);
 assert.ok(spotHigh.score < 25 && spotHigh.level === 'low', `Khu A ĐH Mỏ (17m) phải ở mức Thấp <25 (thực tế: ${spotHigh.score})`);
+
+// 1e. Kiểm tra Thẩm định An toàn Nhà trọ / Địa chỉ (3 trục A-D) & phân loại US AQI
+const cardHigh = computeAddressClimateScorecard(turf, HUMG_CENTER.lat, HUMG_CENTER.lng, 17.0, FLOOD_STREET_CORRIDORS, SAMPLE_HUMG_POINTS, '18 Phố Viên');
+assert.equal(cardHigh.grade, 'A', `Gò ĐH Mỏ phải đạt Hạng A (thực tế: ${cardHigh.grade}, điểm ${cardHigh.overallScore})`);
+assert.ok(cardHigh.checklist.length >= 3);
+
+const cardLow = computeAddressClimateScorecard(turf, 21.069413, 105.772544, 11.0, FLOOD_STREET_CORRIDORS, SAMPLE_HUMG_POINTS, 'Cuối Phố Viên');
+assert.ok(['C', 'D'].includes(cardLow.grade), `Cuối Phố Viên phải ở Hạng C hoặc D (thực tế: ${cardLow.grade}, điểm ${cardLow.overallScore})`);
+assert.ok(cardHigh.overallScore > cardLow.overallScore + 25);
+
+assert.equal(classifyUsAqi(35).level, 'good');
+assert.equal(classifyUsAqi(128).level, 'sensitive');
+assert.equal(classifyUsAqi(175).level, 'unhealthy');
 
 const ppStats = computePrePostEvaluation({
   nPre: 52,

@@ -5,6 +5,38 @@ const HUMG_LAT = 21.072514;
 const HUMG_LNG = 105.77387;
 const MAX_GEOFENCE_METERS = 6500;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const LIVE_PULSE_TTL_MS = 6 * 60 * 60 * 1000;
+const LIVE_PULSE_PATH = 'config/live-pulse.json';
+
+function pruneLivePulse(rawList = []) {
+  const now = Date.now();
+  const valid = (Array.isArray(rawList) ? rawList : [])
+    .filter((item) => item && item.pointId && item.status && Number(item.tsMs) > 0 && now - Number(item.tsMs) <= LIVE_PULSE_TTL_MS)
+    .sort((a, b) => Number(b.tsMs) - Number(a.tsMs))
+    .slice(0, 60);
+
+  const byPoint = {};
+  for (const item of valid) {
+    if (!byPoint[item.pointId]) {
+      byPoint[item.pointId] = {
+        pointId: item.pointId,
+        pointName: item.pointName || item.pointId,
+        status: item.status,
+        note: item.note || '',
+        tsMs: item.tsMs,
+        updatedAt: item.updatedAt,
+        recentCount: 1
+      };
+    } else {
+      byPoint[item.pointId].recentCount += 1;
+    }
+  }
+  return {
+    entries: valid,
+    byPoint,
+    recentFeed: valid.slice(0, 15).map(({ fp, ...pub }) => pub)
+  };
+}
 
 function haversineMeters(lat1, lon1, lat2, lon2) {
   const R = 6371000;
@@ -186,11 +218,14 @@ export async function GET(request) {
       }
     }
 
-    const [moderationMap, broadcast, reportsRaw] = await Promise.all([
+    const [moderationMap, broadcast, livePulseRaw, reportsRaw] = await Promise.all([
       readPrivateJson('config/moderation.json', {}),
       readPrivateJson('config/broadcast.json', null),
+      readPrivateJson(LIVE_PULSE_PATH, []),
       Promise.all(reportBlobs.map((rb) => readPrivateJson(rb.pathname, null)))
     ]);
+
+    const livePulse = pruneLivePulse(livePulseRaw);
 
     const kpiLive = parseSurveyStatsFromBlobs(surveyBlobs);
     const mergedReports = reportsRaw
@@ -233,6 +268,7 @@ export async function GET(request) {
         moderationMap: moderationMap || {},
         confirmCounts,
         broadcast,
+        livePulse: { byPoint: livePulse.byPoint, recentFeed: livePulse.recentFeed },
         kpiLive,
         auditLog,
         surveyRecords
@@ -248,6 +284,7 @@ export async function GET(request) {
         moderationMap: moderationMap || {},
         confirmCounts,
         broadcast,
+        livePulse: { byPoint: livePulse.byPoint, recentFeed: livePulse.recentFeed },
         kpiLive
       },
       {
@@ -291,6 +328,53 @@ export async function POST(request) {
         createdAt: new Date().toISOString()
       });
       return Response.json({ ok: true, pointId });
+    }
+
+    // 2b. Cập nhật tình trạng NGAY LÚC NÀY (Đang ngập / Đang rút / Đã khô — tự làm mới sau 6 giờ theo chuẩn PetaBencana)
+    if (action === 'live_checkin') {
+      const pointId = cleanText(body.pointId, 40);
+      const pointName = cleanText(body.pointName || pointId, 140);
+      const status = ['flooding', 'receding', 'clear'].includes(body.status) ? body.status : null;
+      const note = cleanText(body.note || '', 160);
+      if (!pointId || !status) {
+        return Response.json({ ok: false, error: 'Thiếu mã vị trí hoặc trạng thái cập nhật.' }, { status: 400 });
+      }
+      if (hasSpamContent(note)) {
+        return Response.json({ ok: false, error: 'Ghi chú chứa liên kết hoặc nội dung không hợp lệ.' }, { status: 400 });
+      }
+
+      const fp = getVoterFingerprint(request);
+      const nowMs = Date.now();
+      const rawList = (await readPrivateJson(LIVE_PULSE_PATH, [])) || [];
+      const recentSame = rawList.find(
+        (x) => x.pointId === pointId && x.fp === fp && nowMs - Number(x.tsMs || 0) < 3 * 60 * 1000
+      );
+      if (recentSame) {
+        const pulse = pruneLivePulse(rawList);
+        return Response.json({
+          ok: true,
+          throttled: true,
+          livePulse: { byPoint: pulse.byPoint, recentFeed: pulse.recentFeed }
+        });
+      }
+
+      const entry = {
+        id: `LP-${nowMs.toString(36).slice(-5)}`,
+        pointId,
+        pointName,
+        status,
+        note,
+        fp,
+        tsMs: nowMs,
+        updatedAt: new Date(nowMs).toISOString()
+      };
+      const pruned = pruneLivePulse([entry, ...rawList]);
+      await writePrivateJson(LIVE_PULSE_PATH, pruned.entries);
+      return Response.json({
+        ok: true,
+        entry: { ...entry, fp: undefined },
+        livePulse: { byPoint: pruned.byPoint, recentFeed: pruned.recentFeed }
+      });
     }
 
     // 3. Người dân gửi điểm mới lên Bản đồ Cộng đồng
