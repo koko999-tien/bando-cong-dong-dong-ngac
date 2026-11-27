@@ -119,8 +119,8 @@
     .qr-card img { width: 128px; height: 128px; background: #fff; padding: 4px; border: 1px solid var(--border); border-radius: 6px; margin: 6px 0; }
 
     dialog {
-      border: 1px solid var(--border); border-radius: 12px; padding: 0; width: min(640px, calc(100vw - 24px));
-      max-height: calc(100vh - 24px); background: #fff; color: var(--ink);
+      border: 1px solid var(--border); border-radius: 12px; padding: 0; width: min(640px, calc(100% - 24px));
+      max-height: calc(100dvh - 24px); background: #fff; color: var(--ink);
     }
     dialog[open] { display: flex; flex-direction: column; }
     dialog::backdrop { background: rgba(15, 23, 42, 0.5); }
@@ -152,7 +152,11 @@
     @media (max-width: 920px) {
       .grid-4, .qr-grid { grid-template-columns: repeat(2, 1fr); }
       .grid-2, .grid-3, .filter-grid { grid-template-columns: 1fr; }
-      .kpi-row { grid-template-columns: 1fr 80px 80px; }
+      .kpi-row { grid-template-columns: 1fr auto; gap: 6px 10px; }
+      .kpi-row .prog-track { grid-column: 1 / -1; }
+    }
+    @media (max-width: 540px) {
+      .grid-4, .qr-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>

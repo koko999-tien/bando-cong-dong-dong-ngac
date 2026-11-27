@@ -391,13 +391,14 @@ function createHydrologicalInundationLayer(L, getStateFn) {
       if (st.simRainMm <= 5) return;
 
       const rainMm = Number(st.simRainMm) || 70;
-      // Ngưỡng mặt nước dâng tương đương theo lượng mưa trên địa hình lòng máng sông Nhuệ (từ 9.4m khi mưa 20mm lên 13.0m khi mưa 140mm)
-      const waterElevThreshold = 8.8 + (rainMm / 140) * 4.3;
+      // Ngưỡng mặt nước dâng tương đương theo lượng mưa trên địa hình lòng máng sông Nhuệ (từ 9.1m khi mưa vừa lên 12.45m khi mưa 140mm)
+      const waterElevThreshold = 8.6 + (rainMm / 140) * 3.85;
       const cLat = st.center.lat;
       const cLng = st.center.lng;
-      const maxRadiusDegSq = Math.pow((st.radiusKm / 110.5) * 1.03, 2);
+      const maxRadiusDegSq = Math.pow((st.radiusKm / 110.5) * 1.04, 2);
+      const fadeStartSq = maxRadiusDegSq * 0.58;
 
-      // Vẽ lên offscreen canvas nhỏ rồi phóng mượt bilinear lên màn hình -> đạt 60fps tuyệt đối mà dải nước tự nhiên mềm mại
+      // Vẽ lên offscreen canvas nhỏ rồi phóng mượt bilinear lên màn hình -> đạt 60fps tuyệt đối, viền vùng nước chuyển mượt tự nhiên không bị cắt tròn cứng
       const scale = 6;
       const wSmall = Math.max(1, Math.ceil(size.x / scale));
       const hSmall = Math.max(1, Math.ceil(size.y / scale));
@@ -416,12 +417,12 @@ function createHydrologicalInundationLayer(L, getStateFn) {
           return {
             sx: px.x / scale,
             sy: px.y / scale,
-            weight: p.severity === 'severe' ? 1.35 : 0.95
+            weight: p.severity === 'severe' ? 1.25 : 0.85
           };
         });
 
       const zoom = this._map.getZoom();
-      const spotRadiusSmall = Math.max(3.5, Math.min(14, Math.pow(1.45, zoom - 12) * 3.8));
+      const spotRadiusSmall = Math.max(3, Math.min(10.5, Math.pow(1.4, zoom - 12) * 3.1));
       const spotRadSq = spotRadiusSmall * spotRadiusSmall;
 
       for (let py = 0; py < hSmall; py++) {
@@ -431,48 +432,52 @@ function createHydrologicalInundationLayer(L, getStateFn) {
           const ll = this._map.containerPointToLatLng([screenX, screenY]);
           const dLat = ll.lat - cLat;
           const dLng = (ll.lng - cLng) * 0.933;
-          if (dLat * dLat + dLng * dLng > maxRadiusDegSq) continue;
+          const distSq = dLat * dLat + dLng * dLng;
+          if (distSq > maxRadiusDegSq) continue;
+
+          const edgeFade = distSq <= fadeStartSq ? 1 : Math.max(0, 1 - (distSq - fadeStartSq) / (maxRadiusDegSq - fadeStartSq));
 
           const dem = sampleDemBilinear(ll.lat, ll.lng);
           let depthScore = 0;
           if (dem !== null && dem < waterElevThreshold) {
-            depthScore += (waterElevThreshold - dem) * 0.48;
+            depthScore += (waterElevThreshold - dem) * 0.46;
           }
 
           // Cộng hiệu ứng phễu thoát nước đô thị quanh các ngõ/phố ngập xác thực
           if (rainMm >= 25) {
-            const rainFactor = Math.min(1.35, rainMm / 70);
+            const rainFactor = Math.min(1.3, rainMm / 70);
             for (let k = 0; k < floodSpots.length; k++) {
               const sp = floodSpots[k];
               const dx = px - sp.sx;
               const dy = py - sp.sy;
               const d2 = dx * dx + dy * dy;
               if (d2 < spotRadSq) {
-                depthScore += (1 - d2 / spotRadSq) * sp.weight * 0.85 * rainFactor;
+                depthScore += (1 - d2 / spotRadSq) * sp.weight * 0.82 * rainFactor;
               }
             }
           }
 
-          if (depthScore <= 0.12) continue;
+          depthScore *= edgeFade;
+          if (depthScore <= 0.24) continue;
           const idx = (py * wSmall + px) * 4;
-          if (depthScore >= 1.55) {
-            // Rốn ngập sâu / xoáy cống (Xanh chàm đậm cảnh báo cao)
+          if (depthScore >= 1.45) {
+            // Rốn ngập sâu / xoáy cống (Xanh chàm đậm cảnh báo cao, giữ rõ chữ tên đường bên dưới)
             data[idx] = 29;
             data[idx + 1] = 78;
             data[idx + 2] = 216;
-            data[idx + 3] = Math.min(158, Math.round(95 + depthScore * 26));
-          } else if (depthScore >= 0.65) {
+            data[idx + 3] = Math.min(142, Math.round(82 + depthScore * 24));
+          } else if (depthScore >= 0.68) {
             // Ngập bắp chân / nửa bánh xe (Xanh dương thủy văn rõ nét)
             data[idx] = 2;
             data[idx + 1] = 132;
             data[idx + 2] = 199;
-            data[idx + 3] = Math.min(128, Math.round(68 + depthScore * 36));
+            data[idx + 3] = Math.min(112, Math.round(54 + depthScore * 32));
           } else {
-            // Vùng đọng nước mặt đường / ngõ thấp (Xanh lam nhạt)
+            // Vùng đọng nước mặt đường / ngõ thấp (Xanh lam trong trẻo)
             data[idx] = 14;
             data[idx + 1] = 165;
             data[idx + 2] = 233;
-            data[idx + 3] = Math.min(92, Math.round(36 + depthScore * 55));
+            data[idx + 3] = Math.min(76, Math.round(24 + depthScore * 48));
           }
         }
       }
@@ -695,7 +700,6 @@ function initApp() {
     zoomControl: false
   });
 
-  L.control.zoom({ position: 'bottomright' }).addTo(map);
   L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
 
   const bufferLayerGroup = L.layerGroup().addTo(map);
@@ -715,17 +719,19 @@ function initApp() {
 
   const centerIcon = L.divIcon({
     className: 'center-pin-wrap',
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    html: `<svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true">
-      <circle cx="16" cy="16" r="13" fill="#0F766E" fill-opacity="0.22" stroke="#0F766E" stroke-width="2.2"/>
-      <circle cx="16" cy="16" r="5" fill="#0F766E" stroke="#FFFFFF" stroke-width="2.2"/>
-    </svg>`
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+    html: `<div class="humg-landmark-beacon" aria-hidden="true">
+      <span class="humg-beacon-dot"></span>
+      <span>ĐH Mỏ - Địa chất</span>
+    </div>`
   });
 
   const centerMarker = L.marker([state.center.lat, state.center.lng], {
     icon: centerIcon,
     draggable: false,
+    interactive: false,
+    zIndexOffset: 850,
     title: 'Trường Đại học Mỏ - Địa chất (18 Phố Viên)'
   }).addTo(map);
 
@@ -743,6 +749,19 @@ function initApp() {
     mobBtnNearest: document.getElementById('mob-btn-nearest'),
     mobBtnDrill: document.getElementById('mob-btn-drill'),
     topMoreMenu: document.getElementById('top-more-menu'),
+    mapLegendDetails: document.getElementById('map-legend-details'),
+    btnBrandHome: document.getElementById('btn-brand-home'),
+    btnClearSearch: document.getElementById('btn-clear-search'),
+    btnZoomIn: document.getElementById('btn-zoom-in'),
+    btnZoomOut: document.getElementById('btn-zoom-out'),
+    btnMenuRecenter: document.getElementById('btn-menu-recenter'),
+    menuBmBtns: document.querySelectorAll('.menu-bm-btn'),
+    btnMobMapHome: document.getElementById('btn-mob-map-home'),
+    qcatCountAll: document.getElementById('qcat-count-all'),
+    qcatCountFlood: document.getElementById('qcat-count-flood'),
+    qcatCountSafe: document.getElementById('qcat-count-safe'),
+    qcatCountHeat: document.getElementById('qcat-count-heat'),
+    hotspotJumpBtns: document.querySelectorAll('.js-hotspot-jump'),
     btnToggleSidebar: document.getElementById('btn-toggle-sidebar'),
     sidebarFabLabel: document.getElementById('sidebar-fab-label'),
     sbTabBtns: document.querySelectorAll('.sb-tab-btn'),
@@ -1180,10 +1199,20 @@ function initApp() {
     explore: 'Công cụ Nghiên cứu GIS (Đề tài 08)'
   };
 
+  function syncMobileMapHomeActive() {
+    if (!els.btnMobMapHome) return;
+    const anyCardOpen =
+      (els.contextSheet && !els.contextSheet.hidden) ||
+      (els.spotInspectorCard && !els.spotInspectorCard.hidden) ||
+      (els.nearestBar && !els.nearestBar.hidden);
+    els.btnMobMapHome.classList.toggle('is-map-active', !anyCardOpen && state.mode === 'pan');
+  }
+
   function closeContextSheet() {
     state.activeSbTab = '';
     if (els.contextSheet) els.contextSheet.hidden = true;
     els.openSheetChips?.forEach((c) => c.classList.remove('is-panel-open'));
+    syncMobileMapHomeActive();
   }
 
   function openContextSheet(paneKey) {
@@ -1191,6 +1220,7 @@ function initApp() {
     if (els.spotInspectorCard) els.spotInspectorCard.hidden = true;
     els.nearestBar.hidden = true;
     els.searchResults.hidden = true;
+    if (state.mode !== 'pan') setMode('pan');
 
     state.activeSbTab = paneKey;
     els.contextSheet.hidden = false;
@@ -1203,10 +1233,14 @@ function initApp() {
     if (els.sbPaneExplore) els.sbPaneExplore.hidden = paneKey !== 'explore';
 
     els.openSheetChips?.forEach((c) => {
-      if (c.classList.contains('map-chip')) {
+      if (c.classList.contains('map-chip') || c.classList.contains('dock-nav-btn')) {
         c.classList.toggle('is-panel-open', c.dataset.sheet === paneKey);
       }
     });
+    els.sbTabBtns?.forEach((b) => {
+      b.classList.toggle('is-active', b.dataset.sbtab === paneKey);
+    });
+    syncMobileMapHomeActive();
 
     if (paneKey === 'route') {
       evaluateSelectedRoute(true);
@@ -1230,8 +1264,37 @@ function initApp() {
 
   els.btnCloseSheet?.addEventListener('click', closeContextSheet);
 
+  els.btnMobMapHome?.addEventListener('click', () => {
+    closeContextSheet();
+    if (els.spotInspectorCard) els.spotInspectorCard.hidden = true;
+    els.nearestBar.hidden = true;
+    spotInspectGroup.clearLayers();
+    nearestLinkGroup.clearLayers();
+    if (state.mode !== 'pan') setMode('pan');
+    syncMobileMapHomeActive();
+  });
+
   els.sbTabBtns.forEach((btn) => {
     btn.addEventListener('click', () => openContextSheet(btn.dataset.sbtab));
+  });
+
+  els.btnZoomIn?.addEventListener('click', () => map.zoomIn());
+  els.btnZoomOut?.addEventListener('click', () => map.zoomOut());
+
+  const recenterToHumg = () => {
+    map.flyTo([HUMG_CENTER.lat, HUMG_CENTER.lng], 15, { duration: 0.45 });
+  };
+  els.btnBrandHome?.addEventListener('click', recenterToHumg);
+  els.btnMenuRecenter?.addEventListener('click', () => {
+    if (els.topMoreMenu) els.topMoreMenu.open = false;
+    recenterToHumg();
+  });
+
+  els.hotspotJumpBtns?.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const pid = btn.dataset.ptid;
+      if (pid) flyToAndOpenPoint(pid);
+    });
   });
 
   els.btnToggleExpert?.addEventListener('click', () => {
@@ -1243,6 +1306,7 @@ function initApp() {
     state.showRings = state.isExpertMode;
     if (els.toggleRings) els.toggleRings.checked = state.isExpertMode;
     if (state.isExpertMode) {
+      centerMarker.options.interactive = true;
       centerMarker.dragging?.enable();
       openContextSheet('explore');
     } else {
@@ -1265,11 +1329,15 @@ function initApp() {
     if (els.topMoreMenu?.open && !els.topMoreMenu.contains(e.target)) {
       els.topMoreMenu.open = false;
     }
+    if (els.mapLegendDetails?.open && !els.mapLegendDetails.contains(e.target)) {
+      els.mapLegendDetails.open = false;
+    }
     if (!els.searchResults.hidden && !els.searchForm.parentElement.contains(e.target)) {
       els.searchResults.hidden = true;
     }
   });
-  els.topMoreMenu?.querySelector('.nav-dropdown-menu')?.addEventListener('click', () => {
+  els.topMoreMenu?.querySelector('.nav-dropdown-menu')?.addEventListener('click', (e) => {
+    if (e.target.closest('.menu-bm-btn')) return;
     els.topMoreMenu.open = false;
   });
 
@@ -1485,6 +1553,7 @@ function initApp() {
 
     els.nearestText.innerHTML = `<strong>Điểm an toàn xác thực gần nhất:</strong> ${escapeHtml(found.point.name)}<br>Cách <strong class="mono-num">${found.distanceMeters} m</strong> (${escapeHtml(found.bearingLabel)}) · Đi bộ khoảng <strong>~${found.walkingMinutes} phút</strong>.`;
     els.nearestBar.hidden = false;
+    syncMobileMapHomeActive();
   }
 
   els.nearestClose.addEventListener('click', () => {
@@ -1492,6 +1561,7 @@ function initApp() {
     closeContextSheet();
     if (els.spotInspectorCard) els.spotInspectorCard.hidden = true;
     nearestLinkGroup.clearLayers();
+    syncMobileMapHomeActive();
   });
 
   els.btnQuickShelter.addEventListener('click', () => {
@@ -1510,13 +1580,26 @@ function initApp() {
   });
 
   let currentBaseKey = 'clean';
-  els.basemapSelect.addEventListener('change', () => {
-    const nextKey = els.basemapSelect.value;
+  function applyBasemapChoice(nextKey) {
     if (baseLayers[nextKey] && nextKey !== currentBaseKey) {
       map.removeLayer(baseLayers[currentBaseKey]);
       baseLayers[nextKey].addTo(map);
       currentBaseKey = nextKey;
     }
+    if (els.basemapSelect && els.basemapSelect.value !== nextKey) {
+      els.basemapSelect.value = nextKey;
+    }
+    els.menuBmBtns?.forEach((b) => b.classList.toggle('is-active', b.dataset.bm === nextKey));
+  }
+
+  els.basemapSelect.addEventListener('change', () => {
+    applyBasemapChoice(els.basemapSelect.value);
+  });
+  els.menuBmBtns?.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      applyBasemapChoice(btn.dataset.bm);
+      if (els.topMoreMenu) els.topMoreMenu.open = false;
+    });
   });
 
   els.btnFitBuffer.addEventListener('click', () => {
@@ -1539,6 +1622,7 @@ function initApp() {
   els.btnCloseInspector?.addEventListener('click', () => {
     if (els.spotInspectorCard) els.spotInspectorCard.hidden = true;
     spotInspectGroup.clearLayers();
+    syncMobileMapHomeActive();
   });
 
   async function inspectSpotAt(lat, lng) {
@@ -1620,6 +1704,7 @@ function initApp() {
       </div>
     `;
     els.spotInspectorCard.hidden = false;
+    syncMobileMapHomeActive();
 
     els.inspBody.querySelector('.js-insp-from')?.addEventListener('click', () => {
       setCustomRoutePoint('orig', lat, lng, state.lastInspectedSpot?.label || 'Điểm chọn trên bản đồ');
@@ -1845,10 +1930,25 @@ function initApp() {
     });
   }
 
+  function syncClearSearchBtn() {
+    if (els.btnClearSearch) {
+      els.btnClearSearch.hidden = !els.locationQuery.value.length;
+    }
+  }
+
+  els.btnClearSearch?.addEventListener('click', () => {
+    els.locationQuery.value = '';
+    syncClearSearchBtn();
+    renderInstantSuggestions('');
+    els.locationQuery.focus();
+  });
+
   els.locationQuery.addEventListener('focus', () => {
+    syncClearSearchBtn();
     renderInstantSuggestions(els.locationQuery.value);
   });
   els.locationQuery.addEventListener('input', () => {
+    syncClearSearchBtn();
     renderInstantSuggestions(els.locationQuery.value);
   });
   els.locationQuery.addEventListener('keydown', (e) => {
@@ -2028,6 +2128,18 @@ function initApp() {
     els.statConfirmTotal.textContent = String(state.analysis.stats.totalConfirmations);
     els.statPendingC.textContent = String(state.analysis.stats.communityPendingC);
 
+    const visiblePts = state.analysis.points.filter((p) => p.status !== 'hidden');
+    if (els.qcatCountAll) els.qcatCountAll.textContent = String(visiblePts.length);
+    if (els.qcatCountFlood) {
+      els.qcatCountFlood.textContent = String(visiblePts.filter((p) => p.category === 'flood' || p.category === 'traffic').length);
+    }
+    if (els.qcatCountSafe) {
+      els.qcatCountSafe.textContent = String(visiblePts.filter((p) => p.layerGroup === 'safe').length);
+    }
+    if (els.qcatCountHeat) {
+      els.qcatCountHeat.textContent = String(visiblePts.filter((p) => p.category === 'heat').length);
+    }
+
     const riskAB = state.analysis.points.filter((p) => p.layerGroup === 'risk' && p.confidenceTier !== 'C').length;
     const safeAB = state.analysis.points.filter((p) => p.layerGroup === 'safe' && p.confidenceTier !== 'C').length;
     const pendingC = state.analysis.points.filter((p) => p.confidenceTier === 'C').length;
@@ -2110,8 +2222,16 @@ function initApp() {
   function flyToAndOpenPoint(pointId) {
     const pt = state.points.find((p) => p.id === pointId);
     if (!pt) return;
+    if (window.innerWidth <= 860 && els.contextSheet && !els.contextSheet.hidden) {
+      closeContextSheet();
+    }
     const targetZoom = Math.max(map.getZoom(), 16);
-    map.flyTo([pt.lat, pt.lng], targetZoom, { duration: 0.45 });
+    let targetCenter = L.latLng(pt.lat, pt.lng);
+    if (window.innerWidth > 860 && els.contextSheet && !els.contextSheet.hidden) {
+      const ptPx = map.project(targetCenter, targetZoom);
+      targetCenter = map.unproject(ptPx.subtract([190, 0]), targetZoom);
+    }
+    map.flyTo(targetCenter, targetZoom, { duration: 0.45 });
     setTimeout(() => {
       markerMap.get(pointId)?.openPopup();
     }, 480);
@@ -2274,8 +2394,8 @@ function initApp() {
       });
 
       marker.bindPopup(popupEl, {
-        autoPanPaddingTopLeft: [16, 56],
-        autoPanPaddingBottomRight: [16, 48]
+        autoPanPaddingTopLeft: [24, 118],
+        autoPanPaddingBottomRight: [68, 102]
       });
       markerMap.set(pt.id, marker);
     }
@@ -2741,16 +2861,16 @@ function initApp() {
     const roundedTemp = Math.round(Number(temp));
     if (rain >= 10 || dRain >= 40) {
       els.liveWeatherPill.className = 'live-pill live-pill-danger js-open-sheet';
-      els.liveWeatherPill.textContent = `${roundedTemp}°C · Cảnh báo mưa lớn`;
+      els.liveWeatherPill.textContent = `${roundedTemp}°C · Mưa lớn`;
     } else if (rain > 0.2) {
       els.liveWeatherPill.className = 'live-pill live-pill-warn js-open-sheet';
-      els.liveWeatherPill.textContent = `${roundedTemp}°C · Đang mưa (${rain}mm)`;
+      els.liveWeatherPill.textContent = `${roundedTemp}°C · Mưa ${rain}mm`;
     } else if (app >= 38 || dMax >= 39) {
       els.liveWeatherPill.className = 'live-pill live-pill-warn js-open-sheet';
-      els.liveWeatherPill.textContent = `${roundedTemp}°C · Trời nắng gắt`;
+      els.liveWeatherPill.textContent = `${roundedTemp}°C · Nắng gắt`;
     } else {
       els.liveWeatherPill.className = 'live-pill live-pill-ok js-open-sheet';
-      els.liveWeatherPill.textContent = `${roundedTemp}°C · Trời tạnh ráo`;
+      els.liveWeatherPill.textContent = `${roundedTemp}°C · Tạnh ráo`;
     }
 
     if (els.weatherNowCard) {
