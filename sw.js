@@ -1,4 +1,4 @@
-const CACHE_NAME = 'humg-community-gis-v8';
+const CACHE_NAME = 'humg-community-gis-v9';
 const CORE_ASSETS = [
   './',
   './index.html',

@@ -913,3 +913,86 @@ export function parseImportedPoints(rawText, fileName = '') {
   }
   return imported;
 }
+
+/**
+ * Chẩn đoán Thủy văn & Độ nhạy cảm Ngập cục bộ (0–100) tại bất kỳ tọa độ nào trên bản đồ
+ * Kết hợp thực chứng: (1) Độ trũng địa hình Copernicus DEM GLO-30 so với ngưỡng 13,8m,
+ * (2) Khoảng cách tới 18 hành lang ngõ/phố ngập OSM, (3) Khoảng cách tới 45 điểm rủi ro xác thực.
+ */
+export function computeHydrologicalSpotRisk(turfLib, lat, lng, demM, floodCorridors = [], points = []) {
+  const ptGeo = turfLib.point([Number(lng), Number(lat)]);
+  const dem = demM !== null && demM !== undefined && Number.isFinite(Number(demM)) ? Math.round(Number(demM) * 10) / 10 : null;
+  const diffVsHumgM = dem !== null ? Math.round((dem - 17.0) * 10) / 10 : null;
+
+  let nearestCorridor = null;
+  let corridorDistM = Infinity;
+  for (const fc of floodCorridors) {
+    if (!Array.isArray(fc.coordinates) || fc.coordinates.length < 2) continue;
+    const d = Math.round(turfLib.pointToLineDistance(ptGeo, turfLib.lineString(fc.coordinates), { units: 'meters' }));
+    if (d < corridorDistM) {
+      corridorDistM = d;
+      nearestCorridor = fc;
+    }
+  }
+
+  let nearestFloodPoint = null;
+  let floodPointDistM = Infinity;
+  for (const p of points) {
+    if (p.status === 'hidden' || (p.category !== 'flood' && p.category !== 'traffic')) continue;
+    const d = Math.round(turfLib.distance(ptGeo, turfLib.point([Number(p.lng), Number(p.lat)]), { units: 'meters' }));
+    if (d < floodPointDistM) {
+      floodPointDistM = d;
+      nearestFloodPoint = p;
+    }
+  }
+
+  const nearestSafe = findNearestSafePoint(turfLib, lat, lng, points);
+
+  const demScore = dem === null ? 18 : Math.max(0, Math.min(54, (13.8 - dem) * 13.5));
+  const corridorScore =
+    nearestCorridor && corridorDistM <= 185
+      ? (1 - corridorDistM / 185) * (nearestCorridor.severity === 'severe' ? 28 : 20)
+      : 0;
+  const pointScore =
+    nearestFloodPoint && floodPointDistM <= 230
+      ? (1 - floodPointDistM / 230) * 20
+      : 0;
+
+  const score = Math.min(98, Math.max(4, Math.round(demScore + corridorScore + pointScore)));
+
+  let level = 'low';
+  let levelLabel = 'THẤP — Dải nền cao thoát nước tốt';
+  let colorHex = '#15803d';
+  let bgHex = '#f0fdf4';
+  if (score >= 70) {
+    level = 'very_high';
+    levelLabel = 'RẤT CAO — Lòng máng trũng / Sát rốn ngập';
+    colorHex = '#b91c1c';
+    bgHex = '#fef2f2';
+  } else if (score >= 45) {
+    level = 'high';
+    levelLabel = 'KHÁ CAO — Dễ ngập cục bộ khi mưa ≥50mm';
+    colorHex = '#c2410c';
+    bgHex = '#fff7ed';
+  } else if (score >= 25) {
+    level = 'moderate';
+    levelLabel = 'TRUNG BÌNH — Chú ý đọng nước cống ngõ';
+    colorHex = '#b45309';
+    bgHex = '#fffbeb';
+  }
+
+  return {
+    lat: Number(Number(lat).toFixed(6)),
+    lng: Number(Number(lng).toFixed(6)),
+    dem,
+    diffVsHumgM,
+    score,
+    level,
+    levelLabel,
+    colorHex,
+    bgHex,
+    nearestCorridor: nearestCorridor ? { id: nearestCorridor.id, name: nearestCorridor.name, rainThresholdMm: nearestCorridor.rainThresholdMm, distanceMeters: corridorDistM } : null,
+    nearestFloodPoint: nearestFloodPoint ? { id: nearestFloodPoint.id, name: nearestFloodPoint.name, distanceMeters: floodPointDistM, waterScaleLabel: nearestFloodPoint.waterScaleLabel } : null,
+    nearestSafe
+  };
+}

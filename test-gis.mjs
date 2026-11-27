@@ -12,6 +12,7 @@ import {
   analyzePolylineCorridor,
   buildTransectSamples,
   evaluateWeatherScenario,
+  computeHydrologicalSpotRisk,
   computePrePostEvaluation,
   findDuplicatePairs,
   auditPointsQuality,
@@ -89,6 +90,14 @@ assert.ok(transectRes.maxElevM > transectRes.minElevM);
 
 const scen70 = evaluateWeatherScenario(SAMPLE_HUMG_POINTS, 'rain_70');
 assert.ok(scen70.dimNonMatching && scen70.activeRiskCount >= 6);
+
+// 1d. Kiểm tra Chẩn đoán Thủy văn Tức thì (Spot Inspector 0-100) tại Cuối Phố Viên (11m) vs Khu A ĐH Mỏ (17m)
+const spotLow = computeHydrologicalSpotRisk(turf, 21.069413, 105.772544, 11.0, FLOOD_STREET_CORRIDORS, SAMPLE_HUMG_POINTS);
+assert.ok(spotLow.score >= 70 && spotLow.level === 'very_high', `Cuối Phố Viên (11m) phải đạt nguy cơ Rất cao >=70 (thực tế: ${spotLow.score})`);
+assert.ok(spotLow.nearestSafe && spotLow.nearestSafe.point.id === 'S-01');
+
+const spotHigh = computeHydrologicalSpotRisk(turf, HUMG_CENTER.lat, HUMG_CENTER.lng, 17.0, FLOOD_STREET_CORRIDORS, SAMPLE_HUMG_POINTS);
+assert.ok(spotHigh.score < 25 && spotHigh.level === 'low', `Khu A ĐH Mỏ (17m) phải ở mức Thấp <25 (thực tế: ${spotHigh.score})`);
 
 const ppStats = computePrePostEvaluation({
   nPre: 52,

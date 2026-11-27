@@ -25,7 +25,7 @@ const syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChann
 
 const DEFAULT_KPIS = [
   { id: 'pretest', label: '1. Phiếu khảo sát đầu vào (Pre-test 15 câu)', target: 50, current: 0, unit: 'phiếu', autoGps: false },
-  { id: 'gps', label: '2. Điểm thực địa & xác thực có tọa độ GPS (≤2km)', target: 15, current: 32, unit: 'điểm', autoGps: true },
+  { id: 'gps', label: '2. Điểm thực địa & xác thực có tọa độ GPS (≤2km)', target: 15, current: 60, unit: 'điểm', autoGps: true },
   { id: 'reach', label: '3. Lượt tiếp cận bài truyền thông (FB/Zalo/TikTok)', target: 300, current: 0, unit: 'lượt', autoGps: false },
   { id: 'engage', label: '4. Lượt tương tác (Like, Share, Bình luận, +1 Web)', target: 100, current: 0, unit: 'lượt', autoGps: false },
   { id: 'bitly', label: '5. Lượt mở Bản đồ số (Bitly Analytics)', target: 60, current: 0, unit: 'lượt', autoGps: false },

@@ -6,6 +6,7 @@ import {
   ERA5_CLIMATE_FACTS,
   MONTHLY_2026_CLIMATE,
   EMERGENCY_DIRECTORY,
+  FLOOD_STREET_CORRIDORS,
   SAMPLE_HUMG_POINTS
 } from '../humg-data.js';
 import { KNOWLEDGE_NOTEBOOK_CARDS } from '../knowledge-engine.js';
@@ -170,7 +171,7 @@ async function loadCloudCommunitySnapshot() {
   }
 }
 
-function buildGroundedContextString(extraReports = [], liveWeather = null, broadcast = null) {
+function buildGroundedContextString(extraReports = [], liveWeather = null, broadcast = null, spotContext = null) {
   const ptsSummary = [...SAMPLE_HUMG_POINTS, ...extraReports]
     .filter((p) => p.status !== 'hidden')
     .map(
@@ -178,6 +179,10 @@ function buildGroundedContextString(extraReports = [], liveWeather = null, broad
         `[${p.id}] ${p.name} | Lớp: ${p.layerGroup === 'safe' ? 'AN TOÀN' : 'RỦI RO'} (${CATEGORY_LABELS[p.category] || p.category}, Hạng ${p.confidenceTier}) | DEM: ${p.elevationM ?? '?'}m | Nguồn: ${p.sourceCitation || p.sourceType} | Chi tiết: ${(p.notes || '').slice(0, 180)}`
     )
     .join('\n');
+
+  const corridorSummary = FLOOD_STREET_CORRIDORS.map(
+    (fc) => `(${fc.id}) ${fc.name} — ngập khi mưa ≥${fc.rainThresholdMm}mm | Nguồn: ${fc.source}`
+  ).join('\n');
 
   const eraSummary = ERA5_CLIMATE_FACTS.years
     .map(
@@ -203,10 +208,16 @@ function buildGroundedContextString(extraReports = [], liveWeather = null, broad
       ? `BẢN TIN ĐIỀU HÀNH ĐANG PHÁT TRÊN WEB (${broadcast.level}): ${broadcast.message}`
       : '';
 
+  const spotStr =
+    spotContext && typeof spotContext === 'object'
+      ? `VỊ TRÍ NGƯỜI DÙNG ĐANG CHẤM CHẨN ĐOÁN TRỰC TIẾP TRÊN BẢN ĐỒ: ${cleanText(spotContext.label || 'Điểm chọn', 140)} (${Number(spotContext.lat || 0).toFixed(5)}°N, ${Number(spotContext.lng || 0).toFixed(5)}°E), cao độ vệ tinh Copernicus DEM: ${spotContext.dem ?? '?'}m DSM, chỉ số nhạy cảm ngập thủy văn: ${spotContext.score ?? '?'}/100 (${cleanText(spotContext.levelLabel || '', 80)}), nơi trú an toàn gần nhất: ${cleanText(spotContext.nearestSafeName || '', 120)} (${spotContext.nearestSafeDistM ?? '?'}m).`
+      : '';
+
   return [
-    `TÂM KHẢO SÁT: ${HUMG_CENTER.label} (${HUMG_CENTER.lat}°N, ${HUMG_CENTER.lng}°E, bán kính 2,0 km).`,
+    `TÂM KHẢO SÁT: ${HUMG_CENTER.label} (${HUMG_CENTER.lat}°N, ${HUMG_CENTER.lng}°E, bán kính 2,0 km; 78,5% diện tích 2km có cao độ Copernicus DEM GLO-30 ≤ 12,0 m DSM, riêng Khu A ĐH Mỏ nằm trên gò cao ~17 m DSM).`,
     liveStr,
     bcStr,
+    spotStr,
     '--- CHUỖI KHÍ TƯỢNG THỰC TẾ ECMWF ERA5 (2024–2026) ---',
     eraSummary,
     `Chi tiết 11 tháng 2026: ${month2026}`,
@@ -214,7 +225,9 @@ function buildGroundedContextString(extraReports = [], liveWeather = null, broad
     emerg,
     '--- HỒ SƠ TRI THỨC CHUYÊN SÂU ---',
     kbDigest,
-    '--- DANH SÁCH ĐẦY ĐỦ ĐIỂM BẢN ĐỒ (GHI RÕ MÃ [R-xx] / [S-xx] KHI TRÍCH DẪN) ---',
+    '--- 18 TUYẾN ĐƯỜNG & NGÕ XÓM TRỌ NGẬP XÁC THỰC (OPENSTREETMAP) ---',
+    corridorSummary,
+    '--- DANH SÁCH ĐẦY ĐỦ 60+ ĐIỂM BẢN ĐỒ (GHI RÕ MÃ [R-xx] / [S-xx] KHI TRÍCH DẪN) ---',
     ptsSummary
   ]
     .filter(Boolean)
@@ -293,12 +306,12 @@ export async function POST(request) {
       }
 
       const { extraReports, broadcast } = await loadCloudCommunitySnapshot();
-      const groundedContext = buildGroundedContextString(extraReports, body.liveWeather || null, broadcast);
+      const groundedContext = buildGroundedContextString(extraReports, body.liveWeather || null, broadcast, body.spotContext || null);
 
       const sysPrompt = [
         'Bạn là Trợ lý AI Thực chứng của dự án "Bản đồ Cộng đồng Mở Thích ứng Nắng nóng & Ngập cục bộ khu vực Trường ĐH Mỏ - Địa chất (Phường Đông Ngạc, Hà Nội — Đề tài 08)".',
         'NGUYÊN TẮC KỶ LUẬT CHỐNG ẢO GIÁC (BẮT BUỘC 100%):',
-        '1. CHỈ sử dụng dữ liệu thực tế trong HỒ SƠ DỮ LIỆU bên dưới (ECMWF ERA5 2024–2026, Copernicus DEM GLO-30, 32+ điểm OpenStreetMap/Báo chí, Bộ Y tế, EVNHANOI, HSDC). Tuyệt đối KHÔNG tự bịa số đo độ sâu cm, không bịa tên đường hoặc số điện thoại ngoài hồ sơ.',
+        '1. CHỈ sử dụng dữ liệu thực tế trong HỒ SƠ DỮ LIỆU bên dưới (ECMWF ERA5 2024–2026, Copernicus DEM GLO-30, 60+ điểm OpenStreetMap/Báo chí & 18 tuyến ngõ ngập, Bộ Y tế, EVNHANOI, HSDC). Tuyệt đối KHÔNG tự bịa số đo độ sâu cm, không bịa tên đường hoặc số điện thoại ngoài hồ sơ.',
         '2. Mỗi khi nhắc tới một địa điểm có trong bản đồ, BẮT BUỘC ghi kèm mã điểm trong ngoặc vuông (ví dụ: [R-01], [R-06], [S-01], [S-05], [S-09]) để giao diện tạo nút bấm bay thẳng tới vị trí đó trên bản đồ.',
         '3. Trả lời bằng tiếng Việt tự nhiên, súc tích, chia thành 3–5 gạch đầu dòng rõ ràng (Đánh giá rủi ro/địa hình -> Hành động an toàn cụ thể -> Điểm tránh trú/y tế & số khẩn cấp liên quan). Không viết lời chào rườm rà.'
       ].join('\n');

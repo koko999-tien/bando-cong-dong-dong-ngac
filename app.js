@@ -9,6 +9,7 @@ import {
   buildTransectSamples,
   summarizeTransectProfile,
   evaluateWeatherScenario,
+  computeHydrologicalSpotRisk,
   findNearestSafePoint,
   findNearbyDuplicatePoint,
   exportToGeoJSON,
@@ -206,37 +207,37 @@ function escapeHtml(str) {
 
 const ICON_SVG_CACHE = new Map();
 
-function createMarkerSvg(pt) {
-  const cacheKey = `${pt.confidenceTier}|${pt.layerGroup}|${pt.category}|${pt.severity}`;
+function createMarkerSvg(pt, sizePx = 26) {
+  const cacheKey = `${pt.confidenceTier}|${pt.layerGroup}|${pt.category}|${pt.severity}|${sizePx}`;
   const cached = ICON_SVG_CACHE.get(cacheKey);
   if (cached) return cached;
 
   let svg = '';
   if (pt.confidenceTier === 'C') {
-    svg = `<svg width="24" height="24" viewBox="0 0 28 28" aria-hidden="true">
+    svg = `<svg width="${sizePx}" height="${sizePx}" viewBox="0 0 28 28" aria-hidden="true">
       <circle cx="14" cy="14" r="10" fill="#F59E0B" fill-opacity="0.88" stroke="#78350F" stroke-width="2.2" stroke-dasharray="3 2"/>
       <text x="14" y="18" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700" font-family="sans-serif">?</text>
     </svg>`;
   } else if (pt.layerGroup === 'safe') {
     if (pt.category === 'medical') {
-      svg = `<svg width="26" height="26" viewBox="0 0 28 28" aria-hidden="true">
+      svg = `<svg width="${sizePx}" height="${sizePx}" viewBox="0 0 28 28" aria-hidden="true">
         <circle cx="14" cy="14" r="11" fill="#15803D" stroke="#FFFFFF" stroke-width="2.4"/>
         <path d="M14 8.5v11M8.5 14h11" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/>
       </svg>`;
     } else {
-      svg = `<svg width="25" height="25" viewBox="0 0 28 28" aria-hidden="true">
+      svg = `<svg width="${sizePx}" height="${sizePx}" viewBox="0 0 28 28" aria-hidden="true">
         <rect x="4" y="4" width="20" height="20" rx="5" fill="#0F766E" stroke="#FFFFFF" stroke-width="2.4"/>
         <path d="M9 14.5l3.2 3.2L19 11" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>`;
     }
   } else if (pt.category === 'heat') {
-    svg = `<svg width="26" height="26" viewBox="0 0 28 28" aria-hidden="true">
+    svg = `<svg width="${sizePx}" height="${sizePx}" viewBox="0 0 28 28" aria-hidden="true">
       <polygon points="14,2 26,14 14,26 2,14" fill="#C2410C" stroke="#FFFFFF" stroke-width="2.3" stroke-linejoin="round"/>
       <circle cx="14" cy="14" r="4" fill="#FEF08A"/>
     </svg>`;
   } else {
     const fill = pt.severity === 'severe' ? '#B91C1C' : '#C2410C';
-    svg = `<svg width="26" height="26" viewBox="0 0 28 28" aria-hidden="true">
+    svg = `<svg width="${sizePx}" height="${sizePx}" viewBox="0 0 28 28" aria-hidden="true">
       <polygon points="14,3 25,23 3,23" fill="${fill}" stroke="#FFFFFF" stroke-width="2.4" stroke-linejoin="round"/>
       <line x1="14" y1="10" x2="14" y2="16" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
       <circle cx="14" cy="19.5" r="1.3" fill="#FFFFFF"/>
@@ -585,12 +586,15 @@ function initApp() {
     showRiskLayer: true,
     showSafeLayer: true,
     showPendingLayer: true,
+    showSmartCluster: true,
+    activeSbTab: 'explore',
     activeScenario: 'normal',
     simRainMm: 70,
     transectFirstPt: null,
+    lastInspectedSpot: null,
     mode: 'pan',
     points: Array.isArray(saved?.points) && saved.points.length > 0 ? saved.points : structuredClone(SAMPLE_HUMG_POINTS),
-    filters: { layer: 'all', scope: 'all', search: '' },
+    filters: { layer: 'all', scope: 'all', search: '', quickCat: 'all' },
     analysis: null,
     apiUrl: storedApiUrl || PROJECT_CONFIG.communityApiUrl || '/api/community',
     pendingPhotoDataUrl: '',
@@ -616,11 +620,15 @@ function initApp() {
   }
 
   const baseLayers = {
+    carto: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 20,
+      attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }),
     osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)'
     }),
-    carto: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 20,
       attribution: '&copy; OpenStreetMap &copy; CARTO'
     }),
@@ -637,7 +645,7 @@ function initApp() {
   const map = L.map('map', {
     center: [state.center.lat, state.center.lng],
     zoom: 14,
-    layers: [baseLayers.osm],
+    layers: [baseLayers.carto],
     zoomControl: true
   });
 
@@ -654,6 +662,7 @@ function initApp() {
   const nearestLinkGroup = L.layerGroup().addTo(map);
   const routeCorridorGroup = L.layerGroup().addTo(map);
   const transectLayerGroup = L.layerGroup().addTo(map);
+  const spotInspectGroup = L.layerGroup().addTo(map);
   const hydroInundationLayer = createHydrologicalInundationLayer(L, () => state).addTo(map);
   const riskHeatmapLayer = createRiskHeatmapLayer(L, () => state.points);
 
@@ -675,12 +684,32 @@ function initApp() {
 
   const els = {
     modePanBtn: document.getElementById('mode-pan-btn'),
+    modeInspectBtn: document.getElementById('mode-inspect-btn'),
     modeMarkBtn: document.getElementById('mode-mark-btn'),
     modeNearestBtn: document.getElementById('mode-nearest-btn'),
     btnCenterMode: document.getElementById('btn-center-mode'),
+    mobBtnInspect: document.getElementById('mob-btn-inspect'),
     mobBtnReport: document.getElementById('mob-btn-report'),
     mobBtnNearest: document.getElementById('mob-btn-nearest'),
     mobBtnDrill: document.getElementById('mob-btn-drill'),
+    topMoreMenu: document.getElementById('top-more-menu'),
+    btnToggleSidebar: document.getElementById('btn-toggle-sidebar'),
+    sidebarFabLabel: document.getElementById('sidebar-fab-label'),
+    sbTabBtns: document.querySelectorAll('.sb-tab-btn'),
+    sbPaneExplore: document.getElementById('sb-pane-explore'),
+    sbPaneList: document.getElementById('sb-pane-list'),
+    sbPaneAi: document.getElementById('sb-pane-ai'),
+    qcatPills: document.querySelectorAll('.qcat-pill'),
+    toggleSmartCluster: document.getElementById('toggle-smart-cluster'),
+    spotInspectorCard: document.getElementById('spot-inspector-card'),
+    inspTitle: document.getElementById('insp-title'),
+    btnCloseInspector: document.getElementById('btn-close-inspector'),
+    inspBody: document.getElementById('insp-body'),
+    sbAiInput: document.getElementById('sb-ai-input'),
+    btnSbAiSend: document.getElementById('btn-sb-ai-send'),
+    sbAiChips: document.querySelectorAll('.js-sb-ai-chip'),
+    sbAiOutput: document.getElementById('sb-ai-output'),
+    sbEmergencyCards: document.getElementById('sb-emergency-cards'),
     modeBanner: document.getElementById('mode-banner'),
     modeBannerText: document.getElementById('mode-banner-text'),
     modeBannerCancel: document.getElementById('mode-banner-cancel'),
@@ -776,6 +805,7 @@ function initApp() {
     filterScope: document.getElementById('filter-scope'),
     filterSearch: document.getElementById('filter-search'),
     exportOnlyInside: document.getElementById('export-only-inside'),
+    cardsList: document.getElementById('flood-cards-list'),
     tbody: document.getElementById('flood-tbody'),
     emptyState: document.getElementById('empty-state'),
 
@@ -1079,19 +1109,81 @@ function initApp() {
     updateCenterElevation();
   });
 
+  function switchSidebarTab(tabKey) {
+    state.activeSbTab = tabKey;
+    els.sbTabBtns.forEach((btn) => {
+      const active = btn.dataset.sbtab === tabKey;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', String(active));
+    });
+    if (els.sbPaneExplore) els.sbPaneExplore.hidden = tabKey !== 'explore';
+    if (els.sbPaneList) els.sbPaneList.hidden = tabKey !== 'list';
+    if (els.sbPaneAi) els.sbPaneAi.hidden = tabKey !== 'ai';
+    if (document.body.classList.contains('is-sidebar-collapsed')) {
+      document.body.classList.remove('is-sidebar-collapsed');
+      if (els.sidebarFabLabel) els.sidebarFabLabel.textContent = '◂ Mở rộng Bản đồ';
+      setTimeout(() => map.invalidateSize(), 210);
+    }
+  }
+
+  els.sbTabBtns.forEach((btn) => {
+    btn.addEventListener('click', () => switchSidebarTab(btn.dataset.sbtab));
+  });
+
+  els.btnToggleSidebar?.addEventListener('click', () => {
+    const collapsed = document.body.classList.toggle('is-sidebar-collapsed');
+    if (els.sidebarFabLabel) {
+      els.sidebarFabLabel.textContent = collapsed ? '▸ Mở bảng điều khiển' : '◂ Mở rộng Bản đồ';
+    }
+    setTimeout(() => map.invalidateSize(), 220);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (els.topMoreMenu?.open && !els.topMoreMenu.contains(e.target)) {
+      els.topMoreMenu.open = false;
+    }
+  });
+  els.topMoreMenu?.querySelector('.nav-dropdown-menu')?.addEventListener('click', () => {
+    els.topMoreMenu.open = false;
+  });
+
+  els.qcatPills.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const nextCat = pill.dataset.qcat || 'all';
+      state.filters.quickCat = nextCat;
+      els.qcatPills.forEach((p) => p.classList.toggle('is-active', p === pill));
+      if (nextCat === 'safe' && !state.showSafeLayer) {
+        els.toggleLayerSafe.checked = true;
+        state.showSafeLayer = true;
+        safeLayerGroup.addTo(map);
+      } else if ((nextCat === 'flood' || nextCat === 'heat') && !state.showRiskLayer) {
+        els.toggleLayerRisk.checked = true;
+        state.showRiskLayer = true;
+        riskLayerGroup.addTo(map);
+      }
+      renderFloodCorridorsAndBasins();
+      renderMarkersAndTable();
+    });
+  });
+
   function setMode(nextMode) {
     state.mode = nextMode;
     for (const [btn, m] of [
       [els.modePanBtn, 'pan'],
+      [els.modeInspectBtn, 'inspect'],
       [els.modeMarkBtn, 'mark'],
       [els.modeNearestBtn, 'nearest']
     ]) {
+      if (!btn) continue;
       const active = m === nextMode;
       btn.classList.toggle('is-active', active);
       btn.setAttribute('aria-pressed', String(active));
     }
     els.mapContainer.classList.toggle('cursor-crosshair', nextMode !== 'pan');
-    if (nextMode === 'mark') {
+    if (nextMode === 'inspect') {
+      els.modeBannerText.textContent = 'Chạm vào bất kỳ ngõ, dãy trọ hay tuyến đường nào để đo cao độ DEM vệ tinh & chỉ số nguy cơ ngập (0–100)';
+      els.modeBanner.hidden = false;
+    } else if (nextMode === 'mark') {
       els.modeBannerText.textContent = 'Chạm vào đúng đoạn ngõ / đường trên bản đồ để mở phiếu báo điểm';
       els.modeBanner.hidden = false;
     } else if (nextMode === 'nearest') {
@@ -1110,12 +1202,18 @@ function initApp() {
   }
 
   els.modePanBtn.addEventListener('click', () => setMode('pan'));
+  els.modeInspectBtn?.addEventListener('click', () => setMode(state.mode === 'inspect' ? 'pan' : 'inspect'));
   els.modeMarkBtn.addEventListener('click', () => setMode(state.mode === 'mark' ? 'pan' : 'mark'));
   els.modeNearestBtn.addEventListener('click', () => setMode(state.mode === 'nearest' ? 'pan' : 'nearest'));
   els.btnCenterMode.addEventListener('click', () => setMode(state.mode === 'center' ? 'pan' : 'center'));
   els.modeBannerCancel.addEventListener('click', () => setMode('pan'));
 
   // Mobile Bottom Bar triggers
+  els.mobBtnInspect?.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setMode('inspect');
+    showToast('Chạm vào ngõ hoặc nhà trọ bất kỳ trên bản đồ để chẩn đoán nguy cơ ngập.');
+  });
   els.mobBtnReport.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setMode('mark');
@@ -1125,7 +1223,11 @@ function initApp() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     els.btnQuickShelter.click();
   });
-  els.mobBtnDrill.addEventListener('click', () => els.drillDialog.showModal());
+  els.mobBtnDrill.addEventListener('click', () => {
+    switchSidebarTab('ai');
+    els.sbPaneAi?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => els.sbAiInput?.focus(), 280);
+  });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && state.mode !== 'pan' && !document.querySelector('dialog[open]')) {
@@ -1219,7 +1321,7 @@ function initApp() {
       .addTo(nearestLinkGroup);
 
     map.fitBounds(line.getBounds(), { padding: [60, 60], maxZoom: 17 });
-    markerMap.get(found.point.id)?.openPopup();
+    setTimeout(() => markerMap.get(found.point.id)?.openPopup(), 280);
 
     els.nearestText.innerHTML = `<strong>Điểm an toàn xác thực gần nhất:</strong> ${escapeHtml(found.point.name)}<br>Cách <strong class="mono-num">${found.distanceMeters} m</strong> (${escapeHtml(found.bearingLabel)}) · Đi bộ khoảng <strong>~${found.walkingMinutes} phút</strong>.`;
     els.nearestBar.hidden = false;
@@ -1245,7 +1347,7 @@ function initApp() {
     );
   });
 
-  let currentBaseKey = 'osm';
+  let currentBaseKey = 'carto';
   els.basemapSelect.addEventListener('change', () => {
     const nextKey = els.basemapSelect.value;
     if (baseLayers[nextKey] && nextKey !== currentBaseKey) {
@@ -1267,7 +1369,6 @@ function initApp() {
     if (moveRaf) return;
     moveRaf = requestAnimationFrame(() => {
       moveRaf = null;
-      const utm = latLngToUTM(lat, lng, 48);
       const dist = Math.round(turf.distance([state.center.lng, state.center.lat], [lng, lat], { units: 'meters' }));
       const demAtCursor = sampleDemBilinear(lat, lng);
       const demStr = demAtCursor !== null ? ` · DEM: ~${demAtCursor}m${demAtCursor <= 11 ? ' (Vùng trũng)' : demAtCursor >= 15 ? ' (Gò cao)' : ''}` : '';
@@ -1275,8 +1376,138 @@ function initApp() {
     });
   });
 
+  els.btnCloseInspector?.addEventListener('click', () => {
+    if (els.spotInspectorCard) els.spotInspectorCard.hidden = true;
+    spotInspectGroup.clearLayers();
+  });
+
+  async function inspectSpotAt(lat, lng) {
+    if (!els.spotInspectorCard || !els.inspBody) return;
+    els.nearestBar.hidden = true;
+    spotInspectGroup.clearLayers();
+
+    let dem = sampleDemBilinear(lat, lng);
+    if (dem === null) {
+      dem = await fetchElevationM(lat, lng);
+    }
+
+    const diag = computeHydrologicalSpotRisk(turf, lat, lng, dem, FLOOD_STREET_CORRIDORS, state.points);
+    state.lastInspectedSpot = { ...diag, label: `Tọa độ ${diag.lat.toFixed(5)}, ${diag.lng.toFixed(5)}` };
+
+    L.circleMarker([lat, lng], {
+      radius: 9,
+      color: '#0284c7',
+      weight: 2.5,
+      fillColor: '#38bdf8',
+      fillOpacity: 0.35
+    }).addTo(spotInspectGroup);
+    L.circleMarker([lat, lng], {
+      radius: 3.5,
+      color: '#ffffff',
+      weight: 1.5,
+      fillColor: '#0284c7',
+      fillOpacity: 1
+    }).addTo(spotInspectGroup);
+
+    const diffStr =
+      diag.diffVsHumgM !== null
+        ? diag.diffVsHumgM < 0
+          ? `thấp hơn Khu A ĐH Mỏ ${Math.abs(diag.diffVsHumgM)}m`
+          : diag.diffVsHumgM > 0
+            ? `cao hơn Khu A ĐH Mỏ +${diag.diffVsHumgM}m`
+            : 'ngang gò Khu A ĐH Mỏ'
+        : 'ngoài lưới DEM 2km';
+
+    const corrText = diag.nearestCorridor
+      ? `Cách hành lang ngập <strong>${escapeHtml(diag.nearestCorridor.name)}</strong> <span class="mono-num">${diag.nearestCorridor.distanceMeters} m</span> (ngập khi mưa ≥<span class="mono-num">${diag.nearestCorridor.rainThresholdMm} mm</span>).`
+      : '';
+    const safeText = diag.nearestSafe
+      ? `Nơi trú/Y tế gần nhất: <strong>${escapeHtml(diag.nearestSafe.point.name)}</strong> (<span class="mono-num">${diag.nearestSafe.distanceMeters} m</span> · ~${diag.nearestSafe.walkingMinutes} phút đi bộ).`
+      : '';
+
+    els.inspTitle.textContent = 'Chẩn đoán Thủy văn & Địa hình tại vị trí chấm';
+    els.inspBody.innerHTML = `
+      <div id="insp-addr-line" style="font-size:0.75rem;color:#475569;margin-bottom:6px;">
+        Tọa độ <span class="mono-num">${diag.lat.toFixed(5)}, ${diag.lng.toFixed(5)}</span> (đang tra tên ngõ...)
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 9px;border-radius:7px;background:#f8fafc;border:1px solid #e2e8f0;margin-bottom:7px;">
+        <span>Cao độ vệ tinh DEM: <strong class="mono-num" style="color:#0369a1;">${diag.dem !== null ? `~${diag.dem} m DSM` : 'Đang đo'}</strong></span>
+        <span style="font-size:0.71rem;color:#64748b;">(${escapeHtml(diffStr)})</span>
+      </div>
+      <div style="padding:8px 10px;border-radius:8px;background:${diag.bgHex};border:1px solid ${diag.colorHex}40;margin-bottom:7px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <strong style="font-size:0.74rem;color:${diag.colorHex};">${escapeHtml(diag.levelLabel)}</strong>
+          <strong class="mono-num" style="font-size:0.84rem;color:${diag.colorHex};">${diag.score}/100</strong>
+        </div>
+        <div style="height:6px;border-radius:999px;background:rgba(15,23,42,0.09);overflow:hidden;">
+          <div style="height:100%;width:${diag.score}%;background:${diag.colorHex};border-radius:999px;"></div>
+        </div>
+      </div>
+      ${corrText ? `<p style="margin:0 0 5px;font-size:0.75rem;color:#334155;line-height:1.42;">• ${corrText}</p>` : ''}
+      ${safeText ? `<p style="margin:0 0 8px;font-size:0.75rem;color:#14532d;line-height:1.42;">• ${safeText}</p>` : ''}
+      <div style="display:flex;flex-wrap:wrap;gap:5px;">
+        ${diag.nearestSafe ? `<button type="button" class="btn btn-primary btn-compact js-insp-walk">Vẽ đường bộ tới nơi trú</button>` : ''}
+        <button type="button" class="btn btn-secondary btn-compact js-insp-ai">Hỏi AI Gemini vị trí này</button>
+        <button type="button" class="btn btn-secondary btn-compact js-insp-report">+ Báo điểm tại đây</button>
+      </div>
+    `;
+    els.spotInspectorCard.hidden = false;
+
+    els.inspBody.querySelector('.js-insp-walk')?.addEventListener('click', async () => {
+      if (!diag.nearestSafe) return;
+      const sp = diag.nearestSafe.point;
+      const coords = await fetchOsrmStreetPath([
+        [lng, lat],
+        [sp.lng, sp.lat]
+      ]);
+      const pathLatLngs = coords ? coords.map(([lo, la]) => [la, lo]) : [[lat, lng], [sp.lat, sp.lng]];
+      const walkLine = L.polyline(pathLatLngs, {
+        color: '#15803D',
+        weight: 4,
+        dashArray: '7 5',
+        opacity: 0.95
+      })
+        .bindTooltip(`Lối đi bộ tới ${sp.name} (~${diag.nearestSafe.walkingMinutes} phút)`)
+        .addTo(spotInspectGroup);
+      map.fitBounds(walkLine.getBounds(), { padding: [70, 70], maxZoom: 17 });
+      showToast(`Đã vẽ đường đi bộ thực tế tới "${sp.name}"!`);
+    });
+
+    els.inspBody.querySelector('.js-insp-ai')?.addEventListener('click', () => {
+      const addrLabel = state.lastInspectedSpot?.label || `tọa độ ${diag.lat.toFixed(5)}, ${diag.lng.toFixed(5)}`;
+      const q = `Tại ${addrLabel} (cao độ DEM ${diag.dem ?? '?'}m, chỉ số nhạy cảm ngập ${diag.score}/100), nếu mưa lớn 70–100mm thì nguy cơ thế nào và đi hướng nào tới nơi trú an toàn?`;
+      switchSidebarTab('ai');
+      if (els.sbAiInput) els.sbAiInput.value = q;
+      askInlineSidebarAi(q, {
+        label: addrLabel,
+        lat: diag.lat,
+        lng: diag.lng,
+        dem: diag.dem,
+        score: diag.score,
+        levelLabel: diag.levelLabel,
+        nearestSafeName: diag.nearestSafe?.point?.name || '',
+        nearestSafeDistM: diag.nearestSafe?.distanceMeters || null
+      });
+    });
+
+    els.inspBody.querySelector('.js-insp-report')?.addEventListener('click', () => {
+      openPointDialogForNew(lat, lng);
+    });
+
+    const streetName = await reverseGeocodeVN(lat, lng);
+    if (streetName && state.lastInspectedSpot && Math.abs(state.lastInspectedSpot.lat - diag.lat) < 1e-5) {
+      state.lastInspectedSpot.label = streetName;
+      const addrEl = document.getElementById('insp-addr-line');
+      if (addrEl) {
+        addrEl.innerHTML = `<strong>${escapeHtml(streetName)}</strong> · <span class="mono-num">${diag.lat.toFixed(5)}, ${diag.lng.toFixed(5)}</span>`;
+      }
+    }
+  }
+
   map.on('click', (e) => {
-    if (state.mode === 'mark') {
+    if (state.mode === 'inspect') {
+      inspectSpotAt(e.latlng.lat, e.latlng.lng);
+    } else if (state.mode === 'mark') {
       openPointDialogForNew(e.latlng.lat, e.latlng.lng);
     } else if (state.mode === 'nearest') {
       highlightNearestSafeFrom(e.latlng.lat, e.latlng.lng, 'Vị trí đang chọn');
@@ -1394,6 +1625,18 @@ function initApp() {
       persistState();
     });
   }
+
+  if (els.toggleSmartCluster) {
+    els.toggleSmartCluster.checked = state.showSmartCluster;
+    els.toggleSmartCluster.addEventListener('change', () => {
+      state.showSmartCluster = els.toggleSmartCluster.checked;
+      renderMarkersAndTable();
+    });
+  }
+
+  map.on('zoomend', () => {
+    renderMarkersAndTable();
+  });
 
   function renderFloodCorridorsAndBasins() {
     floodBasinLayerGroup.clearLayers();
@@ -1532,13 +1775,16 @@ function initApp() {
     return state.analysis.points
       .filter((p) => {
         if (p.status === 'hidden') return false;
+        if (state.filters.quickCat === 'flood' && p.category !== 'flood' && p.category !== 'traffic') return false;
+        if (state.filters.quickCat === 'heat' && p.category !== 'heat') return false;
+        if (state.filters.quickCat === 'safe' && p.layerGroup !== 'safe') return false;
         if (state.filters.layer === 'risk' && p.layerGroup !== 'risk') return false;
         if (state.filters.layer === 'safe' && p.layerGroup !== 'safe') return false;
         if (state.filters.layer === 'tierC' && p.confidenceTier !== 'C') return false;
         if (state.filters.scope === 'inside' && !p.insideBuffer) return false;
         if (state.filters.scope === 'outside' && p.insideBuffer) return false;
         if (state.filters.search) {
-          const hay = `${p.name} ${p.sourceCitation || ''} ${p.notes || ''} ${CATEGORY_LABELS[p.category] || ''}`.toLowerCase();
+          const hay = `${p.id} ${p.name} ${p.sourceCitation || ''} ${p.notes || ''} ${CATEGORY_LABELS[p.category] || ''}`.toLowerCase();
           if (!hay.includes(state.filters.search)) return false;
         }
         return true;
@@ -1547,6 +1793,41 @@ function initApp() {
         if (a.insideBuffer !== b.insideBuffer) return a.insideBuffer ? -1 : 1;
         return a.distanceMeters - b.distanceMeters;
       });
+  }
+
+  function flyToAndOpenPoint(pointId) {
+    const pt = state.points.find((p) => p.id === pointId);
+    if (!pt) return;
+    const targetZoom = Math.max(map.getZoom(), 16);
+    map.flyTo([pt.lat, pt.lng], targetZoom, { duration: 0.45 });
+    setTimeout(() => {
+      markerMap.get(pointId)?.openPopup();
+    }, 480);
+  }
+
+  function buildSpatialClusters(pointsList, radiusMeters) {
+    const used = new Set();
+    const clusters = [];
+    for (let i = 0; i < pointsList.length; i++) {
+      const seed = pointsList[i];
+      if (used.has(seed.id)) continue;
+      used.add(seed.id);
+      const groupKey = seed.confidenceTier === 'C' ? 'pending' : seed.layerGroup;
+      const members = [seed];
+      for (let j = i + 1; j < pointsList.length; j++) {
+        const cand = pointsList[j];
+        if (used.has(cand.id)) continue;
+        const candGroup = cand.confidenceTier === 'C' ? 'pending' : cand.layerGroup;
+        if (candGroup !== groupKey) continue;
+        const d = turf.distance([Number(seed.lng), Number(seed.lat)], [Number(cand.lng), Number(cand.lat)], { units: 'meters' });
+        if (d <= radiusMeters) {
+          used.add(cand.id);
+          members.push(cand);
+        }
+      }
+      clusters.push({ groupKey, members });
+    }
+    return clusters;
   }
 
   function renderMarkersAndTable() {
@@ -1558,15 +1839,49 @@ function initApp() {
     const filtered = getFilteredPoints();
     els.shownCount.textContent = String(filtered.length);
     const scenEval = evaluateWeatherScenario(state.points, state.activeScenario);
+    const zoom = map.getZoom();
+    const markerSizePx = zoom <= 14 ? 22 : 27;
+    const enableClusterNow = Boolean(state.showSmartCluster && zoom <= 14 && state.activeScenario === 'normal');
+    const clusterRadiusM = zoom <= 12 ? 420 : zoom === 13 ? 250 : 125;
 
-    for (const pt of filtered) {
+    const groupsToRender = enableClusterNow
+      ? buildSpatialClusters(filtered, clusterRadiusM)
+      : filtered.map((pt) => ({ groupKey: pt.confidenceTier === 'C' ? 'pending' : pt.layerGroup, members: [pt] }));
+
+    for (const grp of groupsToRender) {
       const targetGroup =
-        pt.confidenceTier === 'C'
+        grp.groupKey === 'pending'
           ? pendingLayerGroup
-          : pt.layerGroup === 'safe'
+          : grp.groupKey === 'safe'
             ? safeLayerGroup
             : riskLayerGroup;
 
+      if (grp.members.length >= 2) {
+        const avgLat = grp.members.reduce((s, p) => s + Number(p.lat), 0) / grp.members.length;
+        const avgLng = grp.members.reduce((s, p) => s + Number(p.lng), 0) / grp.members.length;
+        const isSafeCls = grp.groupKey === 'safe' ? 'is-safe-cluster' : '';
+        const previewNames = grp.members.slice(0, 3).map((m) => m.name).join(' · ');
+        const clusterMarker = L.marker([avgLat, avgLng], {
+          icon: L.divIcon({
+            className: 'cluster-marker-wrap',
+            iconSize: [34, 34],
+            iconAnchor: [17, 17],
+            html: `<div class="cluster-pill ${isSafeCls}">${grp.members.length}</div>`
+          }),
+          title: `Cụm ${grp.members.length} điểm — Bấm để phóng to`
+        }).addTo(targetGroup);
+
+        clusterMarker.bindTooltip(
+          `<strong>Cụm ${grp.members.length} điểm ${grp.groupKey === 'safe' ? 'An toàn' : 'Rủi ro'}</strong><br>${escapeHtml(previewNames)}${grp.members.length > 3 ? '…' : ''}<br><em>Bấm để phóng to tách từng điểm</em>`,
+          { direction: 'top', offset: [0, -14] }
+        );
+        clusterMarker.on('click', () => {
+          map.flyTo([avgLat, avgLng], Math.min(17, zoom + 2), { duration: 0.42 });
+        });
+        continue;
+      }
+
+      const pt = grp.members[0];
       const isScenMatch = scenEval.highlightedIds.has(pt.id);
       const scenCls = scenEval.dimNonMatching
         ? isScenMatch
@@ -1577,15 +1892,21 @@ function initApp() {
       const marker = L.marker([pt.lat, pt.lng], {
         icon: L.divIcon({
           className: `flood-marker-wrap ${pt.insideBuffer ? 'inside-marker' : 'outside-marker'} ${scenCls}`,
-          iconSize: [28, 28],
-          iconAnchor: [14, 14],
+          iconSize: [markerSizePx + 2, markerSizePx + 2],
+          iconAnchor: [(markerSizePx + 2) / 2, (markerSizePx + 2) / 2],
           popupAnchor: [0, -12],
-          html: createMarkerSvg(pt)
+          html: createMarkerSvg(pt, markerSizePx)
         }),
         title: `[Hạng ${pt.confidenceTier}] ${pt.name}`
       }).addTo(targetGroup);
 
+      marker.bindTooltip(`[${pt.id}] ${pt.name}`, {
+        direction: 'top',
+        offset: [0, -10]
+      });
+
       const hasVoted = Boolean(votedIds[pt.id]);
+      const demVal = pt.elevationM ?? sampleDemBilinear(pt.lat, pt.lng);
       const hazardHtml =
         pt.hazardFlags && pt.hazardFlags.length > 0
           ? `<p class="popup-meta" style="color:#B91C1C;font-weight:600;">Cảnh báo: ${pt.hazardFlags.map((f) => escapeHtml(HAZARD_FLAGS_META[f] || f)).join(' · ')}</p>`
@@ -1598,12 +1919,13 @@ function initApp() {
       const popupEl = document.createElement('div');
       popupEl.className = 'popup-card';
       popupEl.innerHTML = `
-        <h3>${escapeHtml(pt.name)}</h3>
-        <div>
+        <h3>[${escapeHtml(pt.id)}] ${escapeHtml(pt.name)}</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
           <span class="tier-tag tier-${escapeHtml(pt.confidenceTier)}">Hạng ${escapeHtml(pt.confidenceTier)}</span>
           <span class="sev-badge ${pt.confidenceTier === 'C' ? 'sev-pending' : pt.layerGroup === 'safe' ? 'sev-safe' : `sev-${pt.severity}`}">
             ${escapeHtml(CATEGORY_LABELS[pt.category] || pt.category)}
           </span>
+          ${demVal !== null ? `<span class="dem-pill ${demVal <= 12 ? 'is-low' : ''}">DEM ~${demVal}m</span>` : ''}
         </div>
         ${photoHtml}
         ${pt.layerGroup === 'risk' ? `<p class="popup-meta"><strong>Mức ghi nhận:</strong> ${escapeHtml(pt.waterScaleLabel)}</p>` : ''}
@@ -1616,9 +1938,9 @@ function initApp() {
         ${pt.notes ? `<p class="popup-meta">${escapeHtml(pt.notes)}</p>` : ''}
         <div class="popup-actions">
           <button type="button" class="btn btn-compact btn-upvote ${hasVoted ? 'is-voted' : ''} js-upvote-pt">
-            ${hasVoted ? `Đã xác nhận (${pt.confirmCount})` : `+1 Tôi cũng gặp ở đây (${pt.confirmCount})`}
+            ${hasVoted ? `Đã xác nhận (${pt.confirmCount})` : `+1 Tôi cũng gặp (${pt.confirmCount})`}
           </button>
-          ${pt.layerGroup === 'risk' ? `<button type="button" class="btn btn-primary btn-compact js-find-shelter">Điểm an toàn gần đây</button>` : ''}
+          ${pt.layerGroup === 'risk' ? `<button type="button" class="btn btn-primary btn-compact js-find-shelter">Nơi trú gần đây</button>` : ''}
           <button type="button" class="btn btn-secondary btn-compact js-share-pt" title="Sao chép đường link dẫn thẳng tới điểm này">Chép link</button>
         </div>
       `;
@@ -1642,40 +1964,47 @@ function initApp() {
     }
 
     if (filtered.length === 0) {
+      if (els.cardsList) els.cardsList.innerHTML = '';
       els.tbody.innerHTML = '';
       els.emptyState.hidden = false;
       return;
     }
 
     els.emptyState.hidden = true;
-    els.tbody.innerHTML = filtered
-      .map((pt) => {
-        const hasVoted = Boolean(votedIds[pt.id]);
-        const badgeClass = pt.confidenceTier === 'C' ? 'sev-pending' : pt.layerGroup === 'safe' ? 'sev-safe' : `sev-${pt.severity}`;
-        return `<tr class="${pt.insideBuffer ? '' : 'is-outside'}">
-          <th scope="row">
-            <button type="button" class="pt-title-btn js-focus-pt" data-id="${escapeHtml(pt.id)}">${escapeHtml(pt.name)}</button>
-            <span class="pt-meta-sub">${escapeHtml(pt.sourceCitation || pt.sourceType)}</span>
-          </th>
-          <td>
-            <span class="tier-tag tier-${escapeHtml(pt.confidenceTier)}">${escapeHtml(pt.confidenceTier)}</span>
-            <span class="sev-badge ${badgeClass}">${escapeHtml(CATEGORY_LABELS[pt.category] || pt.category)}</span>
-          </td>
-          <td class="mono-num"><strong>${pt.confirmCount}</strong> phiếu<span class="pt-meta-sub">${pt.distanceMeters} m</span></td>
-          <td>
-            <div class="row-actions">
-              <button type="button" class="btn btn-compact btn-upvote ${hasVoted ? 'is-voted' : ''} js-upvote-row" data-id="${escapeHtml(pt.id)}">
-                ${hasVoted ? 'Đã +1' : '+1'}
-              </button>
-              <button type="button" class="btn btn-secondary btn-compact js-focus-pt" data-id="${escapeHtml(pt.id)}">Xem</button>
+    if (els.cardsList) {
+      els.cardsList.innerHTML = filtered
+        .map((pt) => {
+          const hasVoted = Boolean(votedIds[pt.id]);
+          const badgeClass = pt.confidenceTier === 'C' ? 'sev-pending' : pt.layerGroup === 'safe' ? 'sev-safe' : `sev-${pt.severity}`;
+          const demVal = pt.elevationM ?? sampleDemBilinear(pt.lat, pt.lng);
+          const subLine =
+            pt.layerGroup === 'risk' && pt.waterScaleLabel && pt.waterScale !== 'none'
+              ? `${pt.waterScaleLabel} · ${pt.sourceCitation || pt.sourceType}`
+              : pt.sourceCitation || pt.sourceType;
+          return `<article class="pt-item-card ${pt.insideBuffer ? '' : 'is-outside'}">
+            <div class="pt-card-top">
+              <div class="pt-card-badges">
+                <span class="tier-tag tier-${escapeHtml(pt.confidenceTier)}">Hạng ${escapeHtml(pt.confidenceTier)}</span>
+                <span class="sev-badge ${badgeClass}">${escapeHtml(CATEGORY_LABELS[pt.category] || pt.category)}</span>
+                ${demVal !== null ? `<span class="dem-pill ${demVal <= 12 ? 'is-low' : ''}">DEM ${demVal}m</span>` : ''}
+              </div>
+              <span class="pt-card-dist">${pt.distanceMeters} m</span>
             </div>
-          </td>
-        </tr>`;
-      })
-      .join('');
+            <button type="button" class="pt-title-btn js-focus-pt" data-id="${escapeHtml(pt.id)}">[${escapeHtml(pt.id)}] ${escapeHtml(pt.name)}</button>
+            <span class="pt-meta-sub">${escapeHtml(subLine)}</span>
+            <div class="pt-card-foot">
+              <button type="button" class="btn btn-compact btn-upvote ${hasVoted ? 'is-voted' : ''} js-upvote-row" data-id="${escapeHtml(pt.id)}">
+                ${hasVoted ? `Đã xác nhận (${pt.confirmCount})` : `+1 Xác nhận (${pt.confirmCount})`}
+              </button>
+              <button type="button" class="btn btn-secondary btn-compact js-focus-pt" data-id="${escapeHtml(pt.id)}">Xem trên bản đồ →</button>
+            </div>
+          </article>`;
+        })
+        .join('');
+    }
   }
 
-  els.tbody.addEventListener('click', (e) => {
+  const handleListCardAction = (e) => {
     const upBtn = e.target.closest('.js-upvote-row');
     if (upBtn) {
       handleResidentUpvote(upBtn.dataset.id);
@@ -1683,14 +2012,11 @@ function initApp() {
     }
     const focusBtn = e.target.closest('.js-focus-pt');
     if (focusBtn) {
-      const id = focusBtn.dataset.id;
-      const pt = state.points.find((p) => p.id === id);
-      if (pt) {
-        map.flyTo([pt.lat, pt.lng], Math.max(map.getZoom(), 16), { duration: 0.45 });
-        markerMap.get(id)?.openPopup();
-      }
+      flyToAndOpenPoint(focusBtn.dataset.id);
     }
-  });
+  };
+  els.cardsList?.addEventListener('click', handleListCardAction);
+  els.tbody.addEventListener('click', handleListCardAction);
 
   function updateDialogDistanceBanner() {
     const lat = Number(els.ptLat.value);
@@ -2170,7 +2496,7 @@ function initApp() {
   syncChannel?.addEventListener('message', handleExternalStateSync);
   window.addEventListener('storage', handleExternalStateSync);
 
-  // ================= TÍNH NĂNG MỚI 2: NOTEBOOK TRI THỨC THỰC CHỨNG & XUẤT GOOGLE NOTEBOOKLM =================
+  // ================= TÍNH NĂNG MỚI 2: NOTEBOOK TRI THỨC THỰC CHỨNG & TRỢ LÝ AI SONG SONG CẠNH BẢN ĐỒ =================
   els.nbEmergencyList.innerHTML = EMERGENCY_DIRECTORY.map(
     (d) => `<div class="nb-emerg-item">
       <strong>${escapeHtml(d.org)}</strong>
@@ -2178,6 +2504,104 @@ function initApp() {
       <div style="color:#475569;margin-top:2px;">${escapeHtml(d.address)}</div>
     </div>`
   ).join('');
+
+  if (els.sbEmergencyCards) {
+    els.sbEmergencyCards.innerHTML = EMERGENCY_DIRECTORY.map((d) => {
+      const telHref = String(d.phone || '').replace(/[^0-9+]/g, '');
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border-radius:9px;background:#f8fafc;border:1px solid #e2e8f0;">
+        <div style="min-width:0;">
+          <strong style="display:block;font-size:0.78rem;color:#0f172a;">${escapeHtml(d.org)}</strong>
+          <span style="display:block;font-size:0.71rem;color:#64748b;">${escapeHtml(d.address)}</span>
+        </div>
+        ${telHref ? `<a href="tel:${escapeHtml(telHref)}" class="btn btn-alert btn-compact mono-num" style="flex-shrink:0;">Gọi ${escapeHtml(d.phone)}</a>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  async function askInlineSidebarAi(customQuestion = '', spotContext = null) {
+    if (!els.sbAiOutput) return;
+    const q = (customQuestion || els.sbAiInput?.value || '').trim();
+    if (q.length < 3) {
+      showToast('Hãy nhập câu hỏi vào ô Hỏi AI trước nhé.');
+      els.sbAiInput?.focus();
+      return;
+    }
+    els.sbAiOutput.hidden = false;
+    els.sbAiOutput.innerHTML = `<div style="color:#0f766e;font-weight:600;">AI Thực chứng Gemini đang đối chiếu 60 điểm GIS, 18 tuyến ngõ ngập &amp; lưới vệ tinh DEM...</div>`;
+    if (els.btnSbAiSend) els.btnSbAiSend.disabled = true;
+
+    try {
+      const res = await fetch('/api/ai-copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ask_copilot',
+          question: q,
+          liveWeather: state.liveWeatherSnapshot,
+          spotContext
+        })
+      });
+      const data = await res.json();
+      if (!data?.ok) throw new Error(data?.error || 'Chưa nhận được phản hồi AI.');
+
+      const formattedLines = escapeHtml(data.answer)
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .split('\n')
+        .filter((ln) => ln.trim().length > 0)
+        .map((ln) => `<p style="margin:0 0 6px;">${ln}</p>`)
+        .join('');
+
+      const citedBtns = (data.citedPointIds || [])
+        .map((pid) => {
+          const pt = state.points.find((x) => x.id === pid);
+          return pt
+            ? `<button type="button" class="btn btn-secondary btn-compact js-sb-fly" data-id="${escapeHtml(pid)}">Bay tới [${escapeHtml(pid)}] ${escapeHtml(pt.name.slice(0, 24))}…</button>`
+            : '';
+        })
+        .filter(Boolean)
+        .join('');
+
+      els.sbAiOutput.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
+          <strong style="font-size:0.74rem;color:#0f766e;">GEMINI COPILOT (${escapeHtml(data.modelUsed || 'v1')})</strong>
+          <span style="font-size:0.69rem;color:#64748b;">Đối chiếu trực tiếp trên bản đồ →</span>
+        </div>
+        <div>${formattedLines}</div>
+        ${citedBtns ? `<div class="popup-actions" style="margin-top:8px;">${citedBtns}</div>` : ''}
+      `;
+    } catch (err) {
+      const fallback = synthesizeSituationalAnswer(q, state.points, state.liveWeatherSnapshot);
+      if (fallback) {
+        els.sbAiOutput.innerHTML = `
+          <strong style="display:block;font-size:0.75rem;color:#0f766e;margin-bottom:4px;">TỔNG HỢP GIS CỤC BỘ (KHI OFFLINE)</strong>
+          <strong style="display:block;margin-bottom:5px;">${escapeHtml(fallback.headline)}</strong>
+          <ul style="margin:0;padding-left:16px;">${fallback.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join('')}</ul>
+        `;
+      } else {
+        els.sbAiOutput.innerHTML = `<span style="color:#b45309;">${escapeHtml(err.message)}</span>`;
+      }
+    } finally {
+      if (els.btnSbAiSend) els.btnSbAiSend.disabled = false;
+    }
+  }
+
+  els.btnSbAiSend?.addEventListener('click', () => askInlineSidebarAi());
+  els.sbAiInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      askInlineSidebarAi();
+    }
+  });
+  els.sbAiChips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      if (els.sbAiInput) els.sbAiInput.value = chip.dataset.q || '';
+      askInlineSidebarAi(chip.dataset.q || '');
+    });
+  });
+  els.sbAiOutput?.addEventListener('click', (e) => {
+    const flyBtn = e.target.closest('.js-sb-fly');
+    if (flyBtn) flyToAndOpenPoint(flyBtn.dataset.id);
+  });
 
   function renderNotebookSearch(queryStr = '') {
     const trimmed = queryStr.trim();
@@ -2293,7 +2717,7 @@ function initApp() {
     if (!els.nbAiAnswerWrap) return;
     els.nbAiAnswerWrap.hidden = false;
     els.nbAiAnswerWrap.innerHTML = `<div style="padding:12px 14px;border-radius:10px;border:1px solid #99f6e4;background:#f0fdfa;font-size:0.82rem;color:#115e59;">
-      <strong>AI Thực chứng Gemini đang đối chiếu 32+ điểm GIS, ERA5 &amp; DEM...</strong>
+      <strong>AI Thực chứng Gemini đang đối chiếu 60 điểm GIS, 18 tuyến ngập, ERA5 &amp; DEM...</strong>
     </div>`;
     els.btnAskAiCopilot.disabled = true;
 
