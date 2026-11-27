@@ -10,6 +10,11 @@ import {
   findNearestVietnamZone
 } from '../platform/regions/vietnam-directory.js';
 import { SAMPLE_HUMG_POINTS } from '../humg-data.js';
+import {
+  VIETNAM_VERIFIED_HOTSPOTS,
+  VIETNAM_VERIFIED_CORRIDORS,
+  filterCorridorsInZone
+} from '../platform/data/vietnam-verified-hotspots.js';
 import { GET as researchGET, POST as researchPOST } from '../api/research-portal.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -39,11 +44,37 @@ try {
   assert.equal(inDongNgac.length, 60, 'Khoanh 2 km quanh Đông Ngạc phải hiện đủ 60 điểm thực địa');
   assert.equal(inDaNang.length, 0, 'Khoanh 10 km quanh Đà Nẵng phải trả 0 điểm Hà Nội (chống lag tuyệt đối)');
 
-  // 2. BỎ HOÀN TOÀN NHÃN BÀI TẬP / SÁO RỖNG TRÊN TRANG CHỦ 3 PHẦN
+  // 1B. KHO ĐIỂM NÓNG & HÀNH LANG ĐA ĐÔ THỊ + LÀM GIÀU VÙNG KHOANH (GIẢI QUYẾT DATA CLIFF)
+  assert.ok(VIETNAM_VERIFIED_HOTSPOTS.length >= 45, `Phải có >= 45 điểm nóng đa đô thị (thực tế: ${VIETNAM_VERIFIED_HOTSPOTS.length})`);
+  const hotspotProvinces = new Set(VIETNAM_VERIFIED_HOTSPOTS.map((p) => p.province));
+  assert.ok(hotspotProvinces.size >= 10, `Kho điểm nóng phải phủ >= 10 tỉnh/thành trọng điểm (thực tế: ${hotspotProvinces.size})`);
+  for (const hp of VIETNAM_VERIFIED_HOTSPOTS) {
+    assert.equal(isInsideVietnam(hp.lat, hp.lng), true, `Điểm ${hp.id} phải nằm trong lãnh thổ Việt Nam`);
+    assert.equal(hp.dataClass, 'OBSERVED_DATA', `Điểm ${hp.id} phải gắn nhãn OBSERVED_DATA`);
+  }
+  assert.ok(VIETNAM_VERIFIED_CORRIDORS.length >= 12, 'Phải có >= 12 hành lang rủi ro đa đô thị');
+  const daNangCorridors = filterCorridorsInZone(VIETNAM_VERIFIED_CORRIDORS, 16.0544, 108.2022, 10);
+  assert.ok(daNangCorridors.length >= 2, 'Khoanh vùng Đà Nẵng phải có hành lang ngập kiểm chứng');
+
+  // Kiểm tra endpoint zone_osm chặn tọa độ ngoài Việt Nam và trả JSON chuẩn trong Việt Nam
+  const badOsm = await researchGET(new Request('http://localhost/api/research-portal?action=zone_osm&lat=35.67&lng=139.65&radiusKm=4'));
+  assert.equal(badOsm.status, 400, 'zone_osm phải chặn tọa độ ngoài Việt Nam');
+  const daNangOsmRes = await researchGET(new Request('http://localhost/api/research-portal?action=zone_osm&lat=16.0544&lng=108.2022&radiusKm=4'));
+  assert.equal(daNangOsmRes.status, 200);
+  const daNangOsmJson = await daNangOsmRes.json();
+  assert.equal(daNangOsmJson.ok, true);
+  assert.ok(Array.isArray(daNangOsmJson.pois) && Array.isArray(daNangOsmJson.waterways), 'zone_osm phải trả mảng pois & waterways');
+
+  // 2. BỎ HOÀN TOÀN NHÃN BÀI TẬP / ĐÁNH SỐ TRẺ CON & XÁC NHẬN GIAO DIỆN ĐA LỚP CHUYÊN NGHIỆP
   const html = await fs.readFile(path.join(rootDir, 'index.html'), 'utf8');
-  assert.ok(html.includes('id="pillar-public"'), 'Phải có Phần 1: Cộng đồng');
-  assert.ok(html.includes('id="pillar-research"'), 'Phải có Phần 2: Nghiên cứu');
-  assert.ok(html.includes('id="pillar-news"'), 'Phải có Phần 3: Bản tin & Bài viết');
+  assert.ok(html.includes('id="pillar-public"'), 'Phải có Phân hệ Bản đồ & Cảnh báo');
+  assert.ok(html.includes('id="pillar-research"'), 'Phải có Phân hệ Cổng Nghiên cứu');
+  assert.ok(html.includes('id="pillar-news"'), 'Phải có Phân hệ Bản tin & Công bố');
+  assert.ok(!html.includes('1. Cộng đồng'), 'Phải bỏ cách đánh số kiểu bài tập "1. Cộng đồng"');
+  assert.ok(!html.includes('2. Nghiên cứu'), 'Phải bỏ cách đánh số kiểu bài tập "2. Nghiên cứu"');
+  assert.ok(!html.includes('3. Bản tin'), 'Phải bỏ cách đánh số kiểu bài tập "3. Bản tin"');
+  assert.ok(html.includes('data-basemap="satellite"'), 'Phải có nút chuyển nền Vệ tinh chuyên sâu');
+  assert.ok(html.includes('id="hourly-rain-bars"'), 'Phải có biểu đồ lượng mưa 24 giờ tới');
   assert.ok(!html.includes('Đề tài 08'), 'Phải bỏ nhãn bài tập Đề tài 08 trên nền tảng thực tế');
   assert.ok(!html.includes('Pre-test'), 'Phải bỏ thẻ khảo sát học thuật Pre-test');
   assert.ok(!html.includes('Video 45s'), 'Phải bỏ thẻ Video 45s sáo rỗng');

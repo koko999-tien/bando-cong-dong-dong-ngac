@@ -38,6 +38,212 @@ const VALID_MACRO_REGIONS = new Set(['bac', 'trung', 'tay-nguyen', 'nam', 'dbscl
 const VALID_HAZARDS = new Set(['flood', 'landslide', 'heat', 'air_quality', 'salinity', 'storm', 'environment']);
 const VALID_CATEGORIES = new Set(['flood', 'landslide', 'heat', 'traffic', 'air_quality', 'salinity', 'shelter', 'medical']);
 
+const osmZoneMemoryCache = new Map();
+const OSM_CACHE_TTL_MS = 30 * 60 * 1000;
+const OSM_CACHE_MAX_ENTRIES = 150;
+
+function normalizeOverpassElements(overpassJson) {
+  const elements = Array.isArray(overpassJson?.elements) ? overpassJson.elements : [];
+  const pois = [];
+  const waterways = [];
+
+  for (const el of elements) {
+    const tags = el?.tags || {};
+    if (el.type === 'way' && tags.waterway && Array.isArray(el.geometry) && el.geometry.length >= 2) {
+      if (waterways.length < 30) {
+        waterways.push({
+          id: `osm-ww-${el.id}`,
+          name: cleanText(tags.name || 'Kênh / Sông thoát nước', 120),
+          waterwayType: cleanText(tags.waterway, 30),
+          coordinates: el.geometry.slice(0, 60).map((pt) => [Math.round(pt.lat * 100000) / 100000, Math.round(pt.lon * 100000) / 100000])
+        });
+      }
+      continue;
+    }
+
+    const amenity = tags.amenity || '';
+    const elLat = Number(el.lat ?? el.center?.lat);
+    const elLng = Number(el.lon ?? el.center?.lon);
+    if (!Number.isFinite(elLat) || !Number.isFinite(elLng) || !tags.name || pois.length >= 45) continue;
+
+    const isMedical = ['hospital', 'clinic', 'doctors'].includes(amenity);
+    pois.push({
+      id: `osm-${el.type}-${el.id}`,
+      layerGroup: 'safe',
+      category: isMedical ? 'medical' : 'shelter',
+      name: cleanText(tags.name, 140),
+      lat: Math.round(elLat * 1000000) / 1000000,
+      lng: Math.round(elLng * 1000000) / 1000000,
+      dataClass: 'OBSERVED_DATA',
+      confidenceTier: 'A',
+      status: 'approved',
+      isOsmLive: true,
+      sourceType: 'OpenStreetMap (Dữ liệu hạ tầng vùng khoanh)',
+      sourceCitation: `OpenStreetMap Contributors (ODbL) · osm:${el.type}/${el.id}`,
+      observedDate: 'Live Overpass',
+      notes: [
+        isMedical ? 'Cơ sở y tế' : amenity === 'fire_station' ? 'Đơn vị PCCC & CNCH' : 'Cơ sở hành chính / điểm hỗ trợ cộng đồng',
+        cleanText(tags['addr:street'] || tags['addr:full'] || '', 90)
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      confirmCount: 1
+    });
+  }
+
+  return { pois, waterways };
+}
+
+function quickHaversineMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const rad = (d) => (d * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLng = rad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(a)));
+}
+
+async function fetchPhotonZoneFallback(lat, lng, qRadiusMeters) {
+  const queries = [
+    { q: 'benh vien', fallbackCat: 'medical', note: 'Cơ sở y tế (OSM)' },
+    { q: 'tram y te', fallbackCat: 'medical', note: 'Trạm y tế địa phương (OSM)' },
+    { q: 'ubnd', fallbackCat: 'shelter', note: 'Trụ sở hành chính / điểm hỗ trợ (OSM)' }
+  ];
+  const seenIds = new Set();
+  const pois = [];
+  const results = await Promise.allSettled(
+    queries.map((item) => {
+      const c = new AbortController();
+      const t = setTimeout(() => c.abort(), 4000);
+      return fetch(
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(item.q)}&lat=${lat.toFixed(5)}&lon=${lng.toFixed(5)}&limit=12`,
+        { headers: { 'User-Agent': 'DongNgacOpenGIS/3.0' }, signal: c.signal }
+      )
+        .then((r) => (r.ok ? r.json() : null))
+        .finally(() => clearTimeout(t));
+    })
+  );
+
+  for (let qi = 0; qi < results.length; qi++) {
+    const r = results[qi];
+    if (r.status !== 'fulfilled' || !Array.isArray(r.value?.features)) continue;
+    const cfg = queries[qi];
+    for (const f of r.value.features) {
+      const props = f?.properties || {};
+      const coords = f?.geometry?.coordinates;
+      if (!Array.isArray(coords) || coords.length < 2 || !props.name) continue;
+      if (props.osm_value === 'bus_stop' || props.osm_key === 'highway') continue;
+      const pLng = Number(coords[0]);
+      const pLat = Number(coords[1]);
+      if (!isInsideVietnam(pLat, pLng)) continue;
+      const d = quickHaversineMeters(lat, lng, pLat, pLng);
+      if (d > qRadiusMeters + 350) continue;
+      const id = `osm-ph-${props.osm_type || 'N'}-${props.osm_id || `${pLat.toFixed(4)}-${pLng.toFixed(4)}`}`;
+      if (seenIds.has(id)) continue;
+      seenIds.add(id);
+
+      const val = String(props.osm_value || '').toLowerCase();
+      const isMedical = ['hospital', 'clinic', 'doctors', 'pharmacy'].includes(val) || cfg.fallbackCat === 'medical';
+      pois.push({
+        id,
+        layerGroup: 'safe',
+        category: isMedical ? 'medical' : 'shelter',
+        name: cleanText(props.name, 140),
+        lat: Math.round(pLat * 1000000) / 1000000,
+        lng: Math.round(pLng * 1000000) / 1000000,
+        dataClass: 'OBSERVED_DATA',
+        confidenceTier: 'A',
+        status: 'approved',
+        isOsmLive: true,
+        sourceType: 'OpenStreetMap / Photon (Dữ liệu hạ tầng vùng khoanh)',
+        sourceCitation: `OpenStreetMap Contributors (ODbL) · osm:${props.osm_id || 'photon'}`,
+        observedDate: 'Live OSM',
+        notes: [cfg.note, cleanText(props.street || props.district || '', 80)].filter(Boolean).join(' · '),
+        confirmCount: 1
+      });
+    }
+  }
+  return pois.slice(0, 35);
+}
+
+async function fetchZoneOsmLive(lat, lng, radiusKm) {
+  const qRadiusMeters = Math.round(Math.min(Math.max(Number(radiusKm) || 5, 1.5), 8) * 1000);
+  const cacheKey = `${lat.toFixed(2)}:${lng.toFixed(2)}:${qRadiusMeters}`;
+  const cached = osmZoneMemoryCache.get(cacheKey);
+  if (cached && Date.now() - cached.savedAt < OSM_CACHE_TTL_MS) {
+    return { ...cached.data, cache: 'MEM_HIT' };
+  }
+
+  const edgeBase = String(process.env.CF_EDGE_API_URL || '').replace(/\/$/, '');
+  if (edgeBase) {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(
+        `${edgeBase}/zone-osm?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&radiusKm=${(qRadiusMeters / 1000).toFixed(1)}`,
+        { signal: controller.signal }
+      );
+      clearTimeout(t);
+      if (res.ok) {
+        const edgeData = await res.json();
+        if (edgeData?.ok && ((edgeData.pois?.length || 0) > 0 || (edgeData.waterways?.length || 0) > 0)) {
+          const out = {
+            pois: Array.isArray(edgeData.pois) ? edgeData.pois : [],
+            waterways: Array.isArray(edgeData.waterways) ? edgeData.waterways : [],
+            radiusMeters: qRadiusMeters,
+            source: 'cloudflare_edge_kv'
+          };
+          if (osmZoneMemoryCache.size >= OSM_CACHE_MAX_ENTRIES) {
+            const firstKey = osmZoneMemoryCache.keys().next().value;
+            if (firstKey) osmZoneMemoryCache.delete(firstKey);
+          }
+          osmZoneMemoryCache.set(cacheKey, { savedAt: Date.now(), data: out });
+          return { ...out, cache: edgeData.cache || 'EDGE' };
+        }
+      }
+    } catch {
+      // Fall through
+    }
+  }
+
+  const dDeg = qRadiusMeters / 111000;
+  const s = (lat - dDeg).toFixed(4);
+  const w = (lng - dDeg).toFixed(4);
+  const n = (lat + dDeg).toFixed(4);
+  const e = (lng + dDeg).toFixed(4);
+  const ql = `[out:json][timeout:5][bbox:${s},${w},${n},${e}];(node["amenity"~"hospital|clinic|doctors|fire_station|townhall"]["name"];way["amenity"~"hospital|clinic|doctors|fire_station|townhall"]["name"];way["waterway"~"river|canal|drain"]["name"];);out center 55;`;
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 4200);
+    const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(ql)}`, {
+      headers: { 'User-Agent': 'DongNgacOpenGIS/3.0' },
+      signal: controller.signal
+    });
+    clearTimeout(t);
+    if (!res.ok) throw new Error(`OVERPASS_${res.status}`);
+    const normalized = normalizeOverpassElements(await res.json());
+    if (normalized.pois.length === 0 && normalized.waterways.length === 0) throw new Error('OVERPASS_EMPTY');
+    const out = { ...normalized, radiusMeters: qRadiusMeters, source: 'overpass_direct' };
+    if (osmZoneMemoryCache.size >= OSM_CACHE_MAX_ENTRIES) {
+      const firstKey = osmZoneMemoryCache.keys().next().value;
+      if (firstKey) osmZoneMemoryCache.delete(firstKey);
+    }
+    osmZoneMemoryCache.set(cacheKey, { savedAt: Date.now(), data: out });
+    return { ...out, cache: 'MISS' };
+  } catch {
+    const photonPois = await fetchPhotonZoneFallback(lat, lng, qRadiusMeters);
+    const out = { pois: photonPois, waterways: [], radiusMeters: qRadiusMeters, source: photonPois.length ? 'osm_photon_live' : 'fallback_empty' };
+    if (photonPois.length > 0) {
+      if (osmZoneMemoryCache.size >= OSM_CACHE_MAX_ENTRIES) {
+        const firstKey = osmZoneMemoryCache.keys().next().value;
+        if (firstKey) osmZoneMemoryCache.delete(firstKey);
+      }
+      osmZoneMemoryCache.set(cacheKey, { savedAt: Date.now(), data: out });
+    }
+    return out;
+  }
+}
+
 function getClientIp(request) {
   return (
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -90,6 +296,26 @@ export async function GET(request) {
   try {
     const url = new URL(request.url);
     const action = url.searchParams.get('action') || 'publications';
+
+    // 0. Làm giàu hạ tầng cứu hộ, y tế & thủy hệ OSM theo đúng vòng khoanh (chống lag toàn quốc)
+    if (action === 'zone_osm') {
+      const lat = Number(url.searchParams.get('lat'));
+      const lng = Number(url.searchParams.get('lng'));
+      const radiusKm = Number(url.searchParams.get('radiusKm') || 5);
+      if (!isInsideVietnam(lat, lng)) {
+        return Response.json({ ok: false, error: 'Tọa độ khoanh vùng phải nằm trong lãnh thổ Việt Nam.' }, { status: 400 });
+      }
+      const result = await fetchZoneOsmLive(lat, lng, radiusKm);
+      return Response.json(
+        {
+          ok: true,
+          zone: { lat, lng, radiusKm },
+          ...result
+        },
+        { headers: { 'Cache-Control': 'public, max-age=300' } }
+      );
+    }
+
     const { backend, researchers, submissions, publications } = await loadNationalCollections();
 
     // 1. Lấy dữ liệu nghiên cứu ĐÃ XUẤT BẢN nằm TRONG vùng đang khoanh (Chống lag toàn quốc!)
