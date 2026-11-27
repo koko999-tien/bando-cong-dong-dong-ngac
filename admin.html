@@ -267,6 +267,7 @@
             <p class="sub" style="margin-bottom:0;">Tự động đồng bộ từ trang <code>khao-sat.html</code> trên Cloud (hoặc nhập bổ sung) để kiểm tra ngưỡng KPI (+≥30% kiến thức đúng &amp; +≥1,0 điểm tự tin).</p>
           </div>
           <div class="nav-row">
+            <button type="button" id="btn-ai-chapter5" class="btn">AI Viết Phân tích Chương 5 (Gemini)</button>
             <button type="button" id="btn-export-surveys-csv" class="btn btn-ok">Xuất dữ liệu Khảo sát Pre/Quiz/Post (.CSV Excel)</button>
             <button type="button" id="btn-copy-prepost-text" class="btn btn-primary">Chép đoạn nhận xét Chương 5</button>
           </div>
@@ -408,7 +409,10 @@
           </div>
         </div>
         <div>
-          <label for="bc-message">Nội dung hiển thị trên đầu trang Bản đồ</label>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;gap:8px;flex-wrap:wrap;">
+            <label for="bc-message" style="margin:0;">Nội dung hiển thị trên đầu trang Bản đồ</label>
+            <button type="button" id="btn-ai-draft-bc" class="btn">AI Soạn Bản tin theo Dữ liệu Hiện tại</button>
+          </div>
           <input type="text" id="bc-message" placeholder="Nhập thông điệp ngắn gọn kèm lưu ý [MÔ PHỎNG DIỄN TẬP] nếu là bài tập...">
         </div>
       </div>
@@ -504,8 +508,15 @@
         </div>
 
         <div class="card">
-          <h2>4. Chẩn đoán Hiệu năng &amp; Bộ nhớ PWA</h2>
-          <p class="sub">Theo dõi dung lượng lưu trữ trình duyệt và làm mới bộ nhớ đệm Offline Service Worker khi vừa cập nhật phiên bản mới.</p>
+          <h2>4. Chẩn đoán Hiệu năng &amp; Trợ lý AI Google Gemini</h2>
+          <p class="sub">Quản lý khóa API Gemini mã hóa <strong>AES-256-GCM</strong> trên máy chủ Cloud (không lộ ra trình duyệt/GitHub) và theo dõi bộ nhớ PWA.</p>
+          <div style="margin-bottom:10px;padding:10px 12px;border-radius:8px;background:#f0fdfa;border:1px solid #99f6e4;">
+            <strong id="adm-ai-status" style="font-size:0.8rem;color:#115e59;display:block;margin-bottom:6px;">Đang kiểm tra trạng thái kết nối Gemini AI...</strong>
+            <div style="display:flex;gap:6px;">
+              <input type="password" id="adm-gemini-key" placeholder="Dán khóa Google AI Studio mới nếu muốn đổi / cập nhật...">
+              <button type="button" id="btn-save-gemini-key" class="btn btn-primary">Mã hóa &amp; Lưu lên Cloud</button>
+            </div>
+          </div>
           <div id="perf-diag-box" class="mono" style="padding:10px 12px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;font-size:0.78rem;margin-bottom:10px;"></div>
           <button type="button" id="btn-clear-sw-cache" class="btn">Làm mới bộ nhớ đệm Offline PWA</button>
         </div>

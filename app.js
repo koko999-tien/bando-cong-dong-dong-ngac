@@ -592,6 +592,8 @@ function initApp() {
     notebookDialog: document.getElementById('notebook-dialog'),
     btnCloseNotebook: document.getElementById('btn-close-notebook'),
     nbQueryInput: document.getElementById('nb-query-input'),
+    btnAskAiCopilot: document.getElementById('btn-ask-ai-copilot'),
+    nbAiAnswerWrap: document.getElementById('nb-ai-answer-wrap'),
     btnNbClear: document.getElementById('btn-nb-clear'),
     nbChips: document.querySelectorAll('.js-nb-chip'),
     nbResultsContainer: document.getElementById('nb-results-container'),
@@ -656,6 +658,9 @@ function initApp() {
     ptPhotoPreviewWrap: document.getElementById('pt-photo-preview-wrap'),
     ptPhotoPreview: document.getElementById('pt-photo-preview'),
     ptPhotoMeta: document.getElementById('pt-photo-meta'),
+    ptAiVisionBox: document.getElementById('pt-ai-vision-box'),
+    ptAiVisionText: document.getElementById('pt-ai-vision-text'),
+    btnApplyAiVision: document.getElementById('btn-apply-ai-vision'),
     btnClearPhoto: document.getElementById('btn-clear-photo'),
     ptLat: document.getElementById('pt-lat'),
     ptLng: document.getElementById('pt-lng'),
@@ -736,7 +741,9 @@ function initApp() {
     els.drillDialog.showModal();
   });
 
-  // Xử lý chọn ảnh, kiểm định điểm ảnh chống spam & xóa EXIF ngay trên trình duyệt
+  let lastAiVisionSuggestion = null;
+
+  // Xử lý chọn ảnh, kiểm định điểm ảnh chống spam, xóa EXIF & phân tích đa phương thức Gemini Vision
   els.ptPhoto.addEventListener('change', async () => {
     const file = els.ptPhoto.files?.[0];
     if (!file) return;
@@ -744,10 +751,51 @@ function initApp() {
       const cleaned = await stripExifAndCompressImage(file);
       state.pendingPhotoDataUrl = cleaned.dataUrl;
       state.pendingPhotoQualityFlag = cleaned.qualityFlag || 'ok';
+      lastAiVisionSuggestion = null;
       els.ptPhotoPreview.src = cleaned.dataUrl;
       els.ptPhotoMeta.style.color = cleaned.isWarning ? '#b45309' : '#15803d';
       els.ptPhotoMeta.textContent = `${cleaned.message} (${cleaned.width}×${cleaned.height}px · ~${cleaned.approxKb} KB)`;
       els.ptPhotoPreviewWrap.hidden = false;
+
+      if (els.ptAiVisionBox) {
+        els.ptAiVisionBox.hidden = false;
+        els.btnApplyAiVision.hidden = true;
+        els.ptAiVisionText.textContent = 'AI Vision đang kiểm định khung cảnh hiện trường...';
+        try {
+          const res = await fetch('/api/ai-copilot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'inspect_photo',
+              photoDataUrl: cleaned.dataUrl,
+              category: els.ptCategory.value
+            })
+          });
+          const data = await res.json();
+          if (data?.ok && data.vision) {
+            const v = data.vision;
+            lastAiVisionSuggestion = v;
+            if (!v.isValidScene) {
+              state.pendingPhotoQualityFlag = 'suspect_spam';
+              els.ptAiVisionBox.style.background = '#fef2f2';
+              els.ptAiVisionBox.style.borderColor = '#fecaca';
+              els.ptAiVisionBox.style.color = '#b91c1c';
+              els.ptAiVisionText.textContent = `Cảnh báo AI Vision: ${v.sceneSummary || 'Ảnh không giống hiện trường đường phố/điểm trú'} (${v.safetyNote || 'Báo cáo sẽ chuyển sang chờ duyệt thủ công'}).`;
+            } else {
+              state.pendingPhotoQualityFlag = 'verified_scene';
+              els.ptAiVisionBox.style.background = '#f0fdfa';
+              els.ptAiVisionBox.style.borderColor = '#99f6e4';
+              els.ptAiVisionBox.style.color = '#115e59';
+              els.ptAiVisionText.textContent = `AI Vision nhận diện: ${v.sceneSummary}${v.safetyNote ? ` — ${v.safetyNote}` : ''}`;
+              els.btnApplyAiVision.hidden = false;
+            }
+          } else {
+            els.ptAiVisionBox.hidden = true;
+          }
+        } catch {
+          els.ptAiVisionBox.hidden = true;
+        }
+      }
     } catch (err) {
       state.pendingPhotoDataUrl = '';
       state.pendingPhotoQualityFlag = 'ok';
@@ -756,11 +804,32 @@ function initApp() {
     }
   });
 
+  els.btnApplyAiVision?.addEventListener('click', () => {
+    if (!lastAiVisionSuggestion) return;
+    if (lastAiVisionSuggestion.suggestedCategory) {
+      els.ptCategory.value = lastAiVisionSuggestion.suggestedCategory;
+    }
+    if (lastAiVisionSuggestion.suggestedWaterScale) {
+      els.ptWaterScale.value = lastAiVisionSuggestion.suggestedWaterScale;
+    }
+    if (Array.isArray(lastAiVisionSuggestion.suggestedHazards)) {
+      els.pointForm.querySelectorAll('input[name="hazardFlags"]').forEach((chk) => {
+        if (lastAiVisionSuggestion.suggestedHazards.includes(chk.value)) chk.checked = true;
+      });
+    }
+    if (lastAiVisionSuggestion.sceneSummary && !els.ptNotes.value.trim()) {
+      els.ptNotes.value = lastAiVisionSuggestion.sceneSummary;
+    }
+    showToast('Đã điền gợi ý mô tả & mức cảnh báo từ AI Vision!');
+  });
+
   els.btnClearPhoto.addEventListener('click', () => {
     state.pendingPhotoDataUrl = '';
     state.pendingPhotoQualityFlag = 'ok';
+    lastAiVisionSuggestion = null;
     els.ptPhoto.value = '';
     els.ptPhotoPreviewWrap.hidden = true;
+    if (els.ptAiVisionBox) els.ptAiVisionBox.hidden = true;
   });
 
   // Bảng dữ liệu khí tượng ERA5 2024–2026
@@ -2010,12 +2079,94 @@ function initApp() {
         : `<div class="empty-state"><p class="empty-title">Không tìm thấy mục khớp từ khóa "${escapeHtml(queryStr)}"</p><p class="empty-desc">Thử đặt câu hỏi tự nhiên như: "Mưa lớn từ ĐH Mỏ về Cầu Noi đi đường nào?" hoặc "Phòng trọ mái tôn Cổ Nhuế nóng quá làm sao?".</p></div>`;
   }
 
+  async function askAiCopilot() {
+    const q = (els.nbQueryInput.value || '').trim();
+    if (q.length < 3) {
+      showToast('Hãy nhập câu hỏi vào ô tìm kiếm trước khi bấm Hỏi AI Gemini.');
+      els.nbQueryInput.focus();
+      return;
+    }
+    if (!els.nbAiAnswerWrap) return;
+    els.nbAiAnswerWrap.hidden = false;
+    els.nbAiAnswerWrap.innerHTML = `<div style="padding:12px 14px;border-radius:10px;border:1px solid #99f6e4;background:#f0fdfa;font-size:0.82rem;color:#115e59;">
+      <strong>AI Thực chứng Gemini đang đối chiếu 32+ điểm GIS, ERA5 &amp; DEM...</strong>
+    </div>`;
+    els.btnAskAiCopilot.disabled = true;
+
+    try {
+      const res = await fetch('/api/ai-copilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ask_copilot',
+          question: q,
+          liveWeather: state.liveWeatherSnapshot
+        })
+      });
+      const data = await res.json();
+      if (!data?.ok) throw new Error(data?.error || 'Chưa nhận được câu trả lời từ AI.');
+
+      const formattedLines = escapeHtml(data.answer)
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .split('\n')
+        .filter((ln) => ln.trim().length > 0)
+        .map((ln) => `<p style="margin:0 0 6px;">${ln}</p>`)
+        .join('');
+
+      const citedBtns = (data.citedPointIds || [])
+        .map((pid) => {
+          const pt = state.points.find((x) => x.id === pid);
+          return pt
+            ? `<button type="button" class="btn btn-secondary btn-compact js-nb-fly" data-id="${escapeHtml(pid)}">Bay tới [${escapeHtml(pid)}] ${escapeHtml(pt.name.slice(0, 26))}…</button>`
+            : '';
+        })
+        .filter(Boolean)
+        .join('');
+
+      els.nbAiAnswerWrap.innerHTML = `<section style="padding:13px 15px;border-radius:10px;border:1.5px solid #0f766e;background:#ffffff;box-shadow:0 4px 14px rgba(15,118,110,0.08);">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+          <strong style="font-size:0.76rem;color:#0f766e;">TRỢ LÝ AI THỰC CHỨNG GEMINI (${escapeHtml(data.modelUsed || 'gemini')})</strong>
+          <span style="font-size:0.72rem;color:#475569;">Bám sát dữ liệu OSM · ERA5 · DEM ĐH Mỏ</span>
+        </div>
+        <div style="font-size:0.83rem;line-height:1.55;color:#0f172a;">${formattedLines}</div>
+        ${citedBtns ? `<div class="popup-actions" style="margin-top:8px;">${citedBtns}</div>` : ''}
+      </section>`;
+    } catch (err) {
+      els.nbAiAnswerWrap.innerHTML = `<div style="padding:10px 12px;border-radius:8px;border:1px solid #fde68a;background:#fffbeb;font-size:0.8rem;color:#92400e;">
+        ${escapeHtml(err.message)} (Bộ máy Hỏi-Đáp Tình huống Cục bộ bên dưới vẫn hoạt động đầy đủ).
+      </div>`;
+    } finally {
+      els.btnAskAiCopilot.disabled = false;
+    }
+  }
+
+  els.btnAskAiCopilot?.addEventListener('click', askAiCopilot);
+  els.nbQueryInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      renderNotebookSearch(els.nbQueryInput.value);
+      askAiCopilot();
+    }
+  });
+  els.nbAiAnswerWrap?.addEventListener('click', (e) => {
+    const flyBtn = e.target.closest('.js-nb-fly');
+    if (!flyBtn) return;
+    const pid = flyBtn.dataset.id;
+    const target = state.points.find((p) => p.id === pid);
+    if (target) {
+      els.notebookDialog.close();
+      map.flyTo([target.lat, target.lng], 16, { duration: 0.5 });
+      setTimeout(() => markerMap.get(pid)?.openPopup(), 320);
+    }
+  });
+
   els.nbQueryInput.addEventListener(
     'input',
     debounce(() => renderNotebookSearch(els.nbQueryInput.value), 120)
   );
   els.btnNbClear.addEventListener('click', () => {
     els.nbQueryInput.value = '';
+    if (els.nbAiAnswerWrap) els.nbAiAnswerWrap.hidden = true;
     renderNotebookSearch('');
   });
   els.nbChips.forEach((chip) => {

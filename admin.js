@@ -1165,6 +1165,148 @@ document.getElementById('btn-copy-prepost-text')?.addEventListener('click', asyn
   showToast('Đã sao chép đoạn phân tích Chương 5 vào bộ nhớ tạm!');
 });
 
+// ================= TÍCH HỢP AI QUẢN TRỊ VIÊN (GEMINI INTERACTIONS API V1) =================
+async function refreshAdminAiStatus() {
+  const el = document.getElementById('adm-ai-status');
+  if (!el) return;
+  try {
+    const res = await fetch('/api/ai-copilot', { cache: 'no-store' });
+    const data = await res.json();
+    if (data?.ok && data.aiReady) {
+      el.textContent = `Trạng thái AI: Đang hoạt động (${data.engine} · Nguồn khóa: ${data.keySource === 'env' ? 'Biến môi trường Vercel' : 'Két mã hóa AES-256-GCM'})`;
+      el.style.color = '#15803d';
+    } else {
+      el.textContent = 'Trạng thái AI: Chưa nạp khóa Gemini API trên Cloud — dán khóa bên dưới để kích hoạt.';
+      el.style.color = '#b45309';
+    }
+  } catch {
+    el.textContent = 'Trạng thái AI: Không kiểm tra được ở chế độ ngoại tuyến.';
+  }
+}
+
+document.getElementById('btn-save-gemini-key')?.addEventListener('click', async () => {
+  if (!adminToken) {
+    authGate.hidden = false;
+    showToast('Vui lòng đăng nhập Quản trị Cloud trước khi lưu khóa mã hóa.');
+    return;
+  }
+  const keyInput = document.getElementById('adm-gemini-key');
+  const rawKey = (keyInput?.value || '').trim();
+  if (!rawKey) {
+    showToast('Vui lòng dán khóa API Google AI Studio vào ô nhập.');
+    return;
+  }
+  const btn = document.getElementById('btn-save-gemini-key');
+  btn.disabled = true;
+  btn.textContent = 'Đang kiểm chứng & mã hóa...';
+  try {
+    const res = await fetch('/api/ai-copilot', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({ action: 'admin_set_ai_key', apiKey: rawKey })
+    });
+    const data = await res.json();
+    if (!data?.ok) throw new Error(data?.error || 'Không lưu được khóa.');
+    keyInput.value = '';
+    appendAuditLog('Cập nhật AI Copilot', `Đã mã hóa AES-256-GCM khóa Gemini (${data.modelVerified})`);
+    await refreshAdminAiStatus();
+    showToast(`Đã kích hoạt thành công Gemini AI (${data.modelVerified})!`);
+  } catch (err) {
+    showToast(`Lỗi cấu hình AI: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Mã hóa & Lưu lên Cloud';
+  }
+});
+
+document.getElementById('btn-ai-chapter5')?.addEventListener('click', async () => {
+  if (!adminToken) {
+    authGate.hidden = false;
+    showToast('Vui lòng đăng nhập Quản trị Cloud để dùng Trợ lý AI học thuật.');
+    return;
+  }
+  const btn = document.getElementById('btn-ai-chapter5');
+  btn.disabled = true;
+  btn.textContent = 'AI đang phân tích...';
+  try {
+    const res = await fetch('/api/ai-copilot', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({
+        action: 'admin_ai_brief',
+        mode: 'chapter5_report',
+        statsPayload: {
+          nPre: document.getElementById('pp-n1')?.value,
+          preCorrectPct: document.getElementById('pp-c1')?.value,
+          preConfAvg: document.getElementById('pp-f1')?.value,
+          nPost: document.getElementById('pp-n2')?.value,
+          postCorrectPct: document.getElementById('pp-c2')?.value,
+          postConfAvg: document.getElementById('pp-f2')?.value,
+          quizCount: cloudKpiLive?.quizCount ?? 0,
+          totalPointsActive: rows.filter((r) => r.status !== 'hidden').length
+        }
+      })
+    });
+    const data = await res.json();
+    if (!data?.ok) throw new Error(data?.error || 'Lỗi gọi AI');
+    lastPrePostParagraph = data.text;
+    document.getElementById('pp-paragraph-box').textContent = data.text;
+    showToast(`Gemini (${data.modelUsed}) đã biên soạn đoạn phân tích Chương 5!`);
+  } catch (err) {
+    showToast(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'AI Viết Phân tích Chương 5 (Gemini)';
+  }
+});
+
+document.getElementById('btn-ai-draft-bc')?.addEventListener('click', async () => {
+  if (!adminToken) {
+    authGate.hidden = false;
+    showToast('Vui lòng đăng nhập Quản trị Cloud để dùng AI soạn bản tin.');
+    return;
+  }
+  const btn = document.getElementById('btn-ai-draft-bc');
+  btn.disabled = true;
+  btn.textContent = 'AI đang soạn...';
+  try {
+    const pendingPts = rows.filter((r) => r.confidenceTier === 'C' && r.status !== 'hidden').map((r) => r.name);
+    const res = await fetch('/api/ai-copilot', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${adminToken}`
+      },
+      body: JSON.stringify({
+        action: 'admin_ai_brief',
+        mode: 'alert_draft',
+        statsPayload: {
+          level: bcLevel.value,
+          pendingCommunityHotspots: pendingPts.slice(0, 4),
+          keyVerifiedRisks: ['Cuối Phố Viên (R-01)', 'Cầu Noi (R-06)', 'Trạm buýt Phạm Văn Đồng (R-08)']
+        }
+      })
+    });
+    const data = await res.json();
+    if (!data?.ok) throw new Error(data?.error || 'Lỗi gọi AI');
+    bcMsg.value = data.text.replace(/^["']|["']$/g, '');
+    showToast('Đã điền bản thảo thông báo từ Gemini AI!');
+  } catch (err) {
+    showToast(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'AI Soạn Bản tin theo Dữ liệu Hiện tại';
+  }
+});
+
+refreshAdminAiStatus();
+
 renderUtmQrCards();
 loadLocalRows();
 if (adminToken) {

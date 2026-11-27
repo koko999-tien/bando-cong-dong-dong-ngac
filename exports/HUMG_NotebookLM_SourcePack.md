@@ -1,6 +1,6 @@
 # HỒ SƠ TRI THỨC THỰC CHỨNG — BẢN ĐỒ CỘNG ĐỒNG MỞ PHƯỜNG ĐÔNG NGẠC & ĐH MỎ - ĐỊA CHẤT (BÁN KÍNH 2 KM)
 - **Tâm khảo sát:** Trường ĐH Mỏ - Địa chất (18 Phố Viên, P. Đông Ngạc) (21.072514°N, 105.77387°E · UTM Zone 48N: 580390.3 E, 2330368.2 N)
-- **Thời điểm kết xuất gói nguồn NotebookLM:** 08:36:01 27/11/2026
+- **Thời điểm kết xuất gói nguồn NotebookLM:** 09:31:02 27/11/2026
 - **Tổng số điểm không gian hiện có:** 32 điểm (17 Điểm Rủi ro Ngập/Nắng · 15 Điểm An toàn/Y tế/Hành chính)
 - **Tổng lượt cư dân & sinh viên xác nhận (+1):** 119 lượt
 - **Giấy phép & Tuân thủ:** CC BY 4.0, OpenStreetMap ODbL 1.0, tuân thủ Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 (không chứa dữ liệu định danh cá nhân).

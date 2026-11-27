@@ -502,8 +502,14 @@
         <input type="file" id="pt-photo" accept="image/*">
         <div id="pt-photo-preview-wrap" class="photo-preview-wrap" hidden>
           <img id="pt-photo-preview" alt="Xem trước ảnh hiện trường đã xóa EXIF">
-          <div>
-            <span id="pt-photo-meta" class="hint" style="color:#15803d;font-weight:600;margin-bottom:4px;"></span>
+          <div style="flex:1;">
+            <span id="pt-photo-meta" class="hint" style="color:#15803d;font-weight:600;margin-bottom:4px;display:block;"></span>
+            <div id="pt-ai-vision-box" style="margin:6px 0;padding:7px 9px;border-radius:7px;background:#f0fdfa;border:1px solid #99f6e4;font-size:0.77rem;color:#115e59;" hidden>
+              <span id="pt-ai-vision-text"></span>
+              <div style="margin-top:5px;">
+                <button type="button" id="btn-apply-ai-vision" class="btn btn-primary btn-compact" hidden>Điền nhanh mô tả &amp; mức ngập từ AI</button>
+              </div>
+            </div>
             <button type="button" id="btn-clear-photo" class="btn btn-secondary btn-compact">Bỏ ảnh</button>
           </div>
         </div>
@@ -765,10 +771,13 @@
       </div>
 
       <div class="search-box">
-        <label for="nb-query-input" class="visually-hidden">Đặt câu hỏi hoặc nhập từ khóa tra cứu thực tế</label>
-        <input type="search" id="nb-query-input" placeholder="Hỏi hoặc gõ từ khóa (VD: kênh 920 tỷ, cuối Phố Viên, xe buýt 09A, trọ mái tôn, rò điện 1900 1288, UBND phường)...">
+        <label for="nb-query-input" class="visually-hidden">Đặt câu hỏi tự nhiên cho AI Thực chứng hoặc nhập từ khóa tra cứu</label>
+        <input type="search" id="nb-query-input" placeholder="Đặt câu hỏi cho AI (VD: Mưa to lúc 17h từ ĐH Mỏ về Cầu Noi đi lối nào? Phòng trọ mái tôn nóng quá làm sao?)...">
+        <button type="button" id="btn-ask-ai-copilot" class="btn btn-primary btn-compact">Hỏi AI Gemini</button>
         <button type="button" id="btn-nb-clear" class="btn btn-secondary btn-compact">Xóa</button>
       </div>
+
+      <div id="nb-ai-answer-wrap" style="margin:8px 0 10px;" hidden></div>
 
       <div class="nb-chip-row" aria-label="Chủ đề tra cứu nhanh">
         <button type="button" class="chip-btn js-nb-chip" data-q="kênh thụy phương 920 tỷ cuối phố viên">Kênh 920 tỷ vs. Cuối Phố Viên</button>
