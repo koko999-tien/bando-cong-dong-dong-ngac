@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Slide Bảo vệ Đồ án (10 Trang) &amp; Studio Quay Video 45 Giây — Đề tài 08 HUMG</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --teal: #0f766e;
+      --teal-dark: #115e59;
+      --red: #b91c1c;
+      --orange: #c2410c;
+      --green: #15803d;
+      --ink: #0f172a;
+      --muted: #475569;
+      --border: #cbd5e1;
+      --bg: #eef2f6;
+      --surface: #ffffff;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: var(--ink); background: var(--bg); line-height: 1.5; }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+      padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .topbar h1 { margin: 0; font-size: 1rem; letter-spacing: -0.02em; }
+    .nav-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+      font: inherit; font-size: 0.81rem; font-weight: 600; text-decoration: none; cursor: pointer;
+    }
+    .btn:hover { background: #f1f5f9; }
+    .btn-primary { background: var(--teal); border-color: var(--teal); color: #ffffff; }
+    .btn-primary:hover { background: var(--teal-dark); }
+    .btn.is-active { background: var(--ink); border-color: var(--ink); color: #ffffff; }
+
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 48px; }
+
+    /* Khung Slide 16:9 chuẩn trình chiếu hội trường */
+    .deck-controls {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+      margin-bottom: 12px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    }
+    .slide-stage {
+      background: var(--surface); border: 1.5px solid var(--border); border-radius: 16px;
+      min-height: 520px; display: flex; flex-direction: column; justify-content: space-between;
+      overflow: hidden; box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    }
+    .slide-head {
+      padding: 20px 30px 16px; border-bottom: 1px solid #e2e8f0;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+      background: #f8fafc;
+    }
+    .slide-num-pill {
+      padding: 4px 10px; border-radius: 999px; background: #f0fdfa; border: 1px solid #99f6e4;
+      color: var(--teal-dark); font-family: var(--mono); font-size: 0.76rem; font-weight: 700; white-space: nowrap;
+    }
+    .slide-head h2 { margin: 0; font-size: 1.38rem; letter-spacing: -0.02em; line-height: 1.25; }
+
+    .slide-body { padding: 24px 30px; flex: 1; font-size: 0.96rem; }
+    .slide-foot {
+      padding: 12px 30px; background: #0f172a; color: #cbd5e1; font-size: 0.77rem;
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+
+    .box { padding: 15px 18px; border-radius: 12px; border: 1px solid var(--border); background: #f8fafc; }
+    .box-teal { background: #f0fdfa; border-color: #99f6e4; }
+    .box-red { background: #fef2f2; border-color: #fecaca; }
+    .box-amber { background: #fffbeb; border-color: #fde68a; }
+    .box-green { background: #f0fdf4; border-color: #bbf7d0; }
+    .box h3 { margin: 0 0 8px; font-size: 1rem; }
+    .box ul, .box ol { margin: 0; padding-left: 18px; font-size: 0.88rem; }
+    .box li { margin-bottom: 6px; }
+
+    .big-num { display: block; font-family: var(--mono); font-size: 1.85rem; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
+    .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+    .speaker-box {
+      margin-top: 14px; padding: 14px 18px; border-radius: 10px;
+      background: #fffbeb; border: 1px solid #fcd34d; color: #78350f; font-size: 0.85rem;
+    }
+
+    /* Teleprompter Video 45s */
+    .timer-banner {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+      padding: 16px 22px; border-radius: 12px; background: #0f172a; color: #ffffff; margin-bottom: 16px;
+    }
+    .timer-clock { font-family: var(--mono); font-size: 2.1rem; font-weight: 700; color: #5eead4; }
+    .scene-card {
+      padding: 16px 20px; border-radius: 12px; border: 2px solid var(--border);
+      background: var(--surface); margin-bottom: 12px; transition: border-color 150ms ease, background-color 150ms ease;
+    }
+    .scene-card.is-speaking {
+      border-color: var(--teal); background: #f0fdfa; box-shadow: 0 6px 18px rgba(15, 118, 110, 0.14);
+    }
+    .scene-time {
+      display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--ink); color: #fff;
+      font-family: var(--mono); font-size: 0.76rem; font-weight: 700; margin-bottom: 6px;
+    }
+    .scene-card.is-speaking .scene-time { background: var(--teal); }
+
+    @media (max-width: 820px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .slide-head, .slide-body, .slide-foot { padding-left: 18px; padding-right: 18px; }
+    }
+    @media print {
+      .topbar, .deck-controls { display: none !important; }
+      .slide-stage { box-shadow: none; page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Bộ Slide Bảo vệ Đồ án (10 Trang) &amp; Teleprompter Quay Video 45 Giây</h1>
+      <span style="font-size:0.76rem;color:var(--muted);">Đề tài 08 · Trường Đại học Mỏ - Địa chất · Tự động đồng bộ số liệu trực tiếp từ kho dữ liệu WebGIS</span>
+    </div>
+    <nav class="nav-row">
+      <button type="button" id="mode-slides-btn" class="btn is-active">10 Slide Thuyết trình</button>
+      <button type="button" id="mode-video-btn" class="btn">Teleprompter Video 45 giây</button>
+      <a href="./index.html" class="btn btn-primary">← Về Bản đồ Cộng đồng</a>
+      <a href="./admin.html" class="btn">Quản trị</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <!-- ================= PHẦN 1: 10 SLIDE BẢO VỆ ĐỒ ÁN ================= -->
+    <section id="view-slides">
+      <div class="deck-controls">
+        <div class="nav-row">
+          <button type="button" id="btn-prev-slide" class="btn">← Slide trước</button>
+          <span id="slide-counter" class="mono" style="font-weight:700;padding:0 8px;">Slide 1 / 10</span>
+          <button type="button" id="btn-next-slide" class="btn btn-primary">Slide tiếp →</button>
+        </div>
+        <div class="nav-row">
+          <label style="display:inline-flex;align-items:center;gap:6px;font-size:0.81rem;font-weight:600;cursor:pointer;">
+            <input type="checkbox" id="toggle-speaker-notes" checked>
+            <span>Hiện lời dẫn phân vai (TV1 · TV2 · TV3)</span>
+          </label>
+          <button type="button" id="btn-fullscreen" class="btn">Trình chiếu Toàn màn hình (F)</button>
+        </div>
+      </div>
+
+      <article id="slide-stage" class="slide-stage" aria-live="polite">
+        <header class="slide-head">
+          <h2 id="sl-title">Đang tải slide...</h2>
+          <span id="sl-badge" class="slide-num-pill">01 / 10</span>
+        </header>
+        <div id="sl-body" class="slide-body"></div>
+        <footer class="slide-foot">
+          <span>Đề tài 08 · Bản đồ Cộng đồng Mở P. Đông Ngạc &amp; ĐH Mỏ - Địa chất (Bán kính 2 km)</span>
+          <span id="sl-live-stat" class="mono">32 điểm xác thực · Dữ liệu mở CC BY 4.0</span>
+        </footer>
+      </article>
+
+      <aside id="speaker-notes" class="speaker-box"></aside>
+    </section>
+
+    <!-- ================= PHẦN 2: TELEPROMPTER VIDEO 45 GIÂY ================= -->
+    <section id="view-video" hidden>
+      <div class="timer-banner">
+        <div>
+          <strong style="font-size:1.05rem;display:block;">Bộ Bấm Giờ &amp; Nhắc Thoại Quay Video Ngắn 45 Giây (TikTok / Reels / Shorts)</strong>
+          <span style="font-size:0.8rem;color:#cbd5e1;">Đặt điện thoại quay dọc 9:16, bấm "Bắt đầu quay" — khung thoại tương ứng từng giây sẽ tự động sáng lên!</span>
+        </div>
+        <div class="nav-row">
+          <span id="video-clock" class="timer-clock">00.0s / 45.0s</span>
+          <button type="button" id="btn-timer-start" class="btn btn-primary">Bắt đầu bấm giờ</button>
+          <button type="button" id="btn-timer-reset" class="btn">Đặt lại 00s</button>
+        </div>
+      </div>
+
+      <div id="video-scenes-list">
+        <article class="scene-card" data-start="0" data-end="8">
+          <span class="scene-time">CẢNH 1 · 00s – 08s (Móc câu thu hút tại cổng 18 Phố Viên / cuối Phố Viên)</span>
+          <h3 style="margin:4px 0 6px;">Hình ảnh: Cảnh cổng ĐH Mỏ nắng gắt hoặc ảnh tư liệu ngập sâu cuối Phố Viên</h3>
+          <p style="margin:0;font-size:0.95rem;"><strong>Lời đọc (TV2):</strong> <em>“Sinh viên Mỏ – Tài chính ở Đông Ngạc, Cổ Nhuế chắc chắn từng trải qua: Mùa hè trọ mái tôn nóng 45–50 độ, mưa to 30 phút là cuối Phố Viên, Cầu Noi ngập che kín ổ gà và miệng cống xoáy!”</em></p>
+        </article>
+
+        <article class="scene-card" data-start="8" data-end="20">
+          <span class="scene-time">CẢNH 2 · 08s – 20s (Chứng cứ số liệu thực tế thuyết phục)</span>
+          <h3 style="margin:4px 0 6px;">Hình ảnh: Quay cận biểu đồ ERA5 &amp; Lát cắt địa hình DEM 6m–17m trên màn hình</h3>
+          <p style="margin:0;font-size:0.95rem;"><strong>Lời đọc (TV1):</strong> <em>“Số liệu vệ tinh ERA5 và cao độ DEM cho thấy: Khu vực quanh trường có tới 76 ngày nhiệt cảm nhận trên 40°C trong năm 2026 và nằm ngay dải lòng máng 6 đến 12 mét ven sông Nhuệ!”</em></p>
+        </article>
+
+        <article class="scene-card" data-start="20" data-end="35">
+          <span class="scene-time">CẢNH 3 · 20s – 35s (Demo thao tác “1 Chạm” trên điện thoại)</span>
+          <h3 style="margin:4px 0 6px;">Hình ảnh: Ngón tay bấm nút “Tìm nơi trú gần nhất”, “Lát cắt DEM” &amp; “+1 Tôi cũng gặp ở đây”</h3>
+          <p style="margin:0;font-size:0.95rem;"><strong>Lời đọc (TV3):</strong> <em>“Vì vậy nhóm mình xây dựng Bản đồ Cộng đồng Mở 2 km quanh ĐH Mỏ: Chỉ 1 chạm để tìm đường bộ né điểm ngập, định vị Bệnh viện Phương Đông cách 310 mét, hoặc tra sơ cứu sốc nhiệt 3 phút!”</em></p>
+        </article>
+
+        <article class="scene-card" data-start="35" data-end="45">
+          <span class="scene-time">CẢNH 4 · 35s – 45s (Kêu gọi hành động cộng đồng + Hiện Mã QR to rõ)</span>
+          <h3 style="margin:4px 0 6px;">Hình ảnh: Hiện thẻ Mã QR + Nút bấm “+ Báo điểm ngõ bạn”</h3>
+          <p style="margin:0;font-size:0.95rem;"><strong>Lời đọc (Cả nhóm):</strong> <em>“Quét ngay mã QR hoặc bấm link phần mô tả để tích +1 xác nhận điểm ngập, nắng gắt ngay tại ngõ bạn ở và thử sức Mini-Quiz 60 giây cùng tụi mình nhé!”</em></p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="./vendor/turf/turf.min.js"></script>
+  <script type="module">
+    import { HUMG_CENTER, SAMPLE_HUMG_POINTS } from './humg-data.js';
+    import { analyzeSurveyPoints } from './gis-utils.js';
+
+    const STORAGE_KEY = 'humg_dongngac_community_gis_v7';
+    let pts = structuredClone(SAMPLE_HUMG_POINTS);
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if (Array.isArray(saved?.points) && saved.points.length > 0) pts = saved.points;
+    } catch { /* fallback */ }
+
+    const active = pts.filter((p) => p.status !== 'hidden');
+    const stats = analyzeSurveyPoints(window.turf, active, HUMG_CENTER.lat, HUMG_CENTER.lng, 2.0).stats;
+    document.getElementById('sl-live-stat').textContent =
+      `${stats.inside} điểm trong 2km (${stats.riskInside} Rủi ro · ${stats.safeInside} An toàn) · ${stats.totalConfirmations} lượt xác nhận`;
+
+    const SLIDES = [
+      {
+        title: 'BẢN ĐỒ CỘNG ĐỒNG MỞ THÍCH ỨNG NẮNG NÓNG & NGẬP CỤC BỘ QUANH ĐH MỎ - ĐỊA CHẤT',
+        speaker: 'TV1 mở đầu (40 giây): Giới thiệu tên đề tài, thông điệp chiến dịch "Chủ động một chạm" và phạm vi 2 km quanh 18 Phố Viên, Phường Đông Ngạc mới.',
+        html: `
+          <div class="box box-teal" style="margin-bottom:16px;">
+            <h3 style="font-size:1.15rem;color:#115e59;">Thông điệp xuyên suốt: “Chủ động một chạm – Vững vàng trước nắng gắt, an toàn qua mưa ngập”</h3>
+            <p style="margin:4px 0 0;">Học phần Giáo dục &amp; Truyền thông Môi trường (Đề tài 08) · Tâm khảo sát: 18 Phố Viên, P. Đông Ngạc mới, Hà Nội (<span class="mono">21.072514°N, 105.773870°E</span>)</p>
+          </div>
+          <div class="grid-3">
+            <div class="box"><span class="big-num" style="color:var(--teal)">${stats.inside}</span><strong>Điểm dữ liệu thực tế ≤2km</strong><p style="margin:4px 0 0;font-size:0.83rem;color:var(--muted);">100% có mã OpenStreetMap, cao độ DEM &amp; trích dẫn báo chí chính thống.</p></div>
+            <div class="box"><span class="big-num" style="color:var(--orange)">${stats.totalConfirmations}</span><strong>Lượt xác nhận cộng đồng (+1)</strong><p style="margin:4px 0 0;font-size:0.83rem;color:var(--muted);">Cư dân &amp; sinh viên trực tiếp tham gia kiểm chứng từng ngõ.</p></div>
+            <div class="box"><span class="big-num" style="color:var(--green)">0 VNĐ</span><strong>Chi phí duy trì dài hạn</strong><p style="margin:4px 0 0;font-size:0.83rem;color:var(--muted);">Kiến trúc mở PWA + Google Apps Script sẵn sàng cho Living Lab 2027+.</p></div>
+          </div>`
+      },
+      {
+        title: 'BỐI CẢNH PHƯỜNG ĐÔNG NGẠC MỚI & ĐỐI TƯỢNG DỄ TỔN THƯƠNG',
+        speaker: 'TV1 trình bày (45 giây): Nêu cột mốc sáp nhập hành chính 01/07/2025 và đặc thù mật độ sinh viên thuê trọ quanh cụm 4 trường đại học.',
+        html: `
+          <div class="grid-2">
+            <div class="box">
+              <h3>Địa bàn Phường Đông Ngạc mới (từ 01/07/2025)</h3>
+              <ul>
+                <li>Hợp nhất phường Đức Thắng cũ cùng một phần Cổ Nhuế 2, Đông Ngạc, Thụy Phương, Xuân Đỉnh, Minh Khai (~<strong class="mono">8,85 km²</strong>, ~<strong class="mono">83.544 người</strong>).</li>
+                <li>Trụ sở UBND đặt tại <strong>Phố Văn Hội</strong> (cách ĐH Mỏ <span class="mono">747 m</span>).</li>
+                <li>Cụm đại học tập trung đông sinh viên: <strong>ĐH Mỏ - Địa chất, HV Tài chính, HV Cảnh sát ND, ĐH Y tế Công cộng</strong>.</li>
+              </ul>
+            </div>
+            <div class="box box-amber">
+              <h3>3 Nhóm chịu rủi ro kép Nắng – Ngập rõ nhất</h3>
+              <ol>
+                <li><strong>Sinh viên thuê trọ mái tôn / tầng trệt nền thấp</strong> tại ngõ sâu Cổ Nhuế, Phố Viên, ven sông Nhuệ.</li>
+                <li><strong>Người đi bộ &amp; sinh viên chờ xe buýt 09A, 28, 31</strong> tại Phố Viên và trục bê tông Phạm Văn Đồng.</li>
+                <li><strong>Tiểu thương, tài xế, lao động ngoài trời</strong> quanh Chợ Cổ Nhuế, Cầu Noi, Hoàng Tăng Bí.</li>
+              </ol>
+            </div>
+          </div>`
+      },
+      {
+        title: 'BẰNG CHỨNG KHÍ TƯỢNG THỰC TẾ ECMWF ERA5 & KỶ LỤC TRẠM LÁNG (2024–2026)',
+        speaker: 'TV1 phân tích (50 giây): Chỉ rõ con số 76 ngày nhiệt cảm nhận ≥40°C năm 2026, kỷ lục 40,3°C tại Trạm Láng và đỉnh mưa tháng 8/2026 đạt 624,8 mm.',
+        html: `
+          <div class="grid-4" style="margin-bottom:14px;">
+            <div class="box box-amber"><span class="big-num" style="color:var(--orange)">76 ngày</span><span style="font-size:0.8rem;">Nhiệt cảm nhận ≥40°C năm 2026 tại ĐH Mỏ (ERA5)</span></div>
+            <div class="box box-red"><span class="big-num" style="color:var(--red)">40,3°C</span><span style="font-size:0.8rem;">Kỷ lục lịch sử tháng 8 tại Trạm Láng (04/08/2025)</span></div>
+            <div class="box box-red"><span class="big-num" style="color:var(--red)">45–50°C</span><span style="font-size:0.8rem;">Nhiệt thực đo phòng trọ mái tôn khung 11h–16h</span></div>
+            <div class="box box-teal"><span class="big-num" style="color:var(--teal)">624,8 mm</span><span style="font-size:0.8rem;">Tổng mưa kỷ lục riêng tháng 08/2026 tại ĐH Mỏ</span></div>
+          </div>
+          <div class="box">
+            <h3>Đối chiếu chuỗi cực đoan tại tọa độ 21.0725°N, 105.7739°E</h3>
+            <ul>
+              <li><strong>Năm 2024:</strong> 71 ngày cảm nhận ≥40°C (đỉnh 46,3°C); mưa lớn 23/07 (<span class="mono">135,3 mm</span>) và bão Yagi 07/09 (<span class="mono">121,9 mm</span>).</li>
+              <li><strong>Năm 2025:</strong> 63 ngày cảm nhận ≥40°C; mưa 07/10 (<span class="mono">133,8 mm</span>) gây ngập Ecohome 1–1,4 m.</li>
+              <li><strong>Năm 2026 (tới 20/11):</strong> Tổng mưa <span class="mono">2.120,4 mm</span>; đợt bão số 4 (21–24/08) mưa <span class="mono">329,8 mm</span>; ngày 15/09 mưa <span class="mono">71,3 mm</span>.</li>
+            </ul>
+          </div>`
+      },
+      {
+        title: 'ĐỊA HÌNH “LÒNG MÁNG” COPERNICUS DEM GLO-30 (6 M – 17 M DSM)',
+        speaker: 'TV1 chỉ lên biểu đồ (45 giây): Giải thích vì sao Khu A ĐH Mỏ cao 17m không ngập nhưng đi xuống 372m tới cuối Phố Viên hoặc sang Tân Nhuệ (6m) lại thành túi nước.',
+        html: `
+          <div class="grid-2">
+            <div class="box">
+              <h3>Lát cắt cao độ từ Gò Khu A xuống Sông Nhuệ</h3>
+              <svg viewBox="0 0 430 170" style="width:100%;height:auto;">
+                <rect x="20" y="60" width="395" height="82" fill="#fef2f2"/>
+                <line x1="20" y1="60" x2="415" y2="60" stroke="#ef4444" stroke-dasharray="4 3"/>
+                <text x="26" y="54" font-size="10" fill="#b91c1c" font-weight="700">Ngưỡng lòng máng dễ ngập úng (≤ 12 m DSM)</text>
+                <rect x="30" y="106" width="45" height="36" rx="3" fill="#b91c1c"/><text x="52" y="101" text-anchor="middle" font-size="10" font-weight="700" font-family="JetBrains Mono">6m</text><text x="52" y="156" text-anchor="middle" font-size="9.5">Tân Nhuệ</text>
+                <rect x="95" y="100" width="45" height="42" rx="3" fill="#b91c1c"/><text x="117" y="95" text-anchor="middle" font-size="10" font-weight="700" font-family="JetBrains Mono">7m</text><text x="117" y="156" text-anchor="middle" font-size="9.5">Tây T.Long</text>
+                <rect x="160" y="88" width="45" height="54" rx="3" fill="#b91c1c"/><text x="182" y="83" text-anchor="middle" font-size="10" font-weight="700" font-family="JetBrains Mono">9m</text><text x="182" y="156" text-anchor="middle" font-size="9.5">Hồ TP2/Eco</text>
+                <rect x="225" y="70" width="45" height="72" rx="3" fill="#b91c1c"/><text x="247" y="65" text-anchor="middle" font-size="10" font-weight="700" font-family="JetBrains Mono">12m</text><text x="247" y="156" text-anchor="middle" font-size="9.5">Cuối P.Viên</text>
+                <rect x="290" y="46" width="45" height="96" rx="3" fill="#0f766e"/><text x="312" y="41" text-anchor="middle" font-size="10" font-weight="700" font-family="JetBrains Mono">16m</text><text x="312" y="156" text-anchor="middle" font-size="9.5">Đê Đ.Ngạc</text>
+                <rect x="355" y="40" width="45" height="102" rx="3" fill="#0f766e"/><text x="377" y="35" text-anchor="middle" font-size="10" font-weight="700" font-family="JetBrains Mono">17m</text><text x="377" y="156" text-anchor="middle" font-size="9.5">Khu A Mỏ</text>
+              </svg>
+            </div>
+            <div class="box box-teal">
+              <h3>Cơ chế nghẽn tiêu thoát lưu vực sông Nhuệ</h3>
+              <ul>
+                <li>Khi mưa diện rộng làm sông Nhuệ dâng báo động II–III, các cống tự chảy bị <strong>chặn ngược</strong>.</li>
+                <li>Toàn bộ vùng 6–12 m phải chờ bơm cưỡng bức qua <strong>Trạm bơm Cổ Nhuế (12 m³/s)</strong> và <strong>Trạm bơm Thụy Phương (5 m³/s)</strong>.</li>
+                <li>Trên WebGIS, nhóm tích hợp <strong>Công cụ đo Lát cắt DEM động</strong> để bất kỳ ai cũng kiểm tra được độ dốc thực tế giữa 2 điểm!</li>
+              </ul>
+            </div>
+          </div>`
+      },
+      {
+        title: 'PHÁT HIỆN CỐT LÕI (2025 VS 2026): VÌ SAO CẦN BẢN ĐỒ CỘNG ĐỒNG MỞ?',
+        speaker: 'TV2 nhấn mạnh luận điểm đắt giá nhất của đề tài (60 giây): So sánh hiệu quả Kênh Thụy Phương 920,6 tỷ với tai nạn tại cuối Phố Viên tháng 9/2026.',
+        html: `
+          <div class="grid-3">
+            <div class="box">
+              <h3>1. Trước nâng cấp (2025)</h3>
+              <p style="font-size:0.86rem;">Ecohome 1–3 ngập cổng <strong class="mono">1–1,4 m</strong>, dừng 16 thang máy; KĐT Resco ngập sâu nhiều ngày (<em>Dân Trí, VietNamNet</em>).</p>
+            </div>
+            <div class="box box-green">
+              <h3>2. Đầu tư lớn (Giữa 2026)</h3>
+              <p style="font-size:0.86rem;">TP. Hà Nội triển khai khẩn cấp <strong>Kênh Thụy Phương 920,6 tỷ đồng</strong> → bão số 4 (23/08/2026, mưa 99,6 mm) trục chính và KĐT rút nhanh hơn rõ rệt.</p>
+            </div>
+            <div class="box box-red">
+              <h3>3. Khoảng trống vi mô (09/2026)</h3>
+              <p style="font-size:0.86rem;">Ngày 15–18/09/2026 (mưa 71,3 mm), <strong>cuối Phố Viên</strong> (cách trường <span class="mono">372 m</span>) vẫn ngập sâu kèm xoáy cống gây tai nạn thương tâm (<em>Báo Lao Động</em>).</p>
+            </div>
+          </div>
+          <div class="box box-teal" style="margin-top:14px;">
+            <strong>Kết luận khoa học &amp; thực tiễn:</strong> Hạ tầng lớn giải quyết ngập lưu vực, nhưng các <strong>điểm đen vi mô</strong> (ngõ trọ thấp, ổ gà khuất nước, hố ga mất nắp) chỉ có <strong>cư dân và sinh viên đi qua hằng ngày</strong> mới phát hiện sớm nhất để cảnh báo nhau trên Bản đồ Cộng đồng Mở!
+          </div>`
+      },
+      {
+        title: 'KIẾN TRÚC HỆ SINH THÁI WEBGIS MỞ & TÍNH NĂNG ĐỊA TIN HỌC CHUYÊN SÂU',
+        speaker: 'TV1 + TV3 giới thiệu sản phẩm Web (50 giây): Demo nhanh 5 tính năng kỹ thuật nổi bật vượt xa bản đồ tĩnh thông thường.',
+        html: `
+          <div class="grid-2">
+            <div class="box">
+              <h3>5 Năng lực Kỹ thuật Nổi bật trên Trang chủ</h3>
+              <ol>
+                <li><strong>Định tuyến đường bộ thực tế (OSRM):</strong> Tự động phát hiện tuyến đi qua vùng ngập/xoáy cống và vẽ đường bộ vòng qua nền cao (14–17 m).</li>
+                <li><strong>Lát cắt Địa hình DEM động &amp; Bản đồ nhiệt Canvas 60fps.</strong></li>
+                <li><strong>Mô phỏng kịch bản mưa (30mm · 70mm · &gt;115mm) &amp; UHI &gt;41°C.</strong></li>
+                <li><strong>Thời tiết trực tiếp Open-Meteo + Chạy Offline PWA khi mất mạng.</strong></li>
+                <li><strong>Notebook Tri thức thực chứng</strong> &amp; xuất gói <code>.MD</code> vào <strong>Google NotebookLM</strong>.</li>
+              </ol>
+            </div>
+            <div class="box box-green">
+              <h3>Trung tâm Quản trị 5 Phân hệ (admin.html)</h3>
+              <ul>
+                <li>Duyệt báo cáo Hạng A/B/C kèm <strong>Mini-Map kéo thả ghim trực quan</strong>.</li>
+                <li>Quét tự động &amp; gộp điểm trùng trong bán kính <strong class="mono">50 m</strong>.</li>
+                <li>Phát thanh cảnh báo thời gian thực sang Bản đồ qua <code>BroadcastChannel</code>.</li>
+                <li>Kiểm toán chất lượng dữ liệu GIS (Data QA 100%) &amp; Máy tính thống kê <strong>Pre-test vs Post-test</strong> tự động.</li>
+              </ul>
+            </div>
+          </div>`
+      },
+      {
+        title: 'CƠ CHẾ KIỂM CHỨNG 3 HẠNG (A–B–C) & TUÂN THỦ LUẬT BVDLCN 91/2025/QH15',
+        speaker: 'TV2 trình bày đạo đức dữ liệu & chống tin giả (45 giây): Giải thích cách tránh hoang mang từ báo cáo chưa kiểm chứng và bảo vệ tuyệt đối quyền riêng tư cư dân.',
+        html: `
+          <div class="grid-2">
+            <div class="box">
+              <h3>Phân tầng Độ tin cậy Chống nhiễu</h3>
+              <ul>
+                <li><strong>Hạng A (Xác thực chính thức):</strong> Báo chí có ngày đăng, cơ quan chức năng, mã OSM hoặc nhóm đo thực địa có ảnh.</li>
+                <li><strong>Hạng B (Cộng đồng kiểm chứng):</strong> Tự động thăng hạng khi đủ <strong class="mono">≥ 3 người dân độc lập</strong> bấm <code>+1</code> trong vòng 50 m.</li>
+                <li><strong>Hạng C (Mới báo — Chờ xác minh):</strong> 1–2 phiếu đầu, hiển thị nét đứt màu vàng để thu thập thêm xác nhận.</li>
+              </ul>
+            </div>
+            <div class="box box-teal">
+              <h3>Bảo vệ Dữ liệu Cá nhân (Luật số 91/2025/QH15)</h3>
+              <ul>
+                <li><strong>Không thu thập</strong> họ tên, số điện thoại, email hay số nhà riêng.</li>
+                <li><strong>Tự động xóa sạch EXIF/GPS ảnh:</strong> Vẽ lại qua <code>&lt;canvas&gt;</code> ngay trên máy người dùng và nén nhẹ &lt;36 KB trước khi gửi.</li>
+                <li><strong>Làm tròn tọa độ ~20 m</strong> và ô đồng ý xử lý dữ liệu để trống chủ động (opt-in).</li>
+              </ul>
+            </div>
+          </div>`
+      },
+      {
+        title: 'BỘ HỌC LIỆU “1 CHẠM” & DIỄN TẬP PHẢN XẠ CẢNH BÁO SỐ',
+        speaker: 'TV2 + TV3 trình bày sản phẩm truyền thông (45 giây): Giới thiệu Cẩm nang PDF 1 trang, 03 Infographic, 02 Bản tin Vàng/Đỏ và Mini-Quiz 5 câu.',
+        html: `
+          <div class="grid-3">
+            <div class="box box-red">
+              <h3>Sơ cứu Sốc nhiệt 3 phút</h3>
+              <p style="font-size:0.84rem;">Đưa vào râm thoáng → Chườm <strong>Cổ – Nách – Bẹn</strong> → Uống Oresol từng ngụm khi tỉnh (Nhà thuốc Phố Viên cách <span class="mono">103 m</span>; BV Phương Đông cách <span class="mono">310 m</span>). Bác bỏ sai lầm dùng Paracetamol / điều hòa 16°C.</p>
+            </div>
+            <div class="box box-amber">
+              <h3>Trọ Mái tôn &amp; Xe buýt</h3>
+              <p style="font-size:0.84rem;">Đuổi túi khí nóng mái tôn sau 17h30 bằng quạt thổi hướng ra ngoài 15 phút; canh giờ xe buýt <strong>09A, 28, 31</strong> giảm phơi nắng khung 11h30–15h00.</p>
+            </div>
+            <div class="box box-teal">
+              <h3>Diễn tập Vàng/Đỏ &amp; Điện</h3>
+              <p style="font-size:0.84rem;">Đóng dấu rõ <code>[TÌNH HUỐNG MÔ PHỎNG]</code>, dẫn chiếu <strong>HSDC Maps, iHanoi, nchmf.gov.vn</strong> &amp; tổng đài rò điện <strong>EVNHANOI 1900 1288</strong>.</p>
+            </div>
+          </div>`
+      },
+      {
+        title: 'ĐỐI CHIẾU 8 CHỈ TIÊU KPI & ĐÁNH GIÁ HIỆU QUẢ PRE-TEST VS POST-TEST',
+        speaker: 'TV3 báo cáo số liệu (45 giây): Trình bày kết quả đạt được trên bảng theo dõi KPI và mức tăng nhận thức đúng + điểm tự tin.',
+        html: `
+          <div class="box" style="margin-bottom:14px;">
+            <h3>Kết quả Hạ tầng Dữ liệu Nền (Đã kiểm chứng tự động 100%)</h3>
+            <p style="margin:0;font-size:0.88rem;">Đã hoàn thành <strong class="mono">${stats.inside} / 15</strong> điểm GPS thực tế trong bán kính 2 km (vượt <strong>${Math.round((stats.inside / 15) * 100)}%</strong> chỉ tiêu kế hoạch), tích hợp sẵn bộ 3 Google Forms tự động chấm điểm và theo dõi luồng chuyển đổi qua mã QR UTM đa kênh.</p>
+          </div>
+          <div class="grid-2">
+            <div class="box box-green">
+              <h3>Chỉ tiêu Kiến thức Đúng (Câu 10 Pre → Câu 2 Post)</h3>
+              <p style="font-size:0.85rem;">Đo lường tỷ lệ chọn đúng quy trình chườm mát Cổ – Nách – Bẹn &amp; xử trí sốc nhiệt chuẩn Bộ Y tế (Mục tiêu: <strong>tăng ≥ +30 điểm %</strong> — tự động tính trong Tab Quản trị).</p>
+            </div>
+            <div class="box box-teal">
+              <h3>Chỉ tiêu Tự tin Ứng phó (Thang Likert 1–5)</h3>
+              <p style="font-size:0.85rem;">Đo lường mức độ tự tin định vị nơi tránh trú an toàn và ngắt điện phòng trọ nền thấp khi mưa ngập (Mục tiêu: <strong>tăng ≥ +1,0 điểm</strong>).</p>
+            </div>
+          </div>`
+      },
+      {
+        title: 'HẠN CHẾ TRUNG THỰC & LỘ TRÌNH DÀI HẠN “HUMG LIVING LAB 2027+”',
+        speaker: 'TV1 kết luận & mở ra tầm nhìn dài hạn (45 giây): Thừa nhận trung thực giới hạn mùa vụ tháng 11–12 và đề xuất bàn giao cho CLB Địa tin học & Đoàn phường Đông Ngạc.',
+        html: `
+          <div class="grid-2">
+            <div class="box box-amber">
+              <h3>Nhìn nhận Thẳng thắn Hạn chế</h3>
+              <ul>
+                <li>Thời gian thực hiện cuối tháng 11 – đầu tháng 12 là giao mùa khô mát, nên dữ liệu dân đóng góp chủ yếu mang tính <strong>hồi cứu mùa mưa bão tháng 8–9/2026</strong>.</li>
+                <li>Sai số GPS điện thoại trong ngõ hẹp nhà cao tầng (10–25 m) được khắc phục bằng kéo ghim thủ công và gộp trùng 50 m.</li>
+              </ul>
+            </div>
+            <div class="box box-teal">
+              <h3>Lộ trình Dự án Bền vững 2027+</h3>
+              <ol>
+                <li><strong>Bàn giao vận hành:</strong> Chuyển giao mã nguồn mở &amp; trang Quản trị cho CLB Sinh viên Địa tin học HUMG phối hợp Đoàn phường Đông Ngạc.</li>
+                <li><strong>Viễn thám theo mùa (Hè 2027):</strong> Bổ sung lớp nhiệt độ bề mặt vệ tinh <strong>Landsat 8/9 LST</strong> đầu tháng 5 và phát động <em>“Báo ngập sau mỗi trận mưa”</em> tháng 7–10.</li>
+              </ol>
+            </div>
+          </div>`
+      }
+    ];
+
+    let idx = 0;
+    const elTitle = document.getElementById('sl-title');
+    const elBadge = document.getElementById('sl-badge');
+    const elBody = document.getElementById('sl-body');
+    const elCounter = document.getElementById('slide-counter');
+    const elNotes = document.getElementById('speaker-notes');
+    const chkNotes = document.getElementById('toggle-speaker-notes');
+
+    function renderSlide() {
+      const s = SLIDES[idx];
+      elTitle.textContent = s.title;
+      elBadge.textContent = `${String(idx + 1).padStart(2, '0')} / ${SLIDES.length}`;
+      elCounter.textContent = `Slide ${idx + 1} / ${SLIDES.length}`;
+      elBody.innerHTML = s.html;
+      elNotes.innerHTML = `<strong>Gợi ý lời nói thuyết trình:</strong> ${s.speaker}`;
+      elNotes.hidden = !chkNotes.checked;
+    }
+
+    document.getElementById('btn-prev-slide').addEventListener('click', () => {
+      idx = (idx - 1 + SLIDES.length) % SLIDES.length;
+      renderSlide();
+    });
+    document.getElementById('btn-next-slide').addEventListener('click', () => {
+      idx = (idx + 1) % SLIDES.length;
+      renderSlide();
+    });
+    chkNotes.addEventListener('change', renderSlide);
+
+    document.getElementById('btn-fullscreen').addEventListener('click', () => {
+      const stage = document.getElementById('slide-stage');
+      if (!document.fullscreenElement) stage.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!document.getElementById('view-slides').hidden) {
+        if (e.key === 'ArrowRight' || e.key === ' ') {
+          e.preventDefault();
+          idx = (idx + 1) % SLIDES.length;
+          renderSlide();
+        } else if (e.key === 'ArrowLeft') {
+          idx = (idx - 1 + SLIDES.length) % SLIDES.length;
+          renderSlide();
+        } else if (e.key.toLowerCase() === 'f') {
+          document.getElementById('btn-fullscreen').click();
+        }
+      }
+    });
+
+    // Chuyển qua lại Slide vs Video Teleprompter
+    const btnSlides = document.getElementById('mode-slides-btn');
+    const btnVideo = document.getElementById('mode-video-btn');
+    btnSlides.addEventListener('click', () => {
+      btnSlides.classList.add('is-active');
+      btnVideo.classList.remove('is-active');
+      document.getElementById('view-slides').hidden = false;
+      document.getElementById('view-video').hidden = true;
+    });
+    btnVideo.addEventListener('click', () => {
+      btnVideo.classList.add('is-active');
+      btnSlides.classList.remove('is-active');
+      document.getElementById('view-video').hidden = false;
+      document.getElementById('view-slides').hidden = true;
+    });
+
+    // Bộ bấm giờ Teleprompter 45s
+    let timerId = null;
+    let elapsed = 0;
+    const clockEl = document.getElementById('video-clock');
+    const startBtn = document.getElementById('btn-timer-start');
+    const sceneCards = document.querySelectorAll('.scene-card');
+
+    function updatePrompterUI() {
+      clockEl.textContent = `${elapsed.toFixed(1).padStart(4, '0')}s / 45.0s`;
+      sceneCards.forEach((card) => {
+        const s = Number(card.dataset.start);
+        const e = Number(card.dataset.end);
+        card.classList.toggle('is-speaking', elapsed >= s && elapsed < e);
+      });
+    }
+
+    startBtn.addEventListener('click', () => {
+      if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+        startBtn.textContent = 'Tiếp tục bấm giờ';
+        return;
+      }
+      if (elapsed >= 45) elapsed = 0;
+      startBtn.textContent = 'Tạm dừng';
+      const t0 = performance.now() - elapsed * 1000;
+      timerId = setInterval(() => {
+        elapsed = Math.min(45, (performance.now() - t0) / 1000);
+        updatePrompterUI();
+        if (elapsed >= 45) {
+          clearInterval(timerId);
+          timerId = null;
+          startBtn.textContent = 'Quay lại từ đầu';
+        }
+      }, 100);
+    });
+
+    document.getElementById('btn-timer-reset').addEventListener('click', () => {
+      if (timerId) clearInterval(timerId);
+      timerId = null;
+      elapsed = 0;
+      startBtn.textContent = 'Bắt đầu bấm giờ';
+      updatePrompterUI();
+    });
+
+    renderSlide();
+    updatePrompterUI();
+  </script>
+</body>
+</html>

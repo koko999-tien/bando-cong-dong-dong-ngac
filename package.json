@@ -1,0 +1,14 @@
+{
+  "name": "hanoi-flood-gis",
+  "version": "1.0.0",
+  "description": "Ứng dụng Web GIS khoanh vùng bán kính 2km và quản lý điểm ngập lụt tại Hà Nội",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node test-gis.mjs"
+  },
+  "dependencies": {
+    "@turf/turf": "^7.2.0",
+    "leaflet": "^1.9.4"
+  }
+}

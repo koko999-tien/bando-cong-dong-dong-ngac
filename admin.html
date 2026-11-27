@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trung tâm Quản trị &amp; Điều hành Dự án WebGIS — ĐH Mỏ - Địa chất</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./vendor/leaflet/leaflet.css">
+  <style>
+    :root {
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --green: #15803d;
+      --red: #b91c1c;
+      --orange: #c2410c;
+      --amber: #92400e;
+      --ink: #0f172a;
+      --muted: #475569;
+      --border: #cbd5e1;
+      --panel: #f1f5f9;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: var(--ink); background: var(--bg); line-height: 1.5; font-size: 14px; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 30;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+      padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .topbar h1 { margin: 0; font-size: 1.02rem; letter-spacing: -0.02em; }
+    .topbar-sub { font-size: 0.76rem; color: var(--muted); }
+    .nav-row { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+
+    .mode-pill {
+      display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+      font-size: 0.74rem; font-weight: 700; background: #f0fdfa; color: #115e59; border: 1px solid #99f6e4;
+    }
+    .mode-pill.is-cloud { background: #dcfce7; color: #14532d; border-color: #86efac; }
+
+    .tabbar {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      max-width: 1220px; margin: 14px auto 0; padding: 0 16px;
+    }
+    .tab-btn {
+      padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--muted); font: inherit; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+    }
+    .tab-btn:hover { color: var(--ink); background: var(--panel); }
+    .tab-btn.is-active { background: var(--ink); border-color: var(--ink); color: #ffffff; }
+
+    .wrap { max-width: 1220px; margin: 0 auto; padding: 14px 16px 48px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
+    .card h2 { margin: 0 0 6px; font-size: 0.98rem; }
+    .sub { margin: 0 0 12px; font-size: 0.81rem; color: var(--muted); }
+
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+    .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 13px 15px; }
+    .stat-lbl { font-size: 0.75rem; font-weight: 600; color: var(--muted); }
+    .stat-num { display: block; font-family: var(--mono); font-size: 1.45rem; font-weight: 700; margin: 3px 0; }
+    .stat-foot { font-size: 0.73rem; color: var(--muted); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 6px 11px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--ink); font: inherit; font-size: 0.8rem; font-weight: 600;
+      text-decoration: none; cursor: pointer; white-space: nowrap;
+    }
+    .btn:hover { background: var(--panel); }
+    .btn-primary { background: var(--primary); border-color: var(--primary); color: #ffffff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-ok { background: #f0fdf4; border-color: #86efac; color: var(--green); }
+    .btn-warn { background: #fffbeb; border-color: #fde68a; color: var(--amber); }
+    .btn-danger { background: #fef2f2; border-color: #fecaca; color: var(--red); }
+
+    label { display: block; font-size: 0.77rem; font-weight: 600; margin-bottom: 3px; }
+    input[type="text"], input[type="password"], input[type="number"], input[type="search"], select, textarea {
+      width: 100%; padding: 6px 9px; border: 1px solid var(--border); border-radius: 6px; font: inherit; font-size: 0.82rem; background: #fff;
+    }
+
+    .kpi-row {
+      display: grid; grid-template-columns: 1.7fr 95px 95px 1.2fr 88px; gap: 10px; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.81rem;
+    }
+    .prog-track { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+    .prog-fill { height: 100%; background: var(--primary); border-radius: 999px; }
+    .prog-fill.is-done { background: var(--green); }
+
+    .filter-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr auto; gap: 8px; margin-bottom: 10px; align-items: end; }
+    .bulk-bar {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+      padding: 8px 12px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border); margin-bottom: 10px;
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th, td { padding: 8px 9px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: middle; }
+    th { background: var(--panel); font-size: 0.73rem; color: var(--muted); white-space: nowrap; }
+    tbody tr { content-visibility: auto; contain-intrinsic-size: auto 56px; }
+    tbody tr:hover { background: #f8fafc; }
+
+    .badge { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; }
+    .st-approved { background: #dcfce7; color: #15803d; }
+    .st-pending { background: #fef3c7; color: #92400e; }
+    .st-hidden { background: #fee2e2; color: #b91c1c; }
+    .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    .thumb { width: 58px; height: 44px; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); }
+
+    .qr-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+    .qr-card { padding: 12px; border: 1px solid var(--border); border-radius: 8px; text-align: center; background: #f8fafc; }
+    .qr-card img { width: 128px; height: 128px; background: #fff; padding: 4px; border: 1px solid var(--border); border-radius: 6px; margin: 6px 0; }
+
+    dialog {
+      border: 1px solid var(--border); border-radius: 12px; padding: 0; width: min(640px, calc(100vw - 24px));
+      max-height: calc(100vh - 24px); background: #fff; color: var(--ink);
+    }
+    dialog[open] { display: flex; flex-direction: column; }
+    dialog::backdrop { background: rgba(15, 23, 42, 0.5); }
+    .dlg-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; border-bottom: 1px solid #e2e8f0; }
+    .dlg-body { padding: 14px 18px; overflow-y: auto; }
+    .dlg-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 18px; border-top: 1px solid #e2e8f0; }
+
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 1000; padding: 9px 15px;
+      border-radius: 8px; background: var(--ink); color: #fff; font-size: 0.81rem; font-weight: 600;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
+    }
+
+    @media (max-width: 920px) {
+      .grid-4, .qr-grid { grid-template-columns: repeat(2, 1fr); }
+      .grid-2, .grid-3, .filter-grid { grid-template-columns: 1fr; }
+      .kpi-row { grid-template-columns: 1fr 80px 80px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Trung tâm Quản trị &amp; Điều hành Dự án WebGIS — P. Đông Ngạc · ĐH Mỏ - Địa chất</h1>
+      <span class="topbar-sub">Kiểm duyệt A/B/C · Gộp điểm trùng 50m · Theo dõi 8 KPI · Phát bản tin thời gian thực · Xuất Google NotebookLM</span>
+    </div>
+    <div class="nav-row">
+      <span id="adm-source-pill" class="mode-pill">Chế độ: Cục bộ (Trình duyệt)</span>
+      <a href="./index.html" class="btn btn-primary">← Mở Bản đồ Cộng đồng</a>
+      <a href="./thuyet-trinh.html" class="btn">Slide &amp; Video 45s</a>
+      <a href="./infographics-va-ban-tin.html" class="btn">03 Infographic &amp; Bản tin</a>
+      <a href="./du-lieu-mo.html" class="btn">Số liệu Mở</a>
+    </div>
+  </header>
+
+  <nav class="tabbar" role="tablist" aria-label="Các phân hệ quản trị">
+    <button type="button" class="tab-btn is-active" data-tab="overview">1. Tổng quan &amp; 8 KPI Chiến dịch</button>
+    <button type="button" class="tab-btn" data-tab="moderation">2. Kiểm duyệt, Thêm/Sửa &amp; Gộp trùng (<span id="tab-count-all" class="mono">0</span>)</button>
+    <button type="button" class="tab-btn" data-tab="broadcast">3. Phát Cảnh báo &amp; Mã QR Đa kênh</button>
+    <button type="button" class="tab-btn" data-tab="audit">4. Kiểm toán Dữ liệu GIS &amp; Nhật ký</button>
+    <button type="button" class="tab-btn" data-tab="system">5. Cloud Sheet, Sao lưu &amp; NotebookLM</button>
+  </nav>
+
+  <main class="wrap">
+    <!-- ================= TAB 1: TỔNG QUAN & 8 KPI ================= -->
+    <section id="panel-overview" class="tab-panel">
+      <div class="grid-4">
+        <div class="stat-box">
+          <span class="stat-lbl">Tổng điểm hoạt động (≤2km)</span>
+          <strong id="ov-total-pts" class="stat-num" style="color:var(--primary)">0</strong>
+          <span class="stat-foot" id="ov-split-layer">Rủi ro: 0 · An toàn: 0</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-lbl">Điểm đã xác thực (Hạng A &amp; B)</span>
+          <strong id="ov-verified-ab" class="stat-num" style="color:var(--green)">0</strong>
+          <span class="stat-foot" id="ov-split-tier">Hạng A: 0 · Hạng B: 0</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-lbl">Chờ kiểm duyệt (Hạng C)</span>
+          <strong id="ov-pending-c" class="stat-num" style="color:var(--amber)">0</strong>
+          <span class="stat-foot">Tự lên Hạng B khi đủ ≥3 xác nhận</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-lbl">Tổng lượt cộng đồng xác nhận (+1)</span>
+          <strong id="ov-confirms" class="stat-num" style="color:var(--orange)">0</strong>
+          <span class="stat-foot" id="ov-hidden-count">Đã ẩn spam/trùng: 0</span>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">
+            <h2>Bảng Theo dõi Tiến độ 8 KPI Bắt buộc (Đề tài 08)</h2>
+            <div class="nav-row">
+              <button type="button" id="btn-save-kpi" class="btn btn-primary">Lưu số liệu KPI</button>
+              <button type="button" id="btn-copy-kpi-md" class="btn">Chép bảng Markdown</button>
+            </div>
+          </div>
+          <p class="sub">Điểm GPS thực địa tự động cập nhật trực tiếp từ cơ sở dữ liệu bản đồ; nhóm nhập số liệu thực đạt từ Google Forms, Bitly &amp; Facebook/Zalo để theo dõi tới ngày 02/12.</p>
+          <div id="kpi-tracker-list"></div>
+        </div>
+
+        <div class="card">
+          <h2>Cơ cấu Phân bố Dữ liệu Không gian Hiện tại</h2>
+          <p class="sub">Phân tách theo nhóm hiện tượng thực tế để đảm bảo cân bằng giữa Ngập úng, Nắng nóng/Xe buýt và Hạ tầng Y tế/Tránh trú.</p>
+          <div id="category-breakdown-bars"></div>
+          <div style="margin-top:16px;padding:12px;border-radius:8px;background:#f0fdfa;border:1px solid #99f6e4;font-size:0.8rem;color:#115e59;">
+            <strong>Gợi ý vận hành nhanh cho nhóm 3 thành viên:</strong><br>
+            • <strong>TV1 (GIS &amp; Thực địa):</strong> Dùng Tab 2 bấm <em>“+ Thêm điểm mới”</em> để nhập tọa độ &amp; ảnh đi thực địa Thứ Bảy 28/11.<br>
+            • <strong>TV2 (Nội dung &amp; Diễn tập):</strong> Dùng Tab 3 kích hoạt thanh <em>Diễn tập Cấp độ Đỏ</em> lúc 17h00 ngày 30/11.<br>
+            • <strong>TV3 (Media &amp; Số liệu):</strong> Dùng Tab 3 lấy QR UTM từng kênh và Tab 5 xuất gói Markdown cho <strong>Google NotebookLM</strong>.
+          </div>
+        </div>
+      </div>
+
+      <!-- Máy tính Đánh giá Hiệu quả Trước – Sau (Pre-test vs Post-test) tự động sinh báo cáo Chương 5 -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <div>
+            <h2>Máy tính Thống kê Hiệu quả Truyền thông (Pre-test vs Post-test — Chương 5 Báo cáo)</h2>
+            <p class="sub" style="margin-bottom:0;">Nhập kết quả tổng hợp từ Google Forms đầu vào &amp; đầu ra để tự động kiểm tra ngưỡng KPI (+≥30% kiến thức đúng &amp; +≥1,0 điểm tự tin) và sinh đoạn nhận xét học thuật chuẩn.</p>
+          </div>
+          <button type="button" id="btn-copy-prepost-text" class="btn btn-primary">Chép đoạn nhận xét Chương 5</button>
+        </div>
+        <div class="grid-2" style="align-items:center;margin-top:10px;">
+          <div>
+            <div class="grid-3" style="margin-bottom:8px;">
+              <div><label for="pp-n1">Số phiếu Pre-test</label><input type="number" id="pp-n1" class="mono" value="52" min="1"></div>
+              <div><label for="pp-c1">% Đúng Sốc nhiệt (Pre)</label><input type="number" id="pp-c1" class="mono" value="38.5" step="0.1" min="0" max="100"></div>
+              <div><label for="pp-f1">Tự tin TB (Pre /5)</label><input type="number" id="pp-f1" class="mono" value="2.65" step="0.05" min="1" max="5"></div>
+            </div>
+            <div class="grid-3" style="margin-bottom:8px;">
+              <div><label for="pp-n2">Số phiếu Post-test</label><input type="number" id="pp-n2" class="mono" value="45" min="1"></div>
+              <div><label for="pp-c2">% Đúng Sốc nhiệt (Post)</label><input type="number" id="pp-c2" class="mono" value="82.2" step="0.1" min="0" max="100"></div>
+              <div><label for="pp-f2">Tự tin TB (Post /5)</label><input type="number" id="pp-f2" class="mono" value="4.12" step="0.05" min="1" max="5"></div>
+            </div>
+            <button type="button" id="btn-calc-prepost" class="btn">Tính toán &amp; Cập nhật vào Bảng KPI</button>
+          </div>
+          <div>
+            <div id="pp-chart-box" style="margin-bottom:8px;"></div>
+            <div id="pp-paragraph-box" style="padding:10px 12px;border-radius:8px;background:#f8fafc;border:1px solid #cbd5e1;font-size:0.8rem;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 2: KIỂM DUYỆT, CRUD & GỘP TRÙNG ================= -->
+    <section id="panel-moderation" class="tab-panel" hidden>
+      <div class="card" id="dup-scanner-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <div>
+            <h2>Trình Quét Điểm Trùng Lặp Bán kính 50 m</h2>
+            <p class="sub" style="margin-bottom:0;">Tự động phát hiện các điểm người dân chấm sát nhau ≤50 m để gộp lượt xác nhận (+1) thay vì làm rối bản đồ.</p>
+          </div>
+          <span id="dup-count-badge" class="badge st-approved mono">0 cặp trùng</span>
+        </div>
+        <div id="dup-pairs-list" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="filter-grid">
+          <div>
+            <label for="mod-search">Tìm theo tên ngõ, mã điểm, trích dẫn nguồn</label>
+            <input type="search" id="mod-search" placeholder="VD: Phố Viên, R-01, buýt, trạm y tế...">
+          </div>
+          <div>
+            <label for="mod-status">Trạng thái hiển thị</label>
+            <select id="mod-status">
+              <option value="all">Tất cả trạng thái</option>
+              <option value="pending">Chờ duyệt (Pending / Hạng C)</option>
+              <option value="approved">Đang công khai (Approved)</option>
+              <option value="hidden">Đã ẩn (Spam / Đã gộp)</option>
+            </select>
+          </div>
+          <div>
+            <label for="mod-tier">Hạng tin cậy</label>
+            <select id="mod-tier">
+              <option value="all">Mọi hạng (A, B, C)</option>
+              <option value="A">Hạng A (Xác thực chính thức)</option>
+              <option value="B">Hạng B (≥3 cư dân xác nhận)</option>
+              <option value="C">Hạng C (Mới báo)</option>
+            </select>
+          </div>
+          <div>
+            <label for="mod-cat">Phân loại</label>
+            <select id="mod-cat">
+              <option value="all">Tất cả loại điểm</option>
+              <option value="flood">Ngập úng mưa lớn</option>
+              <option value="heat">Nắng gắt / Trạm buýt</option>
+              <option value="traffic">Đường xấu / Cống xoáy</option>
+              <option value="medical">Bệnh viện / Nhà thuốc</option>
+              <option value="shelter">Điểm trú / Hành chính / Hồ</option>
+            </select>
+          </div>
+          <button type="button" id="btn-add-point" class="btn btn-primary">+ Thêm điểm mới</button>
+        </div>
+
+        <div class="bulk-bar">
+          <div class="nav-row">
+            <label style="display:inline-flex;align-items:center;gap:6px;margin:0;cursor:pointer;">
+              <input type="checkbox" id="mod-check-all">
+              <span>Chọn tất cả đang lọc (<span id="mod-selected-count" class="mono">0</span> đã chọn)</span>
+            </label>
+          </div>
+          <div class="nav-row">
+            <button type="button" class="btn btn-ok js-bulk-act" data-act="approveA">Duyệt hàng loạt → Hạng A</button>
+            <button type="button" class="btn btn-warn js-bulk-act" data-act="approveB">Duyệt hàng loạt → Hạng B</button>
+            <button type="button" class="btn btn-danger js-bulk-act" data-act="hide">Ẩn Spam hàng loạt</button>
+            <button type="button" class="btn btn-danger js-bulk-act" data-act="delete">Xóa điểm đã chọn</button>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:32px;"></th>
+                <th>Mã &amp; Trạng thái</th>
+                <th>Tên địa điểm &amp; Nguồn kiểm chứng</th>
+                <th>Tọa độ &amp; DEM</th>
+                <th>Ảnh</th>
+                <th>Hạng &amp; Phiếu</th>
+                <th>Thao tác quản trị</th>
+              </tr>
+            </thead>
+            <tbody id="adm-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 3: PHÁT CẢNH BÁO & QR UTM ================= -->
+    <section id="panel-broadcast" class="tab-panel" hidden>
+      <div class="card">
+        <h2>Điều khiển Thanh Cảnh báo / Thông báo Trực tiếp trên Trang chủ Bản đồ</h2>
+        <p class="sub">Khi kích hoạt, thanh thông báo sẽ xuất hiện ngay đầu trang <code>index.html</code> theo thời gian thực (phục vụ buổi Diễn tập Cảnh báo Số hoặc kêu gọi cư dân điền khảo sát).</p>
+        <div class="grid-3" style="margin-bottom:10px;">
+          <div>
+            <label for="bc-preset">Chọn mẫu tình huống nhanh</label>
+            <select id="bc-preset">
+              <option value="off">Tắt thanh thông báo (Trạng thái bình thường)</option>
+              <option value="yellow">[DIỄN TẬP VÀNG] Cảnh báo nắng gắt &gt;41°C &amp; trọ mái tôn</option>
+              <option value="red">[DIỄN TẬP ĐỎ 17h00] Giả định mưa &gt;70mm ngập cuối Phố Viên</option>
+              <option value="survey">[KHẢO SÁT CỘNG ĐỒNG] Mời cư dân bấm +1 &amp; làm Pre-test</option>
+            </select>
+          </div>
+          <div>
+            <label for="bc-level">Màu sắc cấp độ hiển thị</label>
+            <select id="bc-level">
+              <option value="yellow">Vàng cam (Chú ý / Nắng nóng)</option>
+              <option value="red">Đỏ khẩn cấp (Diễn tập mưa ngập)</option>
+              <option value="info">Xanh ngọc (Thông báo khảo sát cộng đồng)</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:end;gap:8px;">
+            <button type="button" id="btn-publish-bc" class="btn btn-primary" style="width:100%;">Phát trực tiếp lên Bản đồ</button>
+            <button type="button" id="btn-stop-bc" class="btn btn-danger">Tắt ngay</button>
+          </div>
+        </div>
+        <div>
+          <label for="bc-message">Nội dung hiển thị trên đầu trang Bản đồ</label>
+          <input type="text" id="bc-message" placeholder="Nhập thông điệp ngắn gọn kèm lưu ý [MÔ PHỎNG DIỄN TẬP] nếu là bài tập...">
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:260px;">
+            <h2>Trình Tạo Mã QR &amp; Link Đo Lường Đa Kênh (UTM Campaign Builder)</h2>
+            <p class="sub" style="margin-bottom:6px;">Nhập link Web HTTPS công khai (hoặc link Bitly của nhóm) để sinh 4 mã QR gắn nhãn nguồn truy cập riêng cho từng kênh truyền thông.</p>
+            <input type="text" id="utm-base-url" value="https://bit.ly/bando-dongngac-humg">
+          </div>
+          <button type="button" id="btn-build-utm" class="btn btn-primary">Cập nhật 4 Mã QR Chiến dịch</button>
+        </div>
+        <div id="utm-qr-grid" class="qr-grid"></div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 4: KIỂM TOÁN DỮ LIỆU GIS & NHẬT KÝ ================= -->
+    <section id="panel-audit" class="tab-panel" hidden>
+      <div class="grid-2">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <h2>Kiểm toán Chất lượng Không gian &amp; Chống Ảo giác (Data QA)</h2>
+            <button type="button" id="btn-rerun-qa" class="btn btn-primary">Quét kiểm tra ngay</button>
+          </div>
+          <p class="sub">Tự động rà soát toàn bộ điểm về: tọa độ WGS84 hợp lệ, khoảng cách ≤2,0 km, đầy đủ trích dẫn nguồn, cao độ DEM GLO-30 và không chứa số đo tự chế.</p>
+          <div id="qa-summary-banner" style="margin-bottom:10px;"></div>
+          <div id="qa-issues-list"></div>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <h2>Nhật ký Kiểm duyệt Minh bạch (Audit Log)</h2>
+            <button type="button" id="btn-clear-log" class="btn">Xóa nhật ký</button>
+          </div>
+          <p class="sub">Lưu vết thời gian mọi thao tác duyệt điểm, sửa thông tin, gộp trùng hoặc phát cảnh báo phục vụ minh chứng Chương 3 báo cáo.</p>
+          <div id="audit-log-box" style="max-height:360px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;background:#f8fafc;font-size:0.78rem;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 5: CLOUD SHEET, SAO LƯU & NOTEBOOKLM ================= -->
+    <section id="panel-system" class="tab-panel" hidden>
+      <div class="grid-2">
+        <div class="card">
+          <h2>1. Kết nối Máy chủ Google Sheets (`community-backend.gs`)</h2>
+          <p class="sub">Đồng bộ hai chiều với bảng tính chung của nhóm để duyệt báo cáo từ điện thoại người dân gửi về.</p>
+          <div style="margin-bottom:8px;">
+            <label for="adm-api">URL Google Apps Script Web App</label>
+            <input type="text" id="adm-api" placeholder="https://script.google.com/macros/s/.../exec">
+          </div>
+          <div style="margin-bottom:10px;">
+            <label for="adm-pass">Mật khẩu quản trị (`ADMIN_PASSCODE`)</label>
+            <input type="password" id="adm-pass" placeholder="Mặc định trong script: HUMG2026-DETAI08">
+          </div>
+          <div class="nav-row">
+            <button type="button" id="btn-load-cloud" class="btn btn-primary">Đồng bộ &amp; Duyệt trên Cloud</button>
+            <button type="button" id="btn-ping-api" class="btn">Đo độ trễ API (Ping)</button>
+            <button type="button" id="btn-load-local" class="btn">Chuyển về Dữ liệu Cục bộ</button>
+          </div>
+          <p id="adm-cloud-status" style="margin:10px 0 0;font-size:0.8rem;font-weight:600;color:var(--primary);"></p>
+        </div>
+
+        <div class="card">
+          <h2>2. Tích hợp Google NotebookLM (Tạo Podcast &amp; Trợ lý Nghiên cứu)</h2>
+          <p class="sub">Xuất toàn bộ kho dữ liệu thực tế hiện hành (gồm cả điểm mới do người dân đóng góp, bảng ERA5 theo tháng, DEM và danh bạ khẩn cấp) thành 1 tệp Markdown chuẩn để nạp vào Google NotebookLM.</p>
+          <ol style="margin:0 0 12px;padding-left:18px;font-size:0.8rem;color:var(--ink);">
+            <li>Bấm nút dưới đây để tải tệp <code>HUMG_DongNgac_NotebookLM_SourcePack.md</code>.</li>
+            <li>Mở <a href="https://notebooklm.google.com" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600;">notebooklm.google.com</a> → <strong>Create new notebook</strong> → tải tệp <code>.md</code> vừa xuất lên.</li>
+            <li>Dùng tính năng <strong>Audio Overview (Tiếng Việt)</strong> để tạo bản tin âm thanh 2 MC thảo luận hoặc đặt câu hỏi trích dẫn cho buổi bảo vệ đồ án!</li>
+          </ol>
+          <button type="button" id="btn-sys-notebooklm" class="btn btn-primary">Tải Gói Nguồn Chuẩn Google NotebookLM (.MD)</button>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2>3. Sao lưu, Khôi phục &amp; Xuất Dữ liệu Chuẩn GIS</h2>
+          <p class="sub">Lưu bản chụp toàn bộ trạng thái hệ thống (điểm, KPI, thông báo, nhật ký) ra tệp JSON hoặc xuất tệp chuẩn QGIS / Google My Maps.</p>
+          <div class="nav-row" style="margin-bottom:12px;">
+            <button type="button" id="btn-backup-json" class="btn btn-primary">Sao lưu toàn bộ (.JSON)</button>
+            <label class="btn" style="margin:0;cursor:pointer;">
+              <span>Khôi phục từ tệp .JSON</span>
+              <input type="file" id="input-restore-json" accept=".json,application/json" hidden>
+            </label>
+            <button type="button" id="btn-reset-baseline" class="btn btn-danger">Khôi phục 32 điểm gốc chuẩn</button>
+          </div>
+          <div class="nav-row">
+            <button type="button" id="btn-adm-csv" class="btn">Xuất CSV Excel</button>
+            <button type="button" id="btn-adm-geojson" class="btn">Xuất GeoJSON</button>
+            <button type="button" id="btn-adm-kml" class="btn">Xuất KML My Maps</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>4. Chẩn đoán Hiệu năng &amp; Bộ nhớ PWA</h2>
+          <p class="sub">Theo dõi dung lượng lưu trữ trình duyệt và làm mới bộ nhớ đệm Offline Service Worker khi vừa cập nhật phiên bản mới.</p>
+          <div id="perf-diag-box" class="mono" style="padding:10px 12px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;font-size:0.78rem;margin-bottom:10px;"></div>
+          <button type="button" id="btn-clear-sw-cache" class="btn">Làm mới bộ nhớ đệm Offline PWA</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Hộp thoại Thêm / Chỉnh sửa chi tiết Điểm dữ liệu dành cho Quản trị viên -->
+  <dialog id="adm-edit-dialog" aria-labelledby="adm-edit-title">
+    <div class="dlg-head">
+      <strong id="adm-edit-title">Thêm / Chỉnh sửa Điểm Dữ liệu Bản đồ</strong>
+      <button type="button" id="btn-close-edit" class="btn">Đóng</button>
+    </div>
+    <form id="adm-edit-form" class="dlg-body">
+      <div class="grid-3" style="margin-bottom:8px;">
+        <div>
+          <label for="ed-id">Mã điểm</label>
+          <input type="text" id="ed-id" class="mono" required>
+        </div>
+        <div>
+          <label for="ed-cat">Phân loại</label>
+          <select id="ed-cat">
+            <option value="flood">Ngập úng mưa lớn (Rủi ro)</option>
+            <option value="heat">Nắng gắt / Điểm chờ buýt (Rủi ro)</option>
+            <option value="traffic">Đường xấu / Cống xoáy (Rủi ro)</option>
+            <option value="medical">Bệnh viện / Nhà thuốc (An toàn)</option>
+            <option value="shelter">Điểm tránh trú / Hành chính / Hồ (An toàn)</option>
+          </select>
+        </div>
+        <div>
+          <label for="ed-tier">Hạng &amp; Trạng thái</label>
+          <select id="ed-tier">
+            <option value="A|approved">Hạng A · Công khai</option>
+            <option value="B|approved">Hạng B · Công khai</option>
+            <option value="C|pending">Hạng C · Chờ duyệt</option>
+            <option value="C|hidden">Ẩn (Spam / Trùng)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-bottom:8px;">
+        <label for="ed-name">Tên địa điểm / Tuyến phố / Cơ sở</label>
+        <input type="text" id="ed-name" required>
+      </div>
+
+      <div class="grid-4" style="margin-bottom:8px;">
+        <div>
+          <label for="ed-lat">Vĩ độ (WGS84)</label>
+          <input type="number" id="ed-lat" class="mono" step="any" required>
+        </div>
+        <div>
+          <label for="ed-lng">Kinh độ (WGS84)</label>
+          <input type="number" id="ed-lng" class="mono" step="any" required>
+        </div>
+        <div>
+          <label for="ed-dem">DEM (m)</label>
+          <div style="display:flex;gap:4px;">
+            <input type="number" id="ed-dem" class="mono" step="0.1">
+            <button type="button" id="btn-fetch-ed-dem" class="btn" title="Tự động tra cao độ Copernicus DEM">Tra</button>
+          </div>
+        </div>
+        <div>
+          <label for="ed-confirms">Số lượt +1</label>
+          <input type="number" id="ed-confirms" class="mono" min="1" value="1">
+        </div>
+      </div>
+
+      <div style="margin-bottom:8px;">
+        <label>Bản đồ Kiểm duyệt Trực quan (Nhấp hoặc kéo thả ghim để chỉnh tọa độ chính xác &amp; tự tra DEM)</label>
+        <div id="adm-minimap" style="height:185px;width:100%;border:1px solid var(--border);border-radius:8px;"></div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:8px;">
+        <div>
+          <label for="ed-scale">Mức ngập quan sát</label>
+          <select id="ed-scale">
+            <option value="none">Không ngập / Điểm khô ráo</option>
+            <option value="surface">Đọng mặt đường (&lt;5 cm)</option>
+            <option value="ankle">Ngập mắt cá chân (~10–15 cm)</option>
+            <option value="half_wheel">Ngập nửa bánh xe (~20–30 cm)</option>
+            <option value="knee_stall">Ngập đầu gối / chết máy (~40–50 cm)</option>
+            <option value="enter_house">Ngập tràn nhà / sảnh (&gt;50 cm – &gt;1 m)</option>
+          </select>
+        </div>
+        <div>
+          <label for="ed-date">Ngày sự kiện / khảo sát</label>
+          <input type="text" id="ed-date" class="mono" placeholder="YYYY-MM-DD">
+        </div>
+      </div>
+
+      <div style="margin-bottom:8px;">
+        <label for="ed-cite">Trích dẫn nguồn kiểm chứng (Báo chí + ngày, Mã OSM hoặc Đoàn thực địa)</label>
+        <input type="text" id="ed-cite" required placeholder="VD: Khảo sát thực địa TV1 ngày 28/11/2026 hoặc osm:node/...">
+      </div>
+
+      <div>
+        <label for="ed-notes">Mô tả chi tiết &amp; khuyến nghị an toàn</label>
+        <textarea id="ed-notes" rows="3"></textarea>
+      </div>
+
+      <div class="dlg-foot" style="padding:12px 0 0;margin-top:12px;">
+        <button type="button" id="btn-cancel-edit" class="btn">Hủy</button>
+        <button type="submit" class="btn btn-primary">Lưu điểm dữ liệu</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="adm-toast" class="toast" hidden></div>
+
+  <script src="./vendor/leaflet/leaflet.js"></script>
+  <script src="./vendor/turf/turf.min.js"></script>
+  <script type="module" src="./admin.js"></script>
+</body>
+</html>

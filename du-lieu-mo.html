@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Số liệu Thực tế, Phương pháp &amp; Dữ liệu Mở — Bản đồ Cộng đồng P. Đông Ngạc</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --green: #15803d;
+      --red: #b91c1c;
+      --orange: #c2410c;
+      --amber: #b45309;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --panel: #f1f5f9;
+      --fg: #0f172a;
+      --muted: #475569;
+      --border: #cbd5e1;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: var(--fg); background: var(--bg); line-height: 1.55; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+      padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .topbar h1 { margin: 0; font-size: 1.05rem; letter-spacing: -0.02em; }
+    .nav-links { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--fg);
+      font: inherit; font-size: 0.83rem; font-weight: 600; text-decoration: none; cursor: pointer;
+    }
+    .btn-primary { background: var(--primary); border-color: var(--primary); color: #ffffff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn:hover { background: var(--panel); }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 40px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
+    .kpi-card { margin-bottom: 0; }
+    .kpi-label { font-size: 0.77rem; font-weight: 600; color: var(--muted); }
+    .kpi-val { display: block; font-family: var(--mono); font-size: 1.45rem; font-weight: 700; margin: 4px 0 2px; }
+    .kpi-sub { font-size: 0.75rem; color: var(--muted); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    h2 { margin: 0 0 8px; font-size: 1.02rem; }
+    .lead { margin: 0 0 12px; font-size: 0.85rem; color: var(--muted); }
+    .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    svg.chart { width: 100%; height: auto; display: block; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background: var(--panel); color: var(--muted); font-size: 0.76rem; }
+    .license-box { padding: 12px 14px; border-radius: 8px; background: #f0fdfa; border: 1px solid #99f6e4; font-size: 0.83rem; color: #115e59; }
+    .export-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    @media (max-width: 860px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } .grid-2 { grid-template-columns: 1fr; } }
+    @media (max-width: 520px) { .kpi-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <h1>Số liệu Thực tế, Phương pháp &amp; Cổng Dữ liệu Mở (P. Đông Ngạc · ĐH Mỏ - Địa chất)</h1>
+    <nav class="nav-links">
+      <a href="./index.html" class="btn btn-primary">← Về Bản đồ Cộng đồng</a>
+      <a href="./phieu-thuc-dia.html" class="btn">Phiếu thực địa A4</a>
+      <a href="./cam-nang-1-cham.html" class="btn">Cẩm nang PDF</a>
+      <a href="./infographics-va-ban-tin.html" class="btn">Infographic &amp; Bản tin</a>
+      <a href="./thuyet-trinh.html" class="btn">Slide &amp; Video 45s</a>
+      <a href="./admin.html" class="btn">Quản trị duyệt điểm</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="kpi-grid" aria-label="Tổng hợp thống kê trực tiếp">
+      <div class="card kpi-card">
+        <span class="kpi-label">Điểm xác thực chính thức (Hạng A)</span>
+        <strong id="kpi-tier-a" class="kpi-val" style="color:var(--primary)">0</strong>
+        <span class="kpi-sub">Nguồn OSM, báo chí &amp; cơ quan chức năng</span>
+      </div>
+      <div class="card kpi-card">
+        <span class="kpi-label">Cộng đồng kiểm chứng (Hạng B)</span>
+        <strong id="kpi-tier-b" class="kpi-val" style="color:#0369a1">0</strong>
+        <span class="kpi-sub">≥3 cư dân độc lập xác nhận / báo chí định kỳ</span>
+      </div>
+      <div class="card kpi-card">
+        <span class="kpi-label">Cộng đồng mới báo (Hạng C)</span>
+        <strong id="kpi-tier-c" class="kpi-val" style="color:var(--amber)">0</strong>
+        <span class="kpi-sub">Đang chờ xác nhận thêm hoặc đi thực địa</span>
+      </div>
+      <div class="card kpi-card">
+        <span class="kpi-label">Tổng lượt xác nhận thực tế (+1)</span>
+        <strong id="kpi-confirms" class="kpi-val" style="color:var(--orange)">0</strong>
+        <span class="kpi-sub">Tính trên tổng số <span id="kpi-total-pts" class="mono">0</span> điểm vùng 2km</span>
+      </div>
+    </section>
+
+    <div class="grid-2">
+      <section class="card">
+        <h2>Biểu đồ 1: Số ngày Nắng nóng &amp; Nhiệt cảm nhận ≥40°C (2024–2026)</h2>
+        <p class="lead">Dữ liệu tái phân tích khí quyển <strong>ECMWF ERA5</strong> tại ô lưới ĐH Mỏ - Địa chất (<span class="mono">21.0725°N, 105.7739°E</span>). Năm 2026 tính đến 20/11/2026.</p>
+        <div id="chart-heat"></div>
+      </section>
+
+      <section class="card">
+        <h2>Biểu đồ 2: Lát cắt Cao độ Copernicus DEM GLO-30 (m DSM)</h2>
+        <p class="lead">So sánh cao độ bề mặt giữa vùng gò/đê (<span class="mono">16–17 m</span>) và dải lòng máng tiêu thoát chậm dọc sông Nhuệ – kênh Thụy Phương (<span class="mono">10–12 m</span>).</p>
+        <div id="chart-dem"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Biểu đồ 3: Phân bố Lượng mưa (mm) &amp; Số ngày Nhiệt cảm nhận ≥40°C theo từng tháng năm 2026 (ERA5)</h2>
+      <p class="lead">Tổng lượng mưa tích lũy từ 01/01 đến 20/11/2026 tại ĐH Mỏ đạt <strong class="mono">2.120,4 mm</strong> — nổi bật đỉnh mưa tháng 08/2026 (<strong class="mono">624,8 mm</strong>) và cao điểm nắng bức xạ tháng 06/2026 (<strong class="mono">19 ngày</strong> nhiệt cảm nhận ≥40°C).</p>
+      <div id="chart-monthly-2026"></div>
+    </section>
+
+    <section class="card">
+      <h2>Bảng tổng hợp chuỗi sự kiện thời tiết cực đoan thực tế (ECMWF ERA5 2024–2026)</h2>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Năm</th>
+              <th>Ngày Tmax ≥35°C</th>
+              <th>Ngày Tmax ≥37°C</th>
+              <th>Ngày nhiệt cảm nhận ≥40°C</th>
+              <th>Đỉnh Tmax / Cảm nhận</th>
+              <th>Ngày mưa ≥50mm</th>
+              <th>Các đợt mưa cực đoan ghi nhận thực tế</th>
+            </tr>
+          </thead>
+          <tbody id="era5-full-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Cổng Tải Dữ liệu Mở (Open Data) &amp; Quy chuẩn Pháp lý</h2>
+      <p class="lead">Tải xuống toàn bộ bộ dữ liệu sạch hiện có (kèm mã nguồn kiểm chứng, cấp độ tin cậy A/B/C, tọa độ WGS84 &amp; UTM Zone 48N) để phục vụ báo cáo môn học, nghiên cứu GIS trên QGIS/ArcGIS hoặc tiếp tục phát triển ở các khóa sau.</p>
+      <div class="license-box">
+        <strong>Giấy phép sử dụng dữ liệu:</strong><br>
+        • Dữ liệu đóng góp của cộng đồng và tổng hợp khảo sát của nhóm phát hành theo giấy phép mở <strong>Creative Commons Attribution 4.0 (CC BY 4.0)</strong>.<br>
+        • Các đối tượng nền hạ tầng y tế/công cộng trích xuất từ OpenStreetMap mang bản quyền <strong>© OpenStreetMap contributors</strong> theo giấy phép <strong>ODbL 1.0</strong>.<br>
+        • Dữ liệu khí tượng trích từ <strong>ECMWF ERA5 / Open-Meteo</strong> và cao độ từ <strong>Copernicus DEM GLO-30</strong>. Mọi dữ liệu cá nhân (họ tên, SĐT) không tồn tại trong bộ dữ liệu công khai theo <strong>Luật Bảo vệ dữ liệu cá nhân 91/2025/QH15</strong>.
+      </div>
+      <div class="export-row">
+        <button type="button" id="dl-csv" class="btn btn-primary">Tải Bảng Dữ liệu Mở (.CSV Excel UTF-8)</button>
+        <button type="button" id="dl-geojson" class="btn">Tải Lớp Không gian GIS (.GeoJSON)</button>
+        <button type="button" id="dl-kml" class="btn">Tải Bản đồ 2 Lớp Google My Maps (.KML)</button>
+        <button type="button" id="dl-notebooklm" class="btn" style="border-color:#0f766e;color:#0f766e;">Xuất Gói Nguồn Google NotebookLM (.MD)</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="./vendor/turf/turf.min.js"></script>
+  <script type="module">
+    import { HUMG_CENTER, ERA5_CLIMATE_FACTS, MONTHLY_2026_CLIMATE, SAMPLE_HUMG_POINTS } from './humg-data.js';
+    import { analyzeSurveyPoints, exportToCSV, exportToGeoJSON, exportToKML } from './gis-utils.js';
+    import { buildNotebookLmSourceMarkdown } from './knowledge-engine.js';
+
+    const STORAGE_KEY = 'humg_dongngac_community_gis_v7';
+    let points = structuredClone(SAMPLE_HUMG_POINTS);
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if (Array.isArray(saved?.points) && saved.points.length > 0) points = saved.points;
+    } catch { /* fallback to verified baseline */ }
+
+    const visiblePoints = points.filter((p) => p.status !== 'hidden');
+    const analysis = analyzeSurveyPoints(window.turf, visiblePoints, HUMG_CENTER.lat, HUMG_CENTER.lng, 2.0);
+
+    document.getElementById('kpi-tier-a').textContent = analysis.points.filter((p) => p.confidenceTier === 'A').length;
+    document.getElementById('kpi-tier-b').textContent = analysis.points.filter((p) => p.confidenceTier === 'B').length;
+    document.getElementById('kpi-tier-c').textContent = analysis.points.filter((p) => p.confidenceTier === 'C').length;
+    document.getElementById('kpi-confirms').textContent = analysis.stats.totalConfirmations;
+    document.getElementById('kpi-total-pts').textContent = analysis.stats.total;
+
+    // Bảng ERA5
+    document.getElementById('era5-full-body').innerHTML = ERA5_CLIMATE_FACTS.years.map((y) => `
+      <tr>
+        <td><strong>${y.year}</strong>${y.periodNote ? `<br><small style="color:#475569">${y.periodNote}</small>` : ''}</td>
+        <td class="mono">${y.hotDays35}</td>
+        <td class="mono">${y.hotDays37}</td>
+        <td class="mono"><strong>${y.apparentHot40}</strong></td>
+        <td class="mono">${y.maxTempC}°C / ${y.maxApparentC}°C</td>
+        <td class="mono">${y.rainDays50mm}</td>
+        <td>${y.notableEvents}</td>
+      </tr>
+    `).join('');
+
+    // Biểu đồ SVG 1: Khí tượng nắng nóng 2024-2026
+    const years = ERA5_CLIMATE_FACTS.years;
+    const maxVal = 85;
+    const heatSvg = `
+      <svg class="chart" viewBox="0 0 460 210" role="img" aria-label="Biểu đồ số ngày nắng nóng 2024 đến 2026 tại ĐH Mỏ - Địa chất">
+        <line x1="40" y1="170" x2="440" y2="170" stroke="#cbd5e1" stroke-width="1"/>
+        <line x1="40" y1="30" x2="40" y2="170" stroke="#cbd5e1" stroke-width="1"/>
+        ${[0, 20, 40, 60, 80].map((v) => {
+          const y = 170 - (v / maxVal) * 135;
+          return `<line x1="40" y1="${y}" x2="440" y2="${y}" stroke="#f1f5f9" stroke-width="1"/>
+                  <text x="34" y="${y + 4}" text-anchor="end" font-size="10" fill="#64748b" font-family="JetBrains Mono">${v}</text>`;
+        }).join('')}
+        ${years.map((item, idx) => {
+          const baseX = 78 + idx * 126;
+          const h1 = (item.hotDays35 / maxVal) * 135;
+          const h2 = (item.apparentHot40 / maxVal) * 135;
+          return `
+            <rect x="${baseX}" y="${170 - h1}" width="32" height="${h1}" rx="3" fill="#0f766e"/>
+            <text x="${baseX + 16}" y="${164 - h1}" text-anchor="middle" font-size="11" font-weight="700" fill="#0f766e" font-family="JetBrains Mono">${item.hotDays35}</text>
+            <rect x="${baseX + 38}" y="${170 - h2}" width="32" height="${h2}" rx="3" fill="#ea580c"/>
+            <text x="${baseX + 54}" y="${164 - h2}" text-anchor="middle" font-size="11" font-weight="700" fill="#c2410c" font-family="JetBrains Mono">${item.apparentHot40}</text>
+            <text x="${baseX + 35}" y="188" text-anchor="middle" font-size="12" font-weight="700" fill="#0f172a">${item.year}</text>
+          `;
+        }).join('')}
+        <rect x="44" y="8" width="12" height="10" rx="2" fill="#0f766e"/><text x="61" y="17" font-size="10.5" fill="#334155">Ngày Tmax ≥ 35°C</text>
+        <rect x="190" y="8" width="12" height="10" rx="2" fill="#ea580c"/><text x="207" y="17" font-size="10.5" fill="#334155">Ngày nhiệt cảm nhận ≥ 40°C</text>
+      </svg>`;
+    document.getElementById('chart-heat').innerHTML = heatSvg;
+
+    // Biểu đồ SVG 2: Lát cắt cao độ Copernicus DEM GLO-30 thực tế (bao gồm các điểm trũng nhất 6–9 m mới xác thực)
+    const demProfile = [
+      { label: 'Tân Nhuệ', m: 6, low: true },
+      { label: 'Tây Th.Long', m: 7, low: true },
+      { label: 'P.Văn Nghị', m: 8, low: true },
+      { label: 'Ecohome', m: 9, low: true },
+      { label: 'Phố Viên', m: 12, low: true },
+      { label: 'Khu A Mỏ', m: 17, low: false },
+      { label: 'Đê Đ.Ngạc', m: 16, low: false }
+    ];
+    const demSvg = `
+      <svg class="chart" viewBox="0 0 460 220" role="img" aria-label="Biểu đồ cao độ DEM GLO-30 khu vực ĐH Mỏ - Địa chất và sông Nhuệ">
+        <rect x="44" y="6" width="12" height="10" rx="2" fill="#b91c1c"/><text x="61" y="15" font-size="10.5" fill="#334155">Vùng trũng tiêu thoát chậm (≤12 m DSM)</text>
+        <rect x="278" y="6" width="12" height="10" rx="2" fill="#0f766e"/><text x="295" y="15" font-size="10.5" fill="#334155">Nền gò / đê cao (≥16 m)</text>
+        <line x1="36" y1="184" x2="446" y2="184" stroke="#cbd5e1" stroke-width="1"/>
+        <rect x="36" y="${184 - (12.5 / 20) * 140}" width="410" height="${(12.5 / 20) * 140}" fill="#fef2f2" fill-opacity="0.5"/>
+        <line x1="36" y1="${184 - (12.5 / 20) * 140}" x2="446" y2="${184 - (12.5 / 20) * 140}" stroke="#fca5a5" stroke-width="1" stroke-dasharray="4 3"/>
+        ${demProfile.map((d, i) => {
+          const x = 46 + i * 57;
+          const h = (d.m / 20) * 140;
+          const fill = d.low ? '#b91c1c' : '#0f766e';
+          return `
+            <rect x="${x}" y="${184 - h}" width="36" height="${h}" rx="3" fill="${fill}"/>
+            <text x="${x + 18}" y="${178 - h}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${fill}" font-family="JetBrains Mono">${d.m}m</text>
+            <text x="${x + 18}" y="201" text-anchor="middle" font-size="9.5" fill="#334155">${d.label}</text>
+          `;
+        }).join('')}
+      </svg>`;
+    document.getElementById('chart-dem').innerHTML = demSvg;
+
+    // Biểu đồ SVG 3: Lượng mưa & ngày nắng cảm nhận >=40°C theo tháng năm 2026
+    const maxRainM = 680;
+    const monthlySvg = `
+      <svg class="chart" viewBox="0 0 760 234" role="img" aria-label="Biểu đồ lượng mưa và nắng nóng theo tháng năm 2026 tại ĐH Mỏ">
+        <rect x="48" y="6" width="12" height="10" rx="2" fill="#0284c7"/><text x="65" y="15" font-size="11" fill="#334155">Tổng mưa tháng (mm)</text>
+        <rect x="215" y="6" width="12" height="10" rx="2" fill="#ea580c"/><text x="232" y="15" font-size="11" fill="#334155">Số ngày nhiệt cảm nhận ≥ 40°C (hàng nhãn cam bên dưới)</text>
+        <line x1="44" y1="180" x2="740" y2="180" stroke="#cbd5e1" stroke-width="1"/>
+        ${[0, 200, 400, 600].map((v) => {
+          const y = 180 - (v / maxRainM) * 138;
+          return `<line x1="44" y1="${y}" x2="740" y2="${y}" stroke="#f1f5f9" stroke-width="1"/>
+                  <text x="38" y="${y + 4}" text-anchor="end" font-size="10" fill="#64748b" font-family="JetBrains Mono">${v}</text>`;
+        }).join('')}
+        ${MONTHLY_2026_CLIMATE.map((m, idx) => {
+          const x = 58 + idx * 61;
+          const hRain = Math.max(2, (m.rainMm / maxRainM) * 138);
+          return `
+            <rect x="${x}" y="${180 - hRain}" width="34" height="${hRain}" rx="3" fill="${m.rainMm >= 300 ? '#0369a1' : '#38bdf8'}"/>
+            <text x="${x + 17}" y="${173 - hRain}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#0f172a" font-family="JetBrains Mono">${Math.round(m.rainMm)}</text>
+            <text x="${x + 17}" y="196" text-anchor="middle" font-size="10.5" font-weight="600" fill="#334155">${m.label}</text>
+            ${m.daysApparent40 > 0 ? `<rect x="${x + 3}" y="204" width="28" height="15" rx="3" fill="#fff7ed" stroke="#fdba74"/><text x="${x + 17}" y="215" text-anchor="middle" font-size="9" font-weight="700" fill="#c2410c" font-family="JetBrains Mono">${m.daysApparent40}d</text>` : `<text x="${x + 17}" y="215" text-anchor="middle" font-size="9" fill="#94a3b8" font-family="JetBrains Mono">0d</text>`}
+          `;
+        }).join('')}
+      </svg>`;
+    document.getElementById('chart-monthly-2026').innerHTML = monthlySvg;
+
+    function downloadBlob(content, fileName, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    const meta = { ...HUMG_CENTER, radiusKm: 2.0 };
+    document.getElementById('dl-csv').addEventListener('click', () =>
+      downloadBlob(exportToCSV(analysis, meta, false), 'DongNgac_HUMG_OpenData_2km.csv', 'text/csv;charset=utf-8')
+    );
+    document.getElementById('dl-geojson').addEventListener('click', () =>
+      downloadBlob(JSON.stringify(exportToGeoJSON(analysis, meta, false), null, 2), 'DongNgac_HUMG_OpenData_2km.geojson', 'application/geo+json;charset=utf-8')
+    );
+    document.getElementById('dl-kml').addEventListener('click', () =>
+      downloadBlob(exportToKML(analysis, meta, false), 'DongNgac_HUMG_MyMaps_2km.kml', 'application/vnd.google-earth.kml+xml;charset=utf-8')
+    );
+    document.getElementById('dl-notebooklm').addEventListener('click', () =>
+      downloadBlob(buildNotebookLmSourceMarkdown(visiblePoints, analysis.stats), 'HUMG_DongNgac_NotebookLM_SourcePack.md', 'text/markdown;charset=utf-8')
+    );
+  </script>
+</body>
+</html>

@@ -1,0 +1,1684 @@
+{
+  "type": "FeatureCollection",
+  "name": "HUMG_PhuongDongNgac_CommunityMap_2km",
+  "crs": {
+    "type": "name",
+    "properties": {
+      "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
+    }
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "buffer_zone",
+        "name": "Vùng khảo sát bán kính 2 km",
+        "radiusKm": 2,
+        "centerLat": 21.072514,
+        "centerLng": 105.77387,
+        "areaKm2": 12.56
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              105.77387,
+              21.09050040727449
+            ],
+            [
+              105.77292408516985,
+              21.090478739239128
+            ],
+            [
+              105.77198044995725,
+              21.090413787352183
+            ],
+            [
+              105.77104136848001,
+              21.09030570814506
+            ],
+            [
+              105.77010910386973,
+              21.090154762083802
+            ],
+            [
+              105.76918590281197,
+              21.089961312940694
+            ],
+            [
+              105.76827399012637,
+              21.089725826916663
+            ],
+            [
+              105.76737556339958,
+              21.08944887151654
+            ],
+            [
+              105.76649278768426,
+              21.08913111418002
+            ],
+            [
+              105.7656277902769,
+              21.088773320671468
+            ],
+            [
+              105.76478265558704,
+              21.08837635323269
+            ],
+            [
+              105.76395942011047,
+              21.0879411685029
+            ],
+            [
+              105.76316006751827,
+              21.087468815211167
+            ],
+            [
+              105.76238652387404,
+              21.08696043164668
+            ],
+            [
+              105.76164065299025,
+              21.086417242913193
+            ],
+            [
+              105.7609242519357,
+              21.085840557974123
+            ],
+            [
+              105.76023904670407,
+              21.085231766495536
+            ],
+            [
+              105.7595866880549,
+              21.08459233549465
+            ],
+            [
+              105.75896874753619,
+              21.08392380580195
+            ],
+            [
+              105.75838671369897,
+              21.083227788345454
+            ],
+            [
+              105.75784198851233,
+              21.082505960266218
+            ],
+            [
+              105.75733588398796,
+              21.0817600608743
+            ],
+            [
+              105.75686961902203,
+              21.080991887455166
+            ],
+            [
+              105.75644431646225,
+              21.08020329093647
+            ],
+            [
+              105.7560610004069,
+              21.079396171425845
+            ],
+            [
+              105.75572059374244,
+              21.078572473630405
+            ],
+            [
+              105.75542391592552,
+              21.077734182169
+            ],
+            [
+              105.75517168101489,
+              21.076883316788628
+            ],
+            [
+              105.75496449595734,
+              21.076021927496477
+            ],
+            [
+              105.75480285913258,
+              21.07515208961936
+            ],
+            [
+              105.75468715915964,
+              21.07427589880251
+            ],
+            [
+              105.75461767396826,
+              21.07339546595973
+            ],
+            [
+              105.75459457013694,
+              21.072512912187108
+            ],
+            [
+              105.75461790249963,
+              21.071630363652602
+            ],
+            [
+              105.75468761402155,
+              21.07074994647372
+            ],
+            [
+              105.7548035359444,
+              21.06987378159571
+            ],
+            [
+              105.75496538820104,
+              21.069003979682552
+            ],
+            [
+              105.75517278009768,
+              21.068142636033144
+            ],
+            [
+              105.75542521126265,
+              21.067291825534728
+            ],
+            [
+              105.75572207285906,
+              21.066453597665944
+            ],
+            [
+              105.75606264905834,
+              21.065629971561357
+            ],
+            [
+              105.7564461187711,
+              21.06482293114941
+            ],
+            [
+              105.75687155763104,
+              21.06403442037544
+            ],
+            [
+              105.75733794022729,
+              21.063266338521316
+            ],
+            [
+              105.75784414257927,
+              21.062520535632874
+            ],
+            [
+              105.75838894484869,
+              21.06179880806619
+            ],
+            [
+              105.75897103428147,
+              21.061102894163337
+            ],
+            [
+              105.75958900837317,
+              21.060434470068092
+            ],
+            [
+              105.7602413782494,
+              21.05979514569152
+            ],
+            [
+              105.76092657225401,
+              21.059186460837243
+            ],
+            [
+              105.76164293973562,
+              21.05860988149563
+            ],
+            [
+              105.76238875502384,
+              21.058066796315792
+            ],
+            [
+              105.76316222158533,
+              21.057558513263864
+            ],
+            [
+              105.76396147634992,
+              21.057086256475614
+            ],
+            [
+              105.7647845941962,
+              21.056651163310846
+            ],
+            [
+              105.76562959258585,
+              21.056254281616802
+            ],
+            [
+              105.76649443633583,
+              21.055896567206933
+            ],
+            [
+              105.76737704251634,
+              21.055578881561274
+            ],
+            [
+              105.76827528546362,
+              21.055301989753794
+            ],
+            [
+              105.76918700189489,
+              21.05506655861172
+            ],
+            [
+              105.77010999611353,
+              21.054873155111363
+            ],
+            [
+              105.77104204529194,
+              21.05472224501408
+            ],
+            [
+              105.7719809048192,
+              21.054614191745795
+            ],
+            [
+              105.77292431370127,
+              21.054549255522748
+            ],
+            [
+              105.77387,
+              21.05452759272551
+            ],
+            [
+              105.77481568629874,
+              21.054549255522748
+            ],
+            [
+              105.7757590951808,
+              21.054614191745795
+            ],
+            [
+              105.77669795470807,
+              21.05472224501408
+            ],
+            [
+              105.77763000388647,
+              21.054873155111363
+            ],
+            [
+              105.77855299810513,
+              21.05506655861172
+            ],
+            [
+              105.77946471453639,
+              21.055301989753794
+            ],
+            [
+              105.78036295748367,
+              21.055578881561274
+            ],
+            [
+              105.78124556366417,
+              21.055896567206933
+            ],
+            [
+              105.78211040741415,
+              21.056254281616802
+            ],
+            [
+              105.78295540580382,
+              21.056651163310846
+            ],
+            [
+              105.7837785236501,
+              21.057086256475614
+            ],
+            [
+              105.78457777841467,
+              21.057558513263864
+            ],
+            [
+              105.78535124497618,
+              21.058066796315792
+            ],
+            [
+              105.7860970602644,
+              21.05860988149563
+            ],
+            [
+              105.78681342774601,
+              21.059186460837243
+            ],
+            [
+              105.78749862175061,
+              21.05979514569152
+            ],
+            [
+              105.78815099162685,
+              21.060434470068092
+            ],
+            [
+              105.78876896571853,
+              21.061102894163337
+            ],
+            [
+              105.78935105515134,
+              21.06179880806619
+            ],
+            [
+              105.78989585742076,
+              21.062520535632874
+            ],
+            [
+              105.79040205977275,
+              21.063266338521316
+            ],
+            [
+              105.79086844236896,
+              21.06403442037544
+            ],
+            [
+              105.79129388122892,
+              21.06482293114941
+            ],
+            [
+              105.79167735094167,
+              21.065629971561357
+            ],
+            [
+              105.79201792714096,
+              21.066453597665944
+            ],
+            [
+              105.79231478873737,
+              21.067291825534728
+            ],
+            [
+              105.79256721990232,
+              21.068142636033144
+            ],
+            [
+              105.79277461179896,
+              21.069003979682552
+            ],
+            [
+              105.7929364640556,
+              21.06987378159571
+            ],
+            [
+              105.79305238597846,
+              21.07074994647372
+            ],
+            [
+              105.79312209750037,
+              21.071630363652602
+            ],
+            [
+              105.79314542986307,
+              21.072512912187108
+            ],
+            [
+              105.79312232603175,
+              21.07339546595973
+            ],
+            [
+              105.79305284084037,
+              21.07427589880251
+            ],
+            [
+              105.79293714086742,
+              21.07515208961936
+            ],
+            [
+              105.79277550404267,
+              21.076021927496477
+            ],
+            [
+              105.79256831898512,
+              21.076883316788628
+            ],
+            [
+              105.79231608407449,
+              21.077734182169
+            ],
+            [
+              105.79201940625758,
+              21.078572473630405
+            ],
+            [
+              105.79167899959312,
+              21.079396171425845
+            ],
+            [
+              105.79129568353775,
+              21.08020329093647
+            ],
+            [
+              105.79087038097798,
+              21.080991887455166
+            ],
+            [
+              105.79040411601207,
+              21.0817600608743
+            ],
+            [
+              105.78989801148771,
+              21.082505960266218
+            ],
+            [
+              105.78935328630106,
+              21.083227788345454
+            ],
+            [
+              105.78877125246382,
+              21.08392380580195
+            ],
+            [
+              105.78815331194512,
+              21.08459233549465
+            ],
+            [
+              105.78750095329593,
+              21.085231766495536
+            ],
+            [
+              105.78681574806431,
+              21.085840557974123
+            ],
+            [
+              105.78609934700975,
+              21.086417242913193
+            ],
+            [
+              105.78535347612598,
+              21.08696043164668
+            ],
+            [
+              105.78457993248173,
+              21.087468815211167
+            ],
+            [
+              105.78378057988955,
+              21.0879411685029
+            ],
+            [
+              105.78295734441299,
+              21.08837635323269
+            ],
+            [
+              105.78211220972311,
+              21.088773320671468
+            ],
+            [
+              105.78124721231575,
+              21.08913111418002
+            ],
+            [
+              105.78036443660045,
+              21.08944887151654
+            ],
+            [
+              105.77946600987363,
+              21.089725826916663
+            ],
+            [
+              105.77855409718805,
+              21.089961312940694
+            ],
+            [
+              105.77763089613029,
+              21.090154762083802
+            ],
+            [
+              105.77669863151999,
+              21.09030570814506
+            ],
+            [
+              105.77575955004275,
+              21.090413787352183
+            ],
+            [
+              105.77481591483016,
+              21.090478739239128
+            ],
+            [
+              105.77387,
+              21.09050040727449
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "buffer_center",
+        "name": "Trường ĐH Mỏ - Địa chất (18 Phố Viên, P. Đông Ngạc)",
+        "radiusKm": 2,
+        "utmZone": "48N",
+        "utmEasting": 580390.3,
+        "utmNorthing": 2330368.2
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.77387,
+          21.072514
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-01",
+        "layerGroup": "risk",
+        "category": "flood",
+        "categoryLabel": "Ngập úng mưa lớn",
+        "name": "Cuối Phố Viên (giáp ranh Đông Ngạc – Thượng Cát)",
+        "confidenceTier": "A",
+        "confirmCount": 5,
+        "waterScale": "knee_stall",
+        "waterScaleLabel": "Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)",
+        "hazardFlags": "Cống hở / miệng thu nước tạo xoáy nguy hiểm; Mặt đường gồ ghề, ổ gà khuất dưới nước",
+        "frequency": "Mỗi đợt mưa lớn kéo dài (>50 mm)",
+        "drainDuration": "Đọng nước kéo dài không rút hết",
+        "elevationDemM": 12,
+        "sourceType": "Báo Lao Động (18/09/2026) & Đại Đoàn Kết",
+        "sourceCitation": "Báo Lao Động 18/09/2026 (\"Người dân mong xử lý dứt điểm úng ngập cuối phố Viên, Hà Nội\"); ERA5 15/09/2026: 71,3 mm",
+        "observedDate": "2026-09-18",
+        "distanceToHUMGMeters": 371,
+        "bearingFromHUMG": "Nam (202°)",
+        "insideBuffer": true,
+        "utmEasting": 580254.2,
+        "utmNorthing": 2330024.3,
+        "notes": "Cách cổng trường ~372 m. Báo Lao Động ghi nhận mặt đường gồ ghề nhiều ổ gà, mưa lớn ngập sâu kèm dòng xoáy miệng cống (từng xảy ra tai nạn thương tâm tháng 9/2026). Người dân/SV thường phải quay đầu tìm đường vòng."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.772544,
+          21.069413
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-02",
+        "layerGroup": "risk",
+        "category": "flood",
+        "categoryLabel": "Ngập úng mưa lớn",
+        "name": "Khu vực Cầu Phố Viên – Bờ Tây sông Nhuệ",
+        "confidenceTier": "B",
+        "confirmCount": 3,
+        "waterScale": "half_wheel",
+        "waterScaleLabel": "Ngập bắp chân / nửa bánh xe máy (~20–30 cm)",
+        "hazardFlags": "Mặt đường gồ ghề, ổ gà khuất dưới nước",
+        "frequency": "Khi mưa lớn kết hợp mực nước sông Nhuệ lên cao",
+        "drainDuration": "30 phút – 2 giờ",
+        "elevationDemM": 12,
+        "sourceType": "OSM & Báo chí lưu vực sông Nhuệ",
+        "sourceCitation": "OpenStreetMap Cầu Phố Viên; Hà Nội Mới & Kinh tế Đô thị (áp lực thoát nước sông Nhuệ)",
+        "observedDate": "2025-10-07",
+        "distanceToHUMGMeters": 287,
+        "bearingFromHUMG": "Tây (251°)",
+        "insideBuffer": true,
+        "utmEasting": 580118.5,
+        "utmNorthing": 2330274.6,
+        "notes": "Cách cổng 18 Phố Viên ~287 m; nằm sát mép sông Nhuệ, khi lũ sông dâng báo động II–III nước nội khu mất khả năng tự chảy."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.771249,
+          21.07168
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-03",
+        "layerGroup": "risk",
+        "category": "flood",
+        "categoryLabel": "Ngập úng mưa lớn",
+        "name": "Ngõ 521 & Cụm ngõ dân sinh Cổ Nhuế (Ngõ 401 – 487)",
+        "confidenceTier": "B",
+        "confirmCount": 3,
+        "waterScale": "half_wheel",
+        "waterScaleLabel": "Ngập bắp chân / nửa bánh xe máy (~20–30 cm)",
+        "hazardFlags": "Nhà trọ / tầng 1 nền thấp, nguy cơ mất điện & rò điện",
+        "frequency": "Các trận mưa rào lớn mùa hè – thu",
+        "drainDuration": "Phụ thuộc vận hành trạm bơm Cổ Nhuế",
+        "elevationDemM": 11,
+        "sourceType": "Báo Dân Việt (2025), Lao Động / VTV (2024–2026) & OSM",
+        "sourceCitation": "Báo Dân Việt (ngập ngõ sâu Cổ Nhuế); Lao Động, VTV & Dân Trí (phòng trọ mái tôn sinh viên Hà Nội 45–50°C, giá điện 3.500–4.000 đ/kWh); osm:way/699218408",
+        "observedDate": "2025-09-29",
+        "distanceToHUMGMeters": 540,
+        "bearingFromHUMG": "Đông Nam (143°)",
+        "insideBuffer": true,
+        "utmEasting": 580714.8,
+        "utmNorthing": 2329938.7,
+        "notes": "Cách trường ~540 m, DEM 11 m. Cụm ngõ hẹp tập trung đông nhà trọ sinh viên chịu rủi ro kép: dễ đọng nước khi mưa lớn và nóng hầm hập (báo chí ghi nhận trọ mái tôn Hà Nội đạt 45–50°C khung 11h–16h, giá điện 3.500–4.000 đ/kWh). Mời cư dân bấm \"+ Báo điểm ngõ bạn\" ghim từng ngõ."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.776973,
+          21.068619
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-04",
+        "layerGroup": "risk",
+        "category": "flood",
+        "categoryLabel": "Ngập úng mưa lớn",
+        "name": "Vùng trũng nhà trọ ven sông Nhuệ – Học viện Tài chính",
+        "confidenceTier": "A",
+        "confirmCount": 4,
+        "waterScale": "knee_stall",
+        "waterScaleLabel": "Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)",
+        "hazardFlags": "Nhà trọ / tầng 1 nền thấp, nguy cơ mất điện & rò điện",
+        "frequency": "Khi mưa bão lớn & lũ sông Nhuệ dâng cao",
+        "drainDuration": "> 2 giờ",
+        "elevationDemM": 10,
+        "sourceType": "Thông báo khẩn HV Tài chính (10/09/2024) & VnExpress",
+        "sourceCitation": "Thông báo khẩn Học viện Tài chính 10/09/2024 & VnExpress; osm:way/1198891357",
+        "observedDate": "2024-09-10",
+        "distanceToHUMGMeters": 997,
+        "bearingFromHUMG": "Đông Bắc (37°)",
+        "insideBuffer": true,
+        "utmEasting": 580985.8,
+        "utmNorthing": 2331165.2,
+        "notes": "Cách ĐH Mỏ ~995 m, DEM 10 m. Trong bão số 3 Yagi tháng 9/2024, trường phải rà soát và sơ tán sinh viên ngoại trú vùng trũng ven sông Nhuệ."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.77964,
+          21.079688
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-05",
+        "layerGroup": "risk",
+        "category": "traffic",
+        "categoryLabel": "Đường xấu / Cống nguy hiểm",
+        "name": "Khu vực thi công đường Tây Thăng Long qua sông Nhuệ – Cổ Nhuế",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "half_wheel",
+        "waterScaleLabel": "Ngập bắp chân / nửa bánh xe máy (~20–30 cm)",
+        "hazardFlags": "Mặt đường gồ ghề, ổ gà khuất dưới nước",
+        "frequency": "Mưa lớn trong giai đoạn thi công & GPMB (2025–2026)",
+        "drainDuration": "30 phút – 2 giờ",
+        "elevationDemM": 7,
+        "sourceType": "Báo Sức khỏe & Đời sống, VietnamPlus (2025–2026)",
+        "sourceCitation": "Sức khỏe & Đời sống, VietnamPlus, VOV (dự án Tây Thăng Long >3,2 km); osm:way/1434617049",
+        "observedDate": "2026-08-23",
+        "distanceToHUMGMeters": 1168,
+        "bearingFromHUMG": "Nam (202°)",
+        "insideBuffer": true,
+        "utmEasting": 579959.8,
+        "utmNorthing": 2329287,
+        "notes": "Cách trường ~1.168 m, DEM rất thấp (7 m). Khu vực thi công mở rộng 10 làn xe & cầu qua sông Nhuệ chưa đồng bộ cống ngầm dọc tuyến, dễ đọng nước bùn lầy khi mưa."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.769676,
+          21.062764
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-06",
+        "layerGroup": "risk",
+        "category": "flood",
+        "categoryLabel": "Ngập úng mưa lớn",
+        "name": "Khu vực Cầu Noi – Đường Cổ Nhuế (ven sông Nhuệ)",
+        "confidenceTier": "B",
+        "confirmCount": 4,
+        "waterScale": "knee_stall",
+        "waterScaleLabel": "Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)",
+        "hazardFlags": "Mặt đường gồ ghề, ổ gà khuất dưới nước",
+        "frequency": "Mỗi đợt mưa lớn diện rộng & đỉnh lũ sông Nhuệ",
+        "drainDuration": "> 2 giờ",
+        "elevationDemM": 12,
+        "sourceType": "Hà Nội Mới, Thanh Tra & VietnamPlus",
+        "sourceCitation": "Hà Nội Mới / Thanh Tra / VietnamPlus (2024–2026); tọa độ Cầu Noi OpenStreetMap",
+        "observedDate": "2025-10-07",
+        "distanceToHUMGMeters": 1220,
+        "bearingFromHUMG": "Nam (187°)",
+        "insideBuffer": true,
+        "utmEasting": 580239.1,
+        "utmNorthing": 2329163.2,
+        "notes": "Cách ĐH Mỏ ~1.220 m. Nút thắt giao thông & tiêu thoát nước ven sông Nhuệ nối Cổ Nhuế – Đông Ngạc."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.772358,
+          21.061634
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-07",
+        "layerGroup": "risk",
+        "category": "flood",
+        "categoryLabel": "Ngập úng mưa lớn",
+        "name": "Khu đô thị Resco Cổ Nhuế (Cụm tòa OCT1, OCT2)",
+        "confidenceTier": "A",
+        "confirmCount": 6,
+        "waterScale": "enter_house",
+        "waterScaleLabel": "Ngập trên đầu gối / nước tràn sảnh, nhà trọ (>50 cm – >1 m)",
+        "hazardFlags": "Ngập cô lập lối ra vào khu dân cư; Nhà trọ / tầng 1 nền thấp, nguy cơ mất điện & rò điện",
+        "frequency": "Các trận mưa bão lớn (cải thiện dần từ giữa 2026)",
+        "drainDuration": "> 2 giờ (2025); rút nhanh hơn trong bão số 4/2026",
+        "elevationDemM": 12,
+        "sourceType": "Công ty Thoát nước HN, Tuổi Trẻ & VOV Giao thông",
+        "sourceCitation": "Danh sách điểm ngập Cty Thoát nước HN; Tuổi Trẻ, VOV Giao thông & Báo Tin Tức (2025–2026)",
+        "observedDate": "2025-10-07",
+        "distanceToHUMGMeters": 1246,
+        "bearingFromHUMG": "Đông (83°)",
+        "insideBuffer": true,
+        "utmEasting": 581629,
+        "utmNorthing": 2330516.6,
+        "notes": "Cách trường ~1.246 m. Cốt nền nội khu thấp hơn đường Phạm Văn Đồng; ngập sâu diện rộng năm 2025, đến mùa mưa 2026 đã giảm thời gian ngập nhờ thông tuyến kênh Thụy Phương."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.7858,
+          21.0738
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-08",
+        "layerGroup": "risk",
+        "category": "heat",
+        "categoryLabel": "Nắng gắt / Thiếu bóng mát",
+        "name": "Trục đường Phạm Văn Đồng (đoạn Cổ Nhuế – Công viên Hòa Bình)",
+        "confidenceTier": "B",
+        "confirmCount": 3,
+        "waterScale": "ankle",
+        "waterScaleLabel": "Ngập mắt cá chân / ngập lốp dưới (~10–15 cm)",
+        "hazardFlags": "Mặt đường rộng thiếu bóng cây, bức xạ nhiệt gắt 11h–15h",
+        "frequency": "63–76 ngày nhiệt cảm nhận ≥40°C/năm (ERA5) & đọng nước khi mưa lớn",
+        "drainDuration": "30 phút – 2 giờ khi mưa lớn",
+        "elevationDemM": 12,
+        "sourceType": "KTTV Quốc gia (Trạm Láng), ECMWF ERA5, Lao Động & Thanh Niên",
+        "sourceCitation": "Trạm Láng lập kỷ lục tháng 8 đạt 40,3°C ngày 04/08/2025 (VnExpress); ECMWF ERA5 (63–76 ngày nhiệt cảm nhận ≥40°C); Lao Động & Thanh Niên (di dời ~1.300 cây xanh Vành đai 3); Báo Tin Tức",
+        "observedDate": "2026-05-28",
+        "distanceToHUMGMeters": 1419,
+        "bearingFromHUMG": "Đông Nam (130°)",
+        "insideBuffer": true,
+        "utmEasting": 581477.8,
+        "utmNorthing": 2329458.7,
+        "notes": "Cách trường ~1.422 m. Trục Vành đai 3 nhiều làn bê tông nhựa chịu hiệu ứng đảo nhiệt đô thị (UHI) làm nhiệt cảm nhận mặt đường cao hơn lều khí tượng 2–4°C sau giai đoạn đánh chuyển gần 1.300 cây xanh; đồng thời có các điểm trũng đọng nước khi mưa dồn dập."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.784295,
+          21.064249
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-09",
+        "layerGroup": "risk",
+        "category": "traffic",
+        "categoryLabel": "Đường xấu / Cống nguy hiểm",
+        "name": "Tuyến Kênh Thụy Phương – Đường Hoàng Tăng Bí / Kẻ Vẽ (Dự án 920 tỷ)",
+        "confidenceTier": "A",
+        "confirmCount": 4,
+        "waterScale": "half_wheel",
+        "waterScaleLabel": "Ngập bắp chân / nửa bánh xe máy (~20–30 cm)",
+        "hazardFlags": "Mặt đường gồ ghề, ổ gà khuất dưới nước",
+        "frequency": "Hành lang tiêu thoát trọng điểm đang hoàn thiện năm 2026",
+        "drainDuration": "Hạ tải ngập cho tiểu lưu vực Cổ Nhuế – Đông Ngạc",
+        "elevationDemM": 16,
+        "sourceType": "QĐ 5520/QĐ-UBND (10/11/2025) & VnExpress, CafeF",
+        "sourceCitation": "QĐ 5520/QĐ-UBND TP. Hà Nội; VnExpress, CafeF & HĐND TP. HN (2026); osm:way/1530168567",
+        "observedDate": "2026-08-23",
+        "distanceToHUMGMeters": 1488,
+        "bearingFromHUMG": "Bắc (17°)",
+        "insideBuffer": true,
+        "utmEasting": 580828.2,
+        "utmNorthing": 2331783.7,
+        "notes": "Cách trường ~1.488 m. Dự án khẩn cấp >920 tỷ đồng (>3,5 km kênh hở + ~4 km cống hộp nối sông Tô Lịch, trạm bơm 5 m³/s). VnExpress phản ánh có sụt lún/nứt cục bộ một số nhà dọc tuyến thi công."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.778152,
+          21.085283
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-10",
+        "layerGroup": "risk",
+        "category": "flood",
+        "categoryLabel": "Ngập úng mưa lớn",
+        "name": "Đường Tân Nhuệ (Vùng trũng thấp nhất bán kính 2 km — DEM 6 m)",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "knee_stall",
+        "waterScaleLabel": "Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)",
+        "hazardFlags": "Mặt đường gồ ghề, ổ gà khuất dưới nước",
+        "frequency": "Mưa lớn & thời điểm rào chắn thi công cống kết nối",
+        "drainDuration": "30 phút – 2 giờ",
+        "elevationDemM": 6,
+        "sourceType": "VietnamPlus, Báo Lao Động & Copernicus DEM",
+        "sourceCitation": "VietnamPlus & Lao Động (cống qua đường Tân Nhuệ); osm:way/146724866; DEM GLO-30 = 6 m",
+        "observedDate": "2026-08-23",
+        "distanceToHUMGMeters": 1565,
+        "bearingFromHUMG": "Bắc (351°)",
+        "insideBuffer": true,
+        "utmEasting": 580126.5,
+        "utmNorthing": 2331903.5,
+        "notes": "Cách trường ~1.565 m, cao độ bề mặt chỉ 6 m (thấp nhất trong bán kính 2 km). Khu vực đặt cống qua đường Tân Nhuệ kết nối tiêu thoát cho cụm Đông Ngạc – Ecohome."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.771402,
+          21.086397
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-11",
+        "layerGroup": "risk",
+        "category": "flood",
+        "categoryLabel": "Ngập úng mưa lớn",
+        "name": "Cụm chung cư Ecohome 1, 2, 3 (Đường Đông Thắng – Đông Ngạc)",
+        "confidenceTier": "A",
+        "confirmCount": 6,
+        "waterScale": "enter_house",
+        "waterScaleLabel": "Ngập trên đầu gối / nước tràn sảnh, nhà trọ (>50 cm – >1 m)",
+        "hazardFlags": "Ngập cô lập lối ra vào khu dân cư; Nhà trọ / tầng 1 nền thấp, nguy cơ mất điện & rò điện",
+        "frequency": "Ngập lịch sử 08 & 10/2025; cải thiện rõ trong bão số 4 (23/08/2026)",
+        "drainDuration": "Từng ngập cô lập 48 giờ (2025); rút nhanh hơn từ giữa 2026",
+        "elevationDemM": 9,
+        "sourceType": "Dân Trí (27/08/2025) & VietNamNet (26/08, 27/08, 02/10/2025)",
+        "sourceCitation": "Dân Trí 27/08/2025 & VietNamNet 02/10/2025 (ngập cổng 1–1,4 m, 16 thang máy dừng); Báo Mới 23/08/2026 (mưa 99,6 mm rút tốt hơn); osm:node/12117023197",
+        "observedDate": "2026-08-23",
+        "distanceToHUMGMeters": 1752,
+        "bearingFromHUMG": "Đông Bắc (38°)",
+        "insideBuffer": true,
+        "utmEasting": 581466.1,
+        "utmNorthing": 2331745.4,
+        "notes": "Cách trường ~1.636–1.800 m, DEM 9–10 m. Năm 2025 ngập 1–1,4 m ở cổng rào gần trường học, tràn sảnh 60 cm–1 m làm tê liệt 16 thang máy Ecohome 1. Bão số 4 (23/08/2026) đã cải thiện đáng kể nhờ thông kênh Thụy Phương."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.784291,
+          21.084909
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-12",
+        "layerGroup": "risk",
+        "category": "flood",
+        "categoryLabel": "Ngập úng mưa lớn",
+        "name": "Đường Phạm Văn Nghị – Khu vực Khu B ĐH Mỏ (Bờ Tây sông Nhuệ)",
+        "confidenceTier": "B",
+        "confirmCount": 3,
+        "waterScale": "ankle",
+        "waterScaleLabel": "Ngập mắt cá chân / ngập lốp dưới (~10–15 cm)",
+        "hazardFlags": "Mặt đường rộng thiếu bóng cây, bức xạ nhiệt gắt 11h–15h",
+        "frequency": "Cần khảo sát thêm từ sinh viên Khu B & HV Cảnh sát",
+        "drainDuration": "Đang chờ cộng đồng xác nhận",
+        "elevationDemM": 8,
+        "sourceType": "OpenStreetMap & Copernicus DEM GLO-30",
+        "sourceCitation": "osm:way/965882635 (Đường Phạm Văn Nghị) & osm:way/1294976834 (Khu B ĐH Mỏ); DEM = 8–10 m",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 1809,
+        "bearingFromHUMG": "Tây (253°)",
+        "insideBuffer": true,
+        "utmEasting": 578659.3,
+        "utmNorthing": 2329839.6,
+        "notes": "Cách Khu A ~1.370–1.808 m ở phía Tây sông Nhuệ (DEM 8 m). Mời sinh viên Khu B & cư dân lân cận tích +1 xác nhận tình trạng ngập cục bộ và đoạn thiếu bóng mát giờ trưa."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.757184,
+          21.067813
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-13",
+        "layerGroup": "risk",
+        "category": "heat",
+        "categoryLabel": "Nắng gắt / Thiếu bóng mát",
+        "name": "Điểm dừng xe buýt 138 Phạm Văn Đồng – Cầu vượt bộ hành (Điểm chờ nắng gắt)",
+        "confidenceTier": "A",
+        "confirmCount": 4,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "Mặt đường rộng thiếu bóng cây, bức xạ nhiệt gắt 11h–15h",
+        "frequency": "Nắng gắt khung 11h00–15h30 (63–76 ngày nhiệt cảm nhận ≥40°C/năm)",
+        "drainDuration": "",
+        "elevationDemM": 12,
+        "sourceType": "OpenStreetMap, KTTV Quốc gia & Báo Lao Động / Thanh Niên",
+        "sourceCitation": "osm:node/7294677886 (138 Phạm Văn Đồng – Cầu vượt bộ hành); VnExpress (Trạm Láng 40,3°C ngày 04/08/2025, UHI +2–4°C); Lao Động (mất bóng mát Vành đai 3)",
+        "observedDate": "2025-08-04",
+        "distanceToHUMGMeters": 1222,
+        "bearingFromHUMG": "Đông (80°)",
+        "insideBuffer": true,
+        "utmEasting": 581592.6,
+        "utmNorthing": 2330595.1,
+        "notes": "Cách ĐH Mỏ ~1.222 m, sát cửa ngõ KĐT Resco. Điểm chờ buýt có lưu lượng sinh viên và người lao động cao trên mặt đường bê tông nhựa rộng, dễ phơi nhiễm nắng bức xạ và sốc nhiệt khung giờ trưa."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.785454,
+          21.074511
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-14",
+        "layerGroup": "risk",
+        "category": "heat",
+        "categoryLabel": "Nắng gắt / Thiếu bóng mát",
+        "name": "Điểm dừng xe buýt Phố Viên – Cổng ĐH Mỏ / BV Phương Đông (Tuyến 09A, 28, 31)",
+        "confidenceTier": "A",
+        "confirmCount": 4,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "Mặt đường rộng thiếu bóng cây, bức xạ nhiệt gắt 11h–15h",
+        "frequency": "Giờ tan ca sáng 11h30–13h30 các ngày nắng nóng gay gắt",
+        "drainDuration": "",
+        "elevationDemM": 13,
+        "sourceType": "OpenStreetMap, TimBus Hà Nội & ECMWF ERA5",
+        "sourceCitation": "osm:node/11515782290 (Điểm dừng xe buýt BV Đa khoa Phương Đông); TimBus / Thư viện Pháp luật (lộ trình buýt 09A, 28, 31 qua ĐH Mỏ - Phố Viên)",
+        "observedDate": "2026-06-15",
+        "distanceToHUMGMeters": 121,
+        "bearingFromHUMG": "Nam (162°)",
+        "insideBuffer": true,
+        "utmEasting": 580427.7,
+        "utmNorthing": 2330253.4,
+        "notes": "Cách cổng 18 Phố Viên chỉ ~121 m — trạm trung chuyển chính của sinh viên đi tuyến buýt 09A, 28 và 31. Cần chuẩn bị mũ, nước/Oresol trước khi ra đứng đợi xe trong những ngày nhiệt cảm nhận vượt 40°C."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.774225,
+          21.071475
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-15",
+        "layerGroup": "risk",
+        "category": "heat",
+        "categoryLabel": "Nắng gắt / Thiếu bóng mát",
+        "name": "Khu vực Chợ Cổ Nhuế – Ngõ 103 Đường Cổ Nhuế (Tiểu thương & xóm trọ đông đúc)",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "ankle",
+        "waterScaleLabel": "Ngập mắt cá chân / ngập lốp dưới (~10–15 cm)",
+        "hazardFlags": "Mặt đường rộng thiếu bóng cây, bức xạ nhiệt gắt 11h–15h; Nhà trọ / tầng 1 nền thấp, nguy cơ mất điện & rò điện",
+        "frequency": "Nắng nóng hầm hập khung 11h00–15h30 & ứ đọng cục bộ khi mưa lớn",
+        "drainDuration": "30 phút – 1 giờ",
+        "elevationDemM": 14,
+        "sourceType": "OpenStreetMap xác thực & ECMWF ERA5",
+        "sourceCitation": "osm:way/699065704 — Chợ Cổ Nhuế (Ngõ 103 Đường Cổ Nhuế, cách ĐH Mỏ ~1.503 m); ECMWF ERA5 (76 ngày nhiệt cảm nhận ≥40°C năm 2026)",
+        "observedDate": "2026-06-20",
+        "distanceToHUMGMeters": 1503,
+        "bearingFromHUMG": "Đông Nam (151°)",
+        "insideBuffer": true,
+        "utmEasting": 581125,
+        "utmNorthing": 2329062.2,
+        "notes": "Tập trung đông tiểu thương bán hàng ngoài trời, người giao hàng và cụm nhà trọ mật độ cao; không gian mái tôn/bạt hấp nhiệt lớn vào trưa hè và dễ đọng nước bẩn lối vào chợ sau mưa rào."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.78088,
+          21.060682
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-16",
+        "layerGroup": "risk",
+        "category": "heat",
+        "categoryLabel": "Nắng gắt / Thiếu bóng mát",
+        "name": "Điểm dừng xe buýt 51 Hoàng Tăng Bí (Tuyến 09A, 28 — Hành lang thi công hạ tầng)",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "ankle",
+        "waterScaleLabel": "Ngập mắt cá chân / ngập lốp dưới (~10–15 cm)",
+        "hazardFlags": "Mặt đường rộng thiếu bóng cây, bức xạ nhiệt gắt 11h–15h; Mặt đường gồ ghề, ổ gà khuất dưới nước",
+        "frequency": "Nắng nóng bức xạ khung 11h–15h & bụi/đọng nước mặt đường khi mưa",
+        "drainDuration": "30 phút – 1 giờ",
+        "elevationDemM": 13,
+        "sourceType": "OpenStreetMap, TimBus & Báo Dân Việt / CafeF",
+        "sourceCitation": "osm:node/8954351040 (Điểm dừng xe buýt 51 Hoàng Tăng Bí, cách ĐH Mỏ ~1.487 m); Dân Việt & CafeF (xe tải vật liệu & hạ tầng Hoàng Tăng Bí)",
+        "observedDate": "2026-06-15",
+        "distanceToHUMGMeters": 1487,
+        "bearingFromHUMG": "Đông Bắc (45°)",
+        "insideBuffer": true,
+        "utmEasting": 581440.9,
+        "utmNorthing": 2331417.2,
+        "notes": "Trạm đón tuyến buýt 09A, 28 trên trục Hoàng Tăng Bí nối Đức Thắng – Tân Xuân; mặt đường chịu áp lực xe tải thi công dự án thoát nước gây bụi nóng ngày nắng và trơn trượt ngày mưa."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.784032,
+          21.081945
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "risk_point",
+        "id": "R-17",
+        "layerGroup": "risk",
+        "category": "heat",
+        "categoryLabel": "Nắng gắt / Thiếu bóng mát",
+        "name": "Điểm dừng xe buýt 31 Tân Xuân – Cửa ngõ Ecohome / Chân đê (Tuyến 09A)",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "ankle",
+        "waterScaleLabel": "Ngập mắt cá chân / ngập lốp dưới (~10–15 cm)",
+        "hazardFlags": "Mặt đường rộng thiếu bóng cây, bức xạ nhiệt gắt 11h–15h",
+        "frequency": "Phơi nắng khung giờ cao điểm trưa & chiều hè (63–76 ngày cảm nhận ≥40°C)",
+        "drainDuration": "30 phút – 1 giờ",
+        "elevationDemM": 12,
+        "sourceType": "OpenStreetMap, TimBus & ECMWF ERA5",
+        "sourceCitation": "osm:node/8920049629 (Điểm dừng xe buýt 31 Tân Xuân, cách ĐH Mỏ ~1.632 m); Thư viện Pháp luật (lộ trình tuyến 09A)",
+        "observedDate": "2026-06-15",
+        "distanceToHUMGMeters": 1632,
+        "bearingFromHUMG": "Đông Bắc (45°)",
+        "insideBuffer": true,
+        "utmEasting": 581548.6,
+        "utmNorthing": 2331514,
+        "notes": "Điểm trung chuyển xe buýt phục vụ cư dân cụm Ecohome và người lao động khu vực Tân Xuân – Đông Ngạc; ít mái che cây xanh lớn vào khung 11h30–15h00."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.785074,
+          21.082815
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-01",
+        "layerGroup": "safe",
+        "category": "medical",
+        "categoryLabel": "Bệnh viện / Trạm Y tế",
+        "name": "Bệnh viện Đa khoa Phương Đông (Số 9 Phố Viên)",
+        "confidenceTier": "A",
+        "confirmCount": 5,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Trực cấp cứu 24/7",
+        "drainDuration": "",
+        "elevationDemM": 11,
+        "sourceType": "OpenStreetMap xác thực",
+        "sourceCitation": "osm:way/570572630 — Bệnh viện Đa khoa Phương Đông, Phố Viên",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 309,
+        "bearingFromHUMG": "Nam (159°)",
+        "insideBuffer": true,
+        "utmEasting": 580503.1,
+        "utmNorthing": 2330081.9,
+        "notes": "Bệnh viện đa khoa lớn cách cổng 18 Phố Viên ~310 m (cách cuối Phố Viên ~255 m); tiếp nhận cấp cứu sốc nhiệt nặng, tai nạn giao thông mùa mưa bão."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.774942,
+          21.069922
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-02",
+        "layerGroup": "safe",
+        "category": "medical",
+        "categoryLabel": "Bệnh viện / Trạm Y tế",
+        "name": "Trạm Y tế Đức Thắng (Phường Đông Ngạc mới)",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Y tế cơ sở phường",
+        "drainDuration": "",
+        "elevationDemM": 12,
+        "sourceType": "OpenStreetMap xác thực",
+        "sourceCitation": "osm:node/10213910252 — Trạm y tế phường Đức Thắng",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 827,
+        "bearingFromHUMG": "Bắc (358°)",
+        "insideBuffer": true,
+        "utmEasting": 580360.9,
+        "utmNorthing": 2331190.9,
+        "notes": "Điểm sơ cứu y tế ban đầu cho cư dân và sinh viên khu vực Đức Thắng – Lê Văn Hiến (~826 m từ ĐH Mỏ)."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.773625,
+          21.079948
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-03",
+        "layerGroup": "safe",
+        "category": "medical",
+        "categoryLabel": "Bệnh viện / Trạm Y tế",
+        "name": "Trạm Y tế Cổ Nhuế",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Y tế cơ sở khu vực Cổ Nhuế",
+        "drainDuration": "",
+        "elevationDemM": 14,
+        "sourceType": "OpenStreetMap xác thực",
+        "sourceCitation": "osm:way/699065687 — Trạm Y tế Cổ Nhuế",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 1356,
+        "bearingFromHUMG": "Đông Nam (151°)",
+        "insideBuffer": true,
+        "utmEasting": 581045.2,
+        "utmNorthing": 2329185.6,
+        "notes": "Điểm hỗ trợ y tế gần cụm dân cư và xóm trọ Chợ Cổ Nhuế (~1,35 km về phía Nam ĐH Mỏ)."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.780118,
+          21.061801
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-04",
+        "layerGroup": "safe",
+        "category": "medical",
+        "categoryLabel": "Bệnh viện / Trạm Y tế",
+        "name": "Bệnh viện Đa khoa Phạm Ngọc Thạch & ĐH Y tế Công cộng",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Cơ sở y tế tuyến trên",
+        "drainDuration": "",
+        "elevationDemM": 11,
+        "sourceType": "OpenStreetMap xác thực",
+        "sourceCitation": "osm:node/13703724841 & osm:way/699218281",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 1202,
+        "bearingFromHUMG": "Đông Bắc (28°)",
+        "insideBuffer": true,
+        "utmEasting": 580945.2,
+        "utmNorthing": 2331430.2,
+        "notes": "Cụm cơ sở y tế phía Đông Bắc bán kính ~1,2 km quanh ĐH Mỏ - Địa chất."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.779261,
+          21.082084
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-05",
+        "layerGroup": "safe",
+        "category": "shelter",
+        "categoryLabel": "Điểm tránh trú / Mảng xanh",
+        "name": "Khuôn viên Khu A & Thư viện Trường ĐH Mỏ - Địa chất (18 Phố Viên)",
+        "confidenceTier": "A",
+        "confirmCount": 6,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Mở cửa theo giờ học tập / hành chính của trường",
+        "drainDuration": "",
+        "elevationDemM": 17,
+        "sourceType": "OpenStreetMap xác thực",
+        "sourceCitation": "osm:way/699218352 (Khu A HUMG) & osm:way/1118081920 (Thư viện)",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 12,
+        "bearingFromHUMG": "Tây Bắc (297°)",
+        "insideBuffer": true,
+        "utmEasting": 580379.4,
+        "utmNorthing": 2330373.8,
+        "notes": "Nền khuôn viên cao ráo (DEM 17 m DSM); không gian tránh nắng gắt giờ trưa và tạm dừng chờ mưa ngớt cho sinh viên, cán bộ nhà trường."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.773765,
+          21.072565
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-06",
+        "layerGroup": "safe",
+        "category": "shelter",
+        "categoryLabel": "Điểm tránh trú / Mảng xanh",
+        "name": "Học viện Tài chính – Khu Hội trường 58 Lê Văn Hiến (Điểm sơ tán tiền lệ)",
+        "confidenceTier": "A",
+        "confirmCount": 4,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Kích hoạt theo thông báo khẩn cấp khi mưa lũ lớn",
+        "drainDuration": "",
+        "elevationDemM": 13,
+        "sourceType": "Thông báo chính thức & OSM",
+        "sourceCitation": "osm:way/699218317 & Thông báo HV Tài chính ngày 10/09/2024 (mở Hội trường A8–A11)",
+        "observedDate": "2024-09-10",
+        "distanceToHUMGMeters": 386,
+        "bearingFromHUMG": "Bắc (344°)",
+        "insideBuffer": true,
+        "utmEasting": 580283.4,
+        "utmNorthing": 2330737,
+        "notes": "Trong đợt lũ bão Yagi tháng 9/2024, nhà trường đã mở các Hội trường A8, A9, A10, A11 đón tiếp miễn phí sinh viên và người dân vùng nguy cơ ngập ven sông Nhuệ."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.772858,
+          21.075851
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-07",
+        "layerGroup": "safe",
+        "category": "shelter",
+        "categoryLabel": "Điểm tránh trú / Mảng xanh",
+        "name": "Công viên Hòa Bình (Không gian cây xanh hạ nhiệt đô thị)",
+        "confidenceTier": "A",
+        "confirmCount": 4,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Mở cửa công cộng hằng ngày",
+        "drainDuration": "",
+        "elevationDemM": 7,
+        "sourceType": "OpenStreetMap xác thực",
+        "sourceCitation": "osm:way/208188482 — Công viên Hòa Bình (cách ~1,5 km)",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 1500,
+        "bearingFromHUMG": "Đông Nam (117°)",
+        "insideBuffer": true,
+        "utmEasting": 581727.6,
+        "utmNorthing": 2329689.5,
+        "notes": "Vùng đệm cây xanh – mặt nước lớn giúp giảm bức xạ nhiệt ngày nắng. Lưu ý an toàn: CHỈ dùng nghỉ mát khi nắng, tuyệt đối không đứng dưới tán cây khi có mưa dông sấm sét."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.78671,
+          21.066323
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-08",
+        "layerGroup": "safe",
+        "category": "shelter",
+        "categoryLabel": "Điểm tránh trú / Mảng xanh",
+        "name": "Hồ điều hòa Thụy Phương 2 (Vùng đệm mặt nước tiêu thoát & hạ nhiệt)",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Không gian mặt nước công cộng (lưu vực tiêu thoát tự nhiên)",
+        "drainDuration": "",
+        "elevationDemM": 9,
+        "sourceType": "OpenStreetMap xác thực & Copernicus DEM",
+        "sourceCitation": "osm:way/1555357769 — Hồ điều hòa Thụy Phương 2 (cách ĐH Mỏ ~793 m); Copernicus DEM GLO-30 = 9 m",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 793,
+        "bearingFromHUMG": "Tây Nam (217°)",
+        "insideBuffer": true,
+        "utmEasting": 579918.6,
+        "utmNorthing": 2329733.5,
+        "notes": "Mặt nước điều hòa quy mô lớn ngay trong vòng 800 m quanh trường giúp trữ nước đệm tiểu lưu vực và hạ nhiệt vi khí hậu. Lưu ý an toàn: chỉ là mảng mặt nước hạ nhiệt khi khô ráo, tuyệt đối tránh xa mép hồ khi có mưa dông, gió giật."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.7693,
+          21.0668
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-09",
+        "layerGroup": "safe",
+        "category": "medical",
+        "categoryLabel": "Bệnh viện / Trạm Y tế",
+        "name": "Cụm Nhà thuốc Phố Viên – Ngõ 32 Phố Viên (Đức Huy / Thu Hương — Oresol & sơ cứu sát trường)",
+        "confidenceTier": "A",
+        "confirmCount": 4,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Mở cửa hằng ngày phục vụ sinh viên & cư dân",
+        "drainDuration": "",
+        "elevationDemM": 15,
+        "sourceType": "OpenStreetMap xác thực",
+        "sourceCitation": "osm:node/10258564238 (Nhà thuốc Đức Huy 152) & osm:node/8353977344 (Nhà thuốc Thu Hương) — cách cổng ĐH Mỏ 103–148 m",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 103,
+        "bearingFromHUMG": "Tây (284°)",
+        "insideBuffer": true,
+        "utmEasting": 580289.8,
+        "utmNorthing": 2330392.1,
+        "notes": "Điểm cung cấp nhanh gói điện giải Oresol, gạc mát, nhiệt kế hỗ trợ xử trí say nắng nhẹ ngay sát cổng 18 Phố Viên (nền cao 14–15 m DSM)."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.772904,
+          21.072734
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-10",
+        "layerGroup": "safe",
+        "category": "shelter",
+        "categoryLabel": "Điểm tránh trú / Mảng xanh",
+        "name": "Trụ sở UBND Phường Đông Ngạc mới – Phố Văn Hội (Đầu mối Phòng chống thiên tai phường)",
+        "confidenceTier": "A",
+        "confirmCount": 4,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Cơ quan hành chính & Ban Chỉ huy PCTT phường (ĐT: 024 2217 5455)",
+        "drainDuration": "",
+        "elevationDemM": 12,
+        "sourceType": "Cổng TTĐT TP. Hà Nội & OpenStreetMap",
+        "sourceCitation": "hanoi.gov.vn (trụ sở UBND P. Đông Ngạc mới từ 01/07/2025 tại Phố Văn Hội, TDP số 2 — ĐT 024 2217 5455); osm:way/596707178",
+        "observedDate": "2025-07-01",
+        "distanceToHUMGMeters": 747,
+        "bearingFromHUMG": "Bắc (356°)",
+        "insideBuffer": true,
+        "utmEasting": 580335.3,
+        "utmNorthing": 2331110.1,
+        "notes": "Cách ĐH Mỏ ~747 m (trước sáp nhập là trụ sở UBND P. Đức Thắng cũ). Đầu mối tiếp nhận phản ánh dân sinh, điều phối lực lượng xung kích phòng chống thiên tai và cứu trợ trên địa bàn phường."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.773375,
+          21.079219
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-11",
+        "layerGroup": "safe",
+        "category": "shelter",
+        "categoryLabel": "Điểm tránh trú / Mảng xanh",
+        "name": "Trụ sở Công an khu vực Cổ Nhuế – Phố Phạm Tiến Duật (Hỗ trợ an ninh & cứu hộ)",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Trực ban an ninh trật tự 24/7",
+        "drainDuration": "",
+        "elevationDemM": 9,
+        "sourceType": "OpenStreetMap xác thực",
+        "sourceCitation": "osm:way/335347845 — Công an phường Cổ Nhuế 2, Phố Phạm Tiến Duật (cách ĐH Mỏ ~1.060 m)",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 1060,
+        "bearingFromHUMG": "Đông Nam (124°)",
+        "insideBuffer": true,
+        "utmEasting": 581270.1,
+        "utmNorthing": 2329778.8,
+        "notes": "Điểm trực hỗ trợ an ninh, hướng dẫn phân luồng giao thông và tiếp nhận tin báo sự cố khẩn cấp khu vực KĐT Cổ Nhuế – Phạm Văn Đồng."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.782311,
+          21.06715
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-12",
+        "layerGroup": "safe",
+        "category": "shelter",
+        "categoryLabel": "Điểm tránh trú / Mảng xanh",
+        "name": "Trường THCS Đông Ngạc – Ngõ 429 Hoàng Tăng Bí (Công trình kiên cố khu dân cư phía Bắc)",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Công trình giáo dục kiên cố (kích hoạt hỗ trợ cộng đồng theo điều phối phường)",
+        "drainDuration": "",
+        "elevationDemM": 12,
+        "sourceType": "OpenStreetMap xác thực",
+        "sourceCitation": "osm:way/897569850 — Trường THCS Đông Ngạc, Ngõ 429 Đường Hoàng Tăng Bí (cách ĐH Mỏ ~1.137 m)",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 1137,
+        "bearingFromHUMG": "Bắc (357°)",
+        "insideBuffer": true,
+        "utmEasting": 580331.7,
+        "utmNorthing": 2331498.4,
+        "notes": "Công trình trường học nhiều tầng kiên cố nằm gần dải dân cư Hoàng Tăng Bí – Đức Thắng – Tân Nhuệ."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.773359,
+          21.082728
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-13",
+        "layerGroup": "safe",
+        "category": "shelter",
+        "categoryLabel": "Điểm tránh trú / Mảng xanh",
+        "name": "Học viện Cảnh sát Nhân dân – Đường Phạm Văn Nghị (Cụm công trình kiên cố bờ Tây sông Nhuệ)",
+        "confidenceTier": "A",
+        "confirmCount": 4,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Khuôn viên cơ sở đào tạo lớn phía Tây sông Nhuệ",
+        "drainDuration": "",
+        "elevationDemM": 10,
+        "sourceType": "OpenStreetMap xác thực",
+        "sourceCitation": "osm:way/699218280 — Học viện Cảnh sát Nhân dân, Đường Phạm Văn Nghị (cách Khu A ĐH Mỏ ~1.158 m, sát Khu B)",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 1158,
+        "bearingFromHUMG": "Tây Nam (238°)",
+        "insideBuffer": true,
+        "utmEasting": 579413.2,
+        "utmNorthing": 2329747.5,
+        "notes": "Cụm hạ tầng kiên cố nằm ở bờ Tây sông Nhuệ trên trục nối sang Khu B ĐH Mỏ - Địa chất."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.764436,
+          21.066949
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-14",
+        "layerGroup": "safe",
+        "category": "shelter",
+        "categoryLabel": "Điểm tránh trú / Mảng xanh",
+        "name": "Học viện Cảnh sát Nhân dân – Cơ sở 2 (Số 29 Lê Văn Hiến — Đỉnh gò cao 17 m)",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Khuôn viên cơ sở đào tạo kiên cố trên dải gò cao sát ĐH Mỏ",
+        "drainDuration": "",
+        "elevationDemM": 17,
+        "sourceType": "OpenStreetMap xác thực & Copernicus DEM",
+        "sourceCitation": "osm:way/699218328 — Học viện Cảnh sát nhân dân Cơ sở 2, 29 Lê Văn Hiến (cách ĐH Mỏ ~154 m, DEM = 17 m)",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 154,
+        "bearingFromHUMG": "Đông Bắc (48°)",
+        "insideBuffer": true,
+        "utmEasting": 580505,
+        "utmNorthing": 2330470.4,
+        "notes": "Cùng nằm trên gò địa hình cao ráo nhất vùng (17 m DSM) liền kề Khu A ĐH Mỏ - Địa chất, không ngập trong các đợt mưa cực đoan."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.774979,
+          21.073432
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "featureType": "safe_point",
+        "id": "S-15",
+        "layerGroup": "safe",
+        "category": "medical",
+        "categoryLabel": "Bệnh viện / Trạm Y tế",
+        "name": "Cụm Nhà thuốc Đường Cổ Nhuế (Số 149 Cổ Nhuế — Oresol & sơ cứu khu dân cư phía Nam)",
+        "confidenceTier": "A",
+        "confirmCount": 3,
+        "waterScale": "none",
+        "waterScaleLabel": "Không ngập / Điểm khô ráo",
+        "hazardFlags": "",
+        "frequency": "Nhà thuốc dân sinh mở cửa hằng ngày gần Trạm Y tế & Chợ Cổ Nhuế",
+        "drainDuration": "",
+        "elevationDemM": 15,
+        "sourceType": "OpenStreetMap xác thực",
+        "sourceCitation": "osm:node/8442194667 (Nhà thuốc số 9, 149 Đường Cổ Nhuế) & osm:way/1115657568 (Nhà thuốc Ngọc Hà) — cách ĐH Mỏ ~1.341 m",
+        "observedDate": "2026-11-26",
+        "distanceToHUMGMeters": 1341,
+        "bearingFromHUMG": "Đông Nam (149°)",
+        "insideBuffer": true,
+        "utmEasting": 581090,
+        "utmNorthing": 2329229.5,
+        "notes": "Điểm tiếp cận nhanh Oresol bù điện giải và vật tư sơ cứu ban đầu trên dải nền cao 15 m phục vụ cụm xóm trọ và tiểu thương Chợ Cổ Nhuế."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.780551,
+          21.062195
+        ]
+      }
+    }
+  ]
+}

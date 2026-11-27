@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Bản đồ Cộng đồng Mở P. Đông Ngạc - ĐH Mỏ (2km)</name>
+    <description>Dữ liệu thực tế từ OpenStreetMap, báo chí chính thống, ERA5 và khảo sát cư dân khu vực ĐH Mỏ - Địa chất.</description>
+    <Style id="style-risk-severe"><IconStyle><color>ff1c1cb9</color><scale>1.15</scale></IconStyle></Style>
+    <Style id="style-risk-moderate"><IconStyle><color>ff0c41c2</color><scale>1.05</scale></IconStyle></Style>
+    <Style id="style-safe-shelter"><IconStyle><color>ff6e760f</color><scale>1.1</scale></IconStyle></Style>
+    <Style id="style-safe-medical"><IconStyle><color>ff3d8015</color><scale>1.15</scale></IconStyle></Style>
+    <Style id="style-buffer">
+      <LineStyle><color>ff6e760f</color><width>2.5</width></LineStyle>
+      <PolyStyle><color>226e760f</color></PolyStyle>
+    </Style>
+    <Folder>
+      <name>Lớp 1: Điểm Rủi ro Ngập úng &amp; Nắng nóng</name>
+      <Placemark>
+        <name>[Hạng A] Cuối Phố Viên (giáp ranh Đông Ngạc – Thượng Cát)</name>
+        <description>Độ tin cậy: Hạng A (5 xác nhận)
+Nguồn dữ liệu: Báo Lao Động 18/09/2026 (&quot;Người dân mong xử lý dứt điểm úng ngập cuối phố Viên, Hà Nội&quot;); ERA5 15/09/2026: 71,3 mm
+Mốc ghi nhận: 2026-09-18
+Mức ghi nhận: Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 371 m (Nam (202°))
+Thông tin thực tế: Cách cổng trường ~372 m. Báo Lao Động ghi nhận mặt đường gồ ghề nhiều ổ gà, mưa lớn ngập sâu kèm dòng xoáy miệng cống (từng xảy ra tai nạn thương tâm tháng 9/2026). Người dân/SV thường phải quay đầu tìm đường vòng.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.772544,21.069413,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng B] Khu vực Cầu Phố Viên – Bờ Tây sông Nhuệ</name>
+        <description>Độ tin cậy: Hạng B (3 xác nhận)
+Nguồn dữ liệu: OpenStreetMap Cầu Phố Viên; Hà Nội Mới &amp; Kinh tế Đô thị (áp lực thoát nước sông Nhuệ)
+Mốc ghi nhận: 2025-10-07
+Mức ghi nhận: Ngập bắp chân / nửa bánh xe máy (~20–30 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 287 m (Tây (251°))
+Thông tin thực tế: Cách cổng 18 Phố Viên ~287 m; nằm sát mép sông Nhuệ, khi lũ sông dâng báo động II–III nước nội khu mất khả năng tự chảy.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.771249,21.071680,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng B] Ngõ 521 &amp; Cụm ngõ dân sinh Cổ Nhuế (Ngõ 401 – 487)</name>
+        <description>Độ tin cậy: Hạng B (3 xác nhận)
+Nguồn dữ liệu: Báo Dân Việt (ngập ngõ sâu Cổ Nhuế); Lao Động, VTV &amp; Dân Trí (phòng trọ mái tôn sinh viên Hà Nội 45–50°C, giá điện 3.500–4.000 đ/kWh); osm:way/699218408
+Mốc ghi nhận: 2025-09-29
+Mức ghi nhận: Ngập bắp chân / nửa bánh xe máy (~20–30 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 540 m (Đông Nam (143°))
+Thông tin thực tế: Cách trường ~540 m, DEM 11 m. Cụm ngõ hẹp tập trung đông nhà trọ sinh viên chịu rủi ro kép: dễ đọng nước khi mưa lớn và nóng hầm hập (báo chí ghi nhận trọ mái tôn Hà Nội đạt 45–50°C khung 11h–16h, giá điện 3.500–4.000 đ/kWh). Mời cư dân bấm &quot;+ Báo điểm ngõ bạn&quot; ghim từng ngõ.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.776973,21.068619,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Vùng trũng nhà trọ ven sông Nhuệ – Học viện Tài chính</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: Thông báo khẩn Học viện Tài chính 10/09/2024 &amp; VnExpress; osm:way/1198891357
+Mốc ghi nhận: 2024-09-10
+Mức ghi nhận: Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 997 m (Đông Bắc (37°))
+Thông tin thực tế: Cách ĐH Mỏ ~995 m, DEM 10 m. Trong bão số 3 Yagi tháng 9/2024, trường phải rà soát và sơ tán sinh viên ngoại trú vùng trũng ven sông Nhuệ.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.779640,21.079688,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Khu vực thi công đường Tây Thăng Long qua sông Nhuệ – Cổ Nhuế</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: Sức khỏe &amp; Đời sống, VietnamPlus, VOV (dự án Tây Thăng Long &gt;3,2 km); osm:way/1434617049
+Mốc ghi nhận: 2026-08-23
+Mức ghi nhận: Ngập bắp chân / nửa bánh xe máy (~20–30 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1168 m (Nam (202°))
+Thông tin thực tế: Cách trường ~1.168 m, DEM rất thấp (7 m). Khu vực thi công mở rộng 10 làn xe &amp; cầu qua sông Nhuệ chưa đồng bộ cống ngầm dọc tuyến, dễ đọng nước bùn lầy khi mưa.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.769676,21.062764,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng B] Khu vực Cầu Noi – Đường Cổ Nhuế (ven sông Nhuệ)</name>
+        <description>Độ tin cậy: Hạng B (4 xác nhận)
+Nguồn dữ liệu: Hà Nội Mới / Thanh Tra / VietnamPlus (2024–2026); tọa độ Cầu Noi OpenStreetMap
+Mốc ghi nhận: 2025-10-07
+Mức ghi nhận: Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1220 m (Nam (187°))
+Thông tin thực tế: Cách ĐH Mỏ ~1.220 m. Nút thắt giao thông &amp; tiêu thoát nước ven sông Nhuệ nối Cổ Nhuế – Đông Ngạc.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.772358,21.061634,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Khu đô thị Resco Cổ Nhuế (Cụm tòa OCT1, OCT2)</name>
+        <description>Độ tin cậy: Hạng A (6 xác nhận)
+Nguồn dữ liệu: Danh sách điểm ngập Cty Thoát nước HN; Tuổi Trẻ, VOV Giao thông &amp; Báo Tin Tức (2025–2026)
+Mốc ghi nhận: 2025-10-07
+Mức ghi nhận: Ngập trên đầu gối / nước tràn sảnh, nhà trọ (&gt;50 cm – &gt;1 m)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1246 m (Đông (83°))
+Thông tin thực tế: Cách trường ~1.246 m. Cốt nền nội khu thấp hơn đường Phạm Văn Đồng; ngập sâu diện rộng năm 2025, đến mùa mưa 2026 đã giảm thời gian ngập nhờ thông tuyến kênh Thụy Phương.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.785800,21.073800,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng B] Trục đường Phạm Văn Đồng (đoạn Cổ Nhuế – Công viên Hòa Bình)</name>
+        <description>Độ tin cậy: Hạng B (3 xác nhận)
+Nguồn dữ liệu: Trạm Láng lập kỷ lục tháng 8 đạt 40,3°C ngày 04/08/2025 (VnExpress); ECMWF ERA5 (63–76 ngày nhiệt cảm nhận ≥40°C); Lao Động &amp; Thanh Niên (di dời ~1.300 cây xanh Vành đai 3); Báo Tin Tức
+Mốc ghi nhận: 2026-05-28
+Mức ghi nhận: Ngập mắt cá chân / ngập lốp dưới (~10–15 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1419 m (Đông Nam (130°))
+Thông tin thực tế: Cách trường ~1.422 m. Trục Vành đai 3 nhiều làn bê tông nhựa chịu hiệu ứng đảo nhiệt đô thị (UHI) làm nhiệt cảm nhận mặt đường cao hơn lều khí tượng 2–4°C sau giai đoạn đánh chuyển gần 1.300 cây xanh; đồng thời có các điểm trũng đọng nước khi mưa dồn dập.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.784295,21.064249,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Tuyến Kênh Thụy Phương – Đường Hoàng Tăng Bí / Kẻ Vẽ (Dự án 920 tỷ)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: QĐ 5520/QĐ-UBND TP. Hà Nội; VnExpress, CafeF &amp; HĐND TP. HN (2026); osm:way/1530168567
+Mốc ghi nhận: 2026-08-23
+Mức ghi nhận: Ngập bắp chân / nửa bánh xe máy (~20–30 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1488 m (Bắc (17°))
+Thông tin thực tế: Cách trường ~1.488 m. Dự án khẩn cấp &gt;920 tỷ đồng (&gt;3,5 km kênh hở + ~4 km cống hộp nối sông Tô Lịch, trạm bơm 5 m³/s). VnExpress phản ánh có sụt lún/nứt cục bộ một số nhà dọc tuyến thi công.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.778152,21.085283,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Đường Tân Nhuệ (Vùng trũng thấp nhất bán kính 2 km — DEM 6 m)</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: VietnamPlus &amp; Lao Động (cống qua đường Tân Nhuệ); osm:way/146724866; DEM GLO-30 = 6 m
+Mốc ghi nhận: 2026-08-23
+Mức ghi nhận: Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1565 m (Bắc (351°))
+Thông tin thực tế: Cách trường ~1.565 m, cao độ bề mặt chỉ 6 m (thấp nhất trong bán kính 2 km). Khu vực đặt cống qua đường Tân Nhuệ kết nối tiêu thoát cho cụm Đông Ngạc – Ecohome.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.771402,21.086397,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Cụm chung cư Ecohome 1, 2, 3 (Đường Đông Thắng – Đông Ngạc)</name>
+        <description>Độ tin cậy: Hạng A (6 xác nhận)
+Nguồn dữ liệu: Dân Trí 27/08/2025 &amp; VietNamNet 02/10/2025 (ngập cổng 1–1,4 m, 16 thang máy dừng); Báo Mới 23/08/2026 (mưa 99,6 mm rút tốt hơn); osm:node/12117023197
+Mốc ghi nhận: 2026-08-23
+Mức ghi nhận: Ngập trên đầu gối / nước tràn sảnh, nhà trọ (&gt;50 cm – &gt;1 m)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1752 m (Đông Bắc (38°))
+Thông tin thực tế: Cách trường ~1.636–1.800 m, DEM 9–10 m. Năm 2025 ngập 1–1,4 m ở cổng rào gần trường học, tràn sảnh 60 cm–1 m làm tê liệt 16 thang máy Ecohome 1. Bão số 4 (23/08/2026) đã cải thiện đáng kể nhờ thông kênh Thụy Phương.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.784291,21.084909,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng B] Đường Phạm Văn Nghị – Khu vực Khu B ĐH Mỏ (Bờ Tây sông Nhuệ)</name>
+        <description>Độ tin cậy: Hạng B (3 xác nhận)
+Nguồn dữ liệu: osm:way/965882635 (Đường Phạm Văn Nghị) &amp; osm:way/1294976834 (Khu B ĐH Mỏ); DEM = 8–10 m
+Mốc ghi nhận: 2026-11-26
+Mức ghi nhận: Ngập mắt cá chân / ngập lốp dưới (~10–15 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1809 m (Tây (253°))
+Thông tin thực tế: Cách Khu A ~1.370–1.808 m ở phía Tây sông Nhuệ (DEM 8 m). Mời sinh viên Khu B &amp; cư dân lân cận tích +1 xác nhận tình trạng ngập cục bộ và đoạn thiếu bóng mát giờ trưa.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.757184,21.067813,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Điểm dừng xe buýt 138 Phạm Văn Đồng – Cầu vượt bộ hành (Điểm chờ nắng gắt)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: osm:node/7294677886 (138 Phạm Văn Đồng – Cầu vượt bộ hành); VnExpress (Trạm Láng 40,3°C ngày 04/08/2025, UHI +2–4°C); Lao Động (mất bóng mát Vành đai 3)
+Mốc ghi nhận: 2025-08-04
+Mức ghi nhận: Không ngập / Điểm khô ráo
+Khoảng cách tới ĐH Mỏ - Địa chất: 1222 m (Đông (80°))
+Thông tin thực tế: Cách ĐH Mỏ ~1.222 m, sát cửa ngõ KĐT Resco. Điểm chờ buýt có lưu lượng sinh viên và người lao động cao trên mặt đường bê tông nhựa rộng, dễ phơi nhiễm nắng bức xạ và sốc nhiệt khung giờ trưa.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.785454,21.074511,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Điểm dừng xe buýt Phố Viên – Cổng ĐH Mỏ / BV Phương Đông (Tuyến 09A, 28, 31)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: osm:node/11515782290 (Điểm dừng xe buýt BV Đa khoa Phương Đông); TimBus / Thư viện Pháp luật (lộ trình buýt 09A, 28, 31 qua ĐH Mỏ - Phố Viên)
+Mốc ghi nhận: 2026-06-15
+Mức ghi nhận: Không ngập / Điểm khô ráo
+Khoảng cách tới ĐH Mỏ - Địa chất: 121 m (Nam (162°))
+Thông tin thực tế: Cách cổng 18 Phố Viên chỉ ~121 m — trạm trung chuyển chính của sinh viên đi tuyến buýt 09A, 28 và 31. Cần chuẩn bị mũ, nước/Oresol trước khi ra đứng đợi xe trong những ngày nhiệt cảm nhận vượt 40°C.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.774225,21.071475,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Khu vực Chợ Cổ Nhuế – Ngõ 103 Đường Cổ Nhuế (Tiểu thương &amp; xóm trọ đông đúc)</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: osm:way/699065704 — Chợ Cổ Nhuế (Ngõ 103 Đường Cổ Nhuế, cách ĐH Mỏ ~1.503 m); ECMWF ERA5 (76 ngày nhiệt cảm nhận ≥40°C năm 2026)
+Mốc ghi nhận: 2026-06-20
+Mức ghi nhận: Ngập mắt cá chân / ngập lốp dưới (~10–15 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1503 m (Đông Nam (151°))
+Thông tin thực tế: Tập trung đông tiểu thương bán hàng ngoài trời, người giao hàng và cụm nhà trọ mật độ cao; không gian mái tôn/bạt hấp nhiệt lớn vào trưa hè và dễ đọng nước bẩn lối vào chợ sau mưa rào.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.780880,21.060682,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Điểm dừng xe buýt 51 Hoàng Tăng Bí (Tuyến 09A, 28 — Hành lang thi công hạ tầng)</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: osm:node/8954351040 (Điểm dừng xe buýt 51 Hoàng Tăng Bí, cách ĐH Mỏ ~1.487 m); Dân Việt &amp; CafeF (xe tải vật liệu &amp; hạ tầng Hoàng Tăng Bí)
+Mốc ghi nhận: 2026-06-15
+Mức ghi nhận: Ngập mắt cá chân / ngập lốp dưới (~10–15 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1487 m (Đông Bắc (45°))
+Thông tin thực tế: Trạm đón tuyến buýt 09A, 28 trên trục Hoàng Tăng Bí nối Đức Thắng – Tân Xuân; mặt đường chịu áp lực xe tải thi công dự án thoát nước gây bụi nóng ngày nắng và trơn trượt ngày mưa.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.784032,21.081945,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Điểm dừng xe buýt 31 Tân Xuân – Cửa ngõ Ecohome / Chân đê (Tuyến 09A)</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: osm:node/8920049629 (Điểm dừng xe buýt 31 Tân Xuân, cách ĐH Mỏ ~1.632 m); Thư viện Pháp luật (lộ trình tuyến 09A)
+Mốc ghi nhận: 2026-06-15
+Mức ghi nhận: Ngập mắt cá chân / ngập lốp dưới (~10–15 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1632 m (Đông Bắc (45°))
+Thông tin thực tế: Điểm trung chuyển xe buýt phục vụ cư dân cụm Ecohome và người lao động khu vực Tân Xuân – Đông Ngạc; ít mái che cây xanh lớn vào khung 11h30–15h00.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.785074,21.082815,0</coordinates>
+        </Point>
+      </Placemark>
+    </Folder>
+    <Folder>
+      <name>Lớp 2: Điểm An toàn, Y tế &amp; Ranh giới 2km</name>
+      <Placemark>
+        <name>Trường ĐH Mỏ - Địa chất (18 Phố Viên, P. Đông Ngạc)</name>
+        <styleUrl>#style-safe-shelter</styleUrl>
+        <Point><coordinates>105.773870,21.072514,0</coordinates></Point>
+      </Placemark>
+      <Placemark>
+        <name>Ranh giới khảo sát 2 km</name>
+        <styleUrl>#style-buffer</styleUrl>
+        <Polygon><outerBoundaryIs><LinearRing><coordinates>105.77387,21.09050040727449,0 105.77292408516985,21.090478739239128,0 105.77198044995725,21.090413787352183,0 105.77104136848001,21.09030570814506,0 105.77010910386973,21.090154762083802,0 105.76918590281197,21.089961312940694,0 105.76827399012637,21.089725826916663,0 105.76737556339958,21.08944887151654,0 105.76649278768426,21.08913111418002,0 105.7656277902769,21.088773320671468,0 105.76478265558704,21.08837635323269,0 105.76395942011047,21.0879411685029,0 105.76316006751827,21.087468815211167,0 105.76238652387404,21.08696043164668,0 105.76164065299025,21.086417242913193,0 105.7609242519357,21.085840557974123,0 105.76023904670407,21.085231766495536,0 105.7595866880549,21.08459233549465,0 105.75896874753619,21.08392380580195,0 105.75838671369897,21.083227788345454,0 105.75784198851233,21.082505960266218,0 105.75733588398796,21.0817600608743,0 105.75686961902203,21.080991887455166,0 105.75644431646225,21.08020329093647,0 105.7560610004069,21.079396171425845,0 105.75572059374244,21.078572473630405,0 105.75542391592552,21.077734182169,0 105.75517168101489,21.076883316788628,0 105.75496449595734,21.076021927496477,0 105.75480285913258,21.07515208961936,0 105.75468715915964,21.07427589880251,0 105.75461767396826,21.07339546595973,0 105.75459457013694,21.072512912187108,0 105.75461790249963,21.071630363652602,0 105.75468761402155,21.07074994647372,0 105.7548035359444,21.06987378159571,0 105.75496538820104,21.069003979682552,0 105.75517278009768,21.068142636033144,0 105.75542521126265,21.067291825534728,0 105.75572207285906,21.066453597665944,0 105.75606264905834,21.065629971561357,0 105.7564461187711,21.06482293114941,0 105.75687155763104,21.06403442037544,0 105.75733794022729,21.063266338521316,0 105.75784414257927,21.062520535632874,0 105.75838894484869,21.06179880806619,0 105.75897103428147,21.061102894163337,0 105.75958900837317,21.060434470068092,0 105.7602413782494,21.05979514569152,0 105.76092657225401,21.059186460837243,0 105.76164293973562,21.05860988149563,0 105.76238875502384,21.058066796315792,0 105.76316222158533,21.057558513263864,0 105.76396147634992,21.057086256475614,0 105.7647845941962,21.056651163310846,0 105.76562959258585,21.056254281616802,0 105.76649443633583,21.055896567206933,0 105.76737704251634,21.055578881561274,0 105.76827528546362,21.055301989753794,0 105.76918700189489,21.05506655861172,0 105.77010999611353,21.054873155111363,0 105.77104204529194,21.05472224501408,0 105.7719809048192,21.054614191745795,0 105.77292431370127,21.054549255522748,0 105.77387,21.05452759272551,0 105.77481568629874,21.054549255522748,0 105.7757590951808,21.054614191745795,0 105.77669795470807,21.05472224501408,0 105.77763000388647,21.054873155111363,0 105.77855299810513,21.05506655861172,0 105.77946471453639,21.055301989753794,0 105.78036295748367,21.055578881561274,0 105.78124556366417,21.055896567206933,0 105.78211040741415,21.056254281616802,0 105.78295540580382,21.056651163310846,0 105.7837785236501,21.057086256475614,0 105.78457777841467,21.057558513263864,0 105.78535124497618,21.058066796315792,0 105.7860970602644,21.05860988149563,0 105.78681342774601,21.059186460837243,0 105.78749862175061,21.05979514569152,0 105.78815099162685,21.060434470068092,0 105.78876896571853,21.061102894163337,0 105.78935105515134,21.06179880806619,0 105.78989585742076,21.062520535632874,0 105.79040205977275,21.063266338521316,0 105.79086844236896,21.06403442037544,0 105.79129388122892,21.06482293114941,0 105.79167735094167,21.065629971561357,0 105.79201792714096,21.066453597665944,0 105.79231478873737,21.067291825534728,0 105.79256721990232,21.068142636033144,0 105.79277461179896,21.069003979682552,0 105.7929364640556,21.06987378159571,0 105.79305238597846,21.07074994647372,0 105.79312209750037,21.071630363652602,0 105.79314542986307,21.072512912187108,0 105.79312232603175,21.07339546595973,0 105.79305284084037,21.07427589880251,0 105.79293714086742,21.07515208961936,0 105.79277550404267,21.076021927496477,0 105.79256831898512,21.076883316788628,0 105.79231608407449,21.077734182169,0 105.79201940625758,21.078572473630405,0 105.79167899959312,21.079396171425845,0 105.79129568353775,21.08020329093647,0 105.79087038097798,21.080991887455166,0 105.79040411601207,21.0817600608743,0 105.78989801148771,21.082505960266218,0 105.78935328630106,21.083227788345454,0 105.78877125246382,21.08392380580195,0 105.78815331194512,21.08459233549465,0 105.78750095329593,21.085231766495536,0 105.78681574806431,21.085840557974123,0 105.78609934700975,21.086417242913193,0 105.78535347612598,21.08696043164668,0 105.78457993248173,21.087468815211167,0 105.78378057988955,21.0879411685029,0 105.78295734441299,21.08837635323269,0 105.78211220972311,21.088773320671468,0 105.78124721231575,21.08913111418002,0 105.78036443660045,21.08944887151654,0 105.77946600987363,21.089725826916663,0 105.77855409718805,21.089961312940694,0 105.77763089613029,21.090154762083802,0 105.77669863151999,21.09030570814506,0 105.77575955004275,21.090413787352183,0 105.77481591483016,21.090478739239128,0 105.77387,21.09050040727449,0</coordinates></LinearRing></outerBoundaryIs></Polygon>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Bệnh viện Đa khoa Phương Đông (Số 9 Phố Viên)</name>
+        <description>Độ tin cậy: Hạng A (5 xác nhận)
+Nguồn dữ liệu: osm:way/570572630 — Bệnh viện Đa khoa Phương Đông, Phố Viên
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Trực cấp cứu 24/7
+Khoảng cách tới ĐH Mỏ - Địa chất: 309 m (Nam (159°))
+Thông tin thực tế: Bệnh viện đa khoa lớn cách cổng 18 Phố Viên ~310 m (cách cuối Phố Viên ~255 m); tiếp nhận cấp cứu sốc nhiệt nặng, tai nạn giao thông mùa mưa bão.</description>
+        <styleUrl>#style-safe-medical</styleUrl>
+        <Point>
+          <coordinates>105.774942,21.069922,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Trạm Y tế Đức Thắng (Phường Đông Ngạc mới)</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: osm:node/10213910252 — Trạm y tế phường Đức Thắng
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Y tế cơ sở phường
+Khoảng cách tới ĐH Mỏ - Địa chất: 827 m (Bắc (358°))
+Thông tin thực tế: Điểm sơ cứu y tế ban đầu cho cư dân và sinh viên khu vực Đức Thắng – Lê Văn Hiến (~826 m từ ĐH Mỏ).</description>
+        <styleUrl>#style-safe-medical</styleUrl>
+        <Point>
+          <coordinates>105.773625,21.079948,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Trạm Y tế Cổ Nhuế</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: osm:way/699065687 — Trạm Y tế Cổ Nhuế
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Y tế cơ sở khu vực Cổ Nhuế
+Khoảng cách tới ĐH Mỏ - Địa chất: 1356 m (Đông Nam (151°))
+Thông tin thực tế: Điểm hỗ trợ y tế gần cụm dân cư và xóm trọ Chợ Cổ Nhuế (~1,35 km về phía Nam ĐH Mỏ).</description>
+        <styleUrl>#style-safe-medical</styleUrl>
+        <Point>
+          <coordinates>105.780118,21.061801,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Bệnh viện Đa khoa Phạm Ngọc Thạch &amp; ĐH Y tế Công cộng</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: osm:node/13703724841 &amp; osm:way/699218281
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Cơ sở y tế tuyến trên
+Khoảng cách tới ĐH Mỏ - Địa chất: 1202 m (Đông Bắc (28°))
+Thông tin thực tế: Cụm cơ sở y tế phía Đông Bắc bán kính ~1,2 km quanh ĐH Mỏ - Địa chất.</description>
+        <styleUrl>#style-safe-medical</styleUrl>
+        <Point>
+          <coordinates>105.779261,21.082084,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Khuôn viên Khu A &amp; Thư viện Trường ĐH Mỏ - Địa chất (18 Phố Viên)</name>
+        <description>Độ tin cậy: Hạng A (6 xác nhận)
+Nguồn dữ liệu: osm:way/699218352 (Khu A HUMG) &amp; osm:way/1118081920 (Thư viện)
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Mở cửa theo giờ học tập / hành chính của trường
+Khoảng cách tới ĐH Mỏ - Địa chất: 12 m (Tây Bắc (297°))
+Thông tin thực tế: Nền khuôn viên cao ráo (DEM 17 m DSM); không gian tránh nắng gắt giờ trưa và tạm dừng chờ mưa ngớt cho sinh viên, cán bộ nhà trường.</description>
+        <styleUrl>#style-safe-shelter</styleUrl>
+        <Point>
+          <coordinates>105.773765,21.072565,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Học viện Tài chính – Khu Hội trường 58 Lê Văn Hiến (Điểm sơ tán tiền lệ)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: osm:way/699218317 &amp; Thông báo HV Tài chính ngày 10/09/2024 (mở Hội trường A8–A11)
+Mốc ghi nhận: 2024-09-10
+Hoạt động: Kích hoạt theo thông báo khẩn cấp khi mưa lũ lớn
+Khoảng cách tới ĐH Mỏ - Địa chất: 386 m (Bắc (344°))
+Thông tin thực tế: Trong đợt lũ bão Yagi tháng 9/2024, nhà trường đã mở các Hội trường A8, A9, A10, A11 đón tiếp miễn phí sinh viên và người dân vùng nguy cơ ngập ven sông Nhuệ.</description>
+        <styleUrl>#style-safe-shelter</styleUrl>
+        <Point>
+          <coordinates>105.772858,21.075851,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Công viên Hòa Bình (Không gian cây xanh hạ nhiệt đô thị)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: osm:way/208188482 — Công viên Hòa Bình (cách ~1,5 km)
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Mở cửa công cộng hằng ngày
+Khoảng cách tới ĐH Mỏ - Địa chất: 1500 m (Đông Nam (117°))
+Thông tin thực tế: Vùng đệm cây xanh – mặt nước lớn giúp giảm bức xạ nhiệt ngày nắng. Lưu ý an toàn: CHỈ dùng nghỉ mát khi nắng, tuyệt đối không đứng dưới tán cây khi có mưa dông sấm sét.</description>
+        <styleUrl>#style-safe-shelter</styleUrl>
+        <Point>
+          <coordinates>105.786710,21.066323,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Hồ điều hòa Thụy Phương 2 (Vùng đệm mặt nước tiêu thoát &amp; hạ nhiệt)</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: osm:way/1555357769 — Hồ điều hòa Thụy Phương 2 (cách ĐH Mỏ ~793 m); Copernicus DEM GLO-30 = 9 m
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Không gian mặt nước công cộng (lưu vực tiêu thoát tự nhiên)
+Khoảng cách tới ĐH Mỏ - Địa chất: 793 m (Tây Nam (217°))
+Thông tin thực tế: Mặt nước điều hòa quy mô lớn ngay trong vòng 800 m quanh trường giúp trữ nước đệm tiểu lưu vực và hạ nhiệt vi khí hậu. Lưu ý an toàn: chỉ là mảng mặt nước hạ nhiệt khi khô ráo, tuyệt đối tránh xa mép hồ khi có mưa dông, gió giật.</description>
+        <styleUrl>#style-safe-shelter</styleUrl>
+        <Point>
+          <coordinates>105.769300,21.066800,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Cụm Nhà thuốc Phố Viên – Ngõ 32 Phố Viên (Đức Huy / Thu Hương — Oresol &amp; sơ cứu sát trường)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: osm:node/10258564238 (Nhà thuốc Đức Huy 152) &amp; osm:node/8353977344 (Nhà thuốc Thu Hương) — cách cổng ĐH Mỏ 103–148 m
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Mở cửa hằng ngày phục vụ sinh viên &amp; cư dân
+Khoảng cách tới ĐH Mỏ - Địa chất: 103 m (Tây (284°))
+Thông tin thực tế: Điểm cung cấp nhanh gói điện giải Oresol, gạc mát, nhiệt kế hỗ trợ xử trí say nắng nhẹ ngay sát cổng 18 Phố Viên (nền cao 14–15 m DSM).</description>
+        <styleUrl>#style-safe-medical</styleUrl>
+        <Point>
+          <coordinates>105.772904,21.072734,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Trụ sở UBND Phường Đông Ngạc mới – Phố Văn Hội (Đầu mối Phòng chống thiên tai phường)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: hanoi.gov.vn (trụ sở UBND P. Đông Ngạc mới từ 01/07/2025 tại Phố Văn Hội, TDP số 2 — ĐT 024 2217 5455); osm:way/596707178
+Mốc ghi nhận: 2025-07-01
+Hoạt động: Cơ quan hành chính &amp; Ban Chỉ huy PCTT phường (ĐT: 024 2217 5455)
+Khoảng cách tới ĐH Mỏ - Địa chất: 747 m (Bắc (356°))
+Thông tin thực tế: Cách ĐH Mỏ ~747 m (trước sáp nhập là trụ sở UBND P. Đức Thắng cũ). Đầu mối tiếp nhận phản ánh dân sinh, điều phối lực lượng xung kích phòng chống thiên tai và cứu trợ trên địa bàn phường.</description>
+        <styleUrl>#style-safe-shelter</styleUrl>
+        <Point>
+          <coordinates>105.773375,21.079219,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Trụ sở Công an khu vực Cổ Nhuế – Phố Phạm Tiến Duật (Hỗ trợ an ninh &amp; cứu hộ)</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: osm:way/335347845 — Công an phường Cổ Nhuế 2, Phố Phạm Tiến Duật (cách ĐH Mỏ ~1.060 m)
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Trực ban an ninh trật tự 24/7
+Khoảng cách tới ĐH Mỏ - Địa chất: 1060 m (Đông Nam (124°))
+Thông tin thực tế: Điểm trực hỗ trợ an ninh, hướng dẫn phân luồng giao thông và tiếp nhận tin báo sự cố khẩn cấp khu vực KĐT Cổ Nhuế – Phạm Văn Đồng.</description>
+        <styleUrl>#style-safe-shelter</styleUrl>
+        <Point>
+          <coordinates>105.782311,21.067150,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Trường THCS Đông Ngạc – Ngõ 429 Hoàng Tăng Bí (Công trình kiên cố khu dân cư phía Bắc)</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: osm:way/897569850 — Trường THCS Đông Ngạc, Ngõ 429 Đường Hoàng Tăng Bí (cách ĐH Mỏ ~1.137 m)
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Công trình giáo dục kiên cố (kích hoạt hỗ trợ cộng đồng theo điều phối phường)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1137 m (Bắc (357°))
+Thông tin thực tế: Công trình trường học nhiều tầng kiên cố nằm gần dải dân cư Hoàng Tăng Bí – Đức Thắng – Tân Nhuệ.</description>
+        <styleUrl>#style-safe-shelter</styleUrl>
+        <Point>
+          <coordinates>105.773359,21.082728,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Học viện Cảnh sát Nhân dân – Đường Phạm Văn Nghị (Cụm công trình kiên cố bờ Tây sông Nhuệ)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: osm:way/699218280 — Học viện Cảnh sát Nhân dân, Đường Phạm Văn Nghị (cách Khu A ĐH Mỏ ~1.158 m, sát Khu B)
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Khuôn viên cơ sở đào tạo lớn phía Tây sông Nhuệ
+Khoảng cách tới ĐH Mỏ - Địa chất: 1158 m (Tây Nam (238°))
+Thông tin thực tế: Cụm hạ tầng kiên cố nằm ở bờ Tây sông Nhuệ trên trục nối sang Khu B ĐH Mỏ - Địa chất.</description>
+        <styleUrl>#style-safe-shelter</styleUrl>
+        <Point>
+          <coordinates>105.764436,21.066949,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Học viện Cảnh sát Nhân dân – Cơ sở 2 (Số 29 Lê Văn Hiến — Đỉnh gò cao 17 m)</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: osm:way/699218328 — Học viện Cảnh sát nhân dân Cơ sở 2, 29 Lê Văn Hiến (cách ĐH Mỏ ~154 m, DEM = 17 m)
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Khuôn viên cơ sở đào tạo kiên cố trên dải gò cao sát ĐH Mỏ
+Khoảng cách tới ĐH Mỏ - Địa chất: 154 m (Đông Bắc (48°))
+Thông tin thực tế: Cùng nằm trên gò địa hình cao ráo nhất vùng (17 m DSM) liền kề Khu A ĐH Mỏ - Địa chất, không ngập trong các đợt mưa cực đoan.</description>
+        <styleUrl>#style-safe-shelter</styleUrl>
+        <Point>
+          <coordinates>105.774979,21.073432,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Cụm Nhà thuốc Đường Cổ Nhuế (Số 149 Cổ Nhuế — Oresol &amp; sơ cứu khu dân cư phía Nam)</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: osm:node/8442194667 (Nhà thuốc số 9, 149 Đường Cổ Nhuế) &amp; osm:way/1115657568 (Nhà thuốc Ngọc Hà) — cách ĐH Mỏ ~1.341 m
+Mốc ghi nhận: 2026-11-26
+Hoạt động: Nhà thuốc dân sinh mở cửa hằng ngày gần Trạm Y tế &amp; Chợ Cổ Nhuế
+Khoảng cách tới ĐH Mỏ - Địa chất: 1341 m (Đông Nam (149°))
+Thông tin thực tế: Điểm tiếp cận nhanh Oresol bù điện giải và vật tư sơ cứu ban đầu trên dải nền cao 15 m phục vụ cụm xóm trọ và tiểu thương Chợ Cổ Nhuế.</description>
+        <styleUrl>#style-safe-medical</styleUrl>
+        <Point>
+          <coordinates>105.780551,21.062195,0</coordinates>
+        </Point>
+      </Placemark>
+    </Folder>
+  </Document>
+</kml>

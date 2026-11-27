@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bộ 03 Infographic &amp; 02 Bản tin Cảnh báo Mẫu — Đề tài 08 ĐH Mỏ - Địa chất</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --teal: #0f766e;
+      --teal-dark: #115e59;
+      --teal-soft: #f0fdfa;
+      --teal-border: #99f6e4;
+      --red: #b91c1c;
+      --red-dark: #7f1d1d;
+      --red-soft: #fef2f2;
+      --red-border: #fecaca;
+      --orange: #c2410c;
+      --amber: #b45309;
+      --amber-soft: #fffbeb;
+      --amber-border: #fde68a;
+      --green: #15803d;
+      --green-soft: #f0fdf4;
+      --green-border: #bbf7d0;
+      --ink: #0f172a;
+      --muted: #475569;
+      --border: #cbd5e1;
+      --canvas: #eef2f6;
+      --paper: #ffffff;
+      --mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--canvas);
+      line-height: 1.5;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 12px 20px;
+      background: var(--paper);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar h1 { margin: 0; font-size: 1.02rem; letter-spacing: -0.02em; }
+    .topbar-sub { margin: 2px 0 0; font-size: 0.78rem; color: var(--muted); }
+    .nav-group { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--paper);
+      color: var(--ink);
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .btn:hover { background: #f1f5f9; }
+    .btn-primary { background: var(--teal); border-color: var(--teal); color: #ffffff; }
+    .btn-primary:hover { background: var(--teal-dark); }
+    .btn-tab.is-active { background: var(--ink); border-color: var(--ink); color: #ffffff; }
+
+    .wrap { max-width: 1060px; margin: 0 auto; padding: 20px 16px 48px; }
+
+    .filter-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 12px 16px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .filter-note { font-size: 0.82rem; color: var(--muted); }
+
+    .asset-block {
+      margin-bottom: 28px;
+      break-inside: avoid;
+    }
+    .asset-block[hidden] { display: none !important; }
+
+    .asset-meta-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .asset-tag {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    /* Khung Infographic chuẩn tỉ lệ đăng Facebook/Zalo & in A4 */
+    .poster {
+      background: var(--paper);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .poster-head {
+      padding: 20px 24px 18px;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .poster-head-teal { background: #0f4c46; }
+    .poster-head-red { background: #991b1b; }
+    .poster-head-orange { background: #9a3412; }
+
+    .poster-head h2 {
+      margin: 0 0 6px;
+      font-size: 1.35rem;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+    .poster-head p {
+      margin: 0;
+      font-size: 0.86rem;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .poster-badge {
+      flex-shrink: 0;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.14);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      font-weight: 600;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .poster-body { padding: 20px 24px 22px; }
+
+    .stat-row-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .stat-tile {
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+    }
+    .stat-tile-red { background: var(--red-soft); border-color: var(--red-border); }
+    .stat-tile-amber { background: var(--amber-soft); border-color: var(--amber-border); }
+    .stat-tile-teal { background: var(--teal-soft); border-color: var(--teal-border); }
+    .stat-num {
+      display: block;
+      font-family: var(--mono);
+      font-size: 1.38rem;
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 4px;
+    }
+    .stat-lbl { display: block; font-size: 0.76rem; color: var(--muted); line-height: 1.35; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+    .panel {
+      padding: 14px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #f8fafc;
+    }
+    .panel-red { background: var(--red-soft); border-color: var(--red-border); }
+    .panel-amber { background: var(--amber-soft); border-color: var(--amber-border); }
+    .panel-teal { background: var(--teal-soft); border-color: var(--teal-border); }
+    .panel-green { background: var(--green-soft); border-color: var(--green-border); }
+
+    .panel h3 {
+      margin: 0 0 8px;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .panel ul, .panel ol { margin: 0; padding-left: 18px; font-size: 0.84rem; }
+    .panel li { margin-bottom: 6px; }
+    .panel p { margin: 0 0 8px; font-size: 0.84rem; }
+
+    .dont-strip {
+      margin-top: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: #ffffff;
+      border: 1px solid #fca5a5;
+      color: var(--red);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .poster-foot {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+      padding: 14px 24px;
+      background: #f8fafc;
+      border-top: 1px solid var(--border);
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .poster-foot strong { color: var(--ink); }
+    .qr-mini {
+      width: 72px;
+      height: 72px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #ffffff;
+      padding: 3px;
+    }
+
+    /* Bản tin cảnh báo diễn tập (Vàng / Đỏ) */
+    .bulletin {
+      border-radius: 14px;
+      border: 2px solid var(--border);
+      background: var(--paper);
+      overflow: hidden;
+      box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+    }
+    .bulletin-yellow { border-color: #d97706; }
+    .bulletin-red { border-color: #b91c1c; }
+
+    .sim-banner {
+      padding: 8px 18px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0.01em;
+    }
+    .sim-banner-yellow { background: #fef3c7; color: #78350f; border-bottom: 1px solid #fcd34d; }
+    .sim-banner-red { background: #fee2e2; color: #7f1d1d; border-bottom: 1px solid #fca5a5; }
+
+    .bulletin-head {
+      padding: 16px 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: #ffffff;
+    }
+    .bulletin-head-yellow { background: #b45309; }
+    .bulletin-head-red { background: #b91c1c; }
+    .bulletin-head h2 { margin: 0; font-size: 1.15rem; line-height: 1.3; }
+    .bulletin-body { padding: 18px 22px; }
+
+    .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    .caption-status { font-size: 0.78rem; color: var(--teal); font-weight: 600; }
+
+    @media (max-width: 760px) {
+      .stat-row-4 { grid-template-columns: repeat(2, 1fr); }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .poster-head, .bulletin-head { flex-direction: column; }
+    }
+
+    @media print {
+      body { background: #ffffff; }
+      .topbar, .filter-strip, .asset-meta-bar { display: none !important; }
+      .wrap { max-width: none; padding: 0; }
+      .asset-block { page-break-after: always; margin-bottom: 0; }
+      .poster, .bulletin { box-shadow: none; border-radius: 6px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Bộ 03 Infographic &amp; 02 Bản tin Cảnh báo Mẫu (Đề tài 08 · ĐH Mỏ - Địa chất)</h1>
+      <p class="topbar-sub">100% số liệu xác thực từ ECMWF ERA5, Copernicus DEM, OpenStreetMap, Bộ Y tế &amp; báo chí chính thống — Sẵn sàng chụp ảnh đăng Facebook / Zalo / TikTok hoặc xuất PDF</p>
+    </div>
+    <nav class="nav-group" aria-label="Điều hướng công cụ dự án">
+      <a href="./index.html" class="btn btn-primary">← Bản đồ Cộng đồng</a>
+      <a href="./thuyet-trinh.html" class="btn">Slide &amp; Video 45s</a>
+      <a href="./du-lieu-mo.html" class="btn">Số liệu Mở</a>
+      <a href="./cam-nang-1-cham.html" class="btn">Cẩm nang PDF</a>
+      <button type="button" onclick="window.print()" class="btn">In / Lưu trọn bộ PDF</button>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="filter-strip" aria-label="Bộ lọc ấn phẩm truyền thông">
+      <div class="nav-group" role="group" aria-label="Chọn nhóm ấn phẩm hiển thị">
+        <button type="button" class="btn btn-tab is-active" data-filter="all">Tất cả 5 ấn phẩm</button>
+        <button type="button" class="btn btn-tab" data-filter="infographic">Chỉ 03 Infographic</button>
+        <button type="button" class="btn btn-tab" data-filter="bulletin">Chỉ 02 Bản tin Diễn tập</button>
+      </div>
+      <span class="filter-note">Mẹo cho TV3: Bấm <strong>Chép caption đăng bài</strong> kèm chụp màn hình từng khung ấn phẩm để đăng Facebook / Zalo lớp &amp; nhóm cư dân Đông Ngạc.</span>
+    </section>
+
+    <!-- ================= INFOGRAPHIC 1 ================= -->
+    <article class="asset-block" data-kind="infographic">
+      <div class="asset-meta-bar">
+        <span class="asset-tag">Ấn phẩm 1/5 · Infographic 01 (Truyền thông Mở đầu — Gọi cộng đồng vào Bản đồ)</span>
+        <div class="nav-group">
+          <span class="caption-status" id="status-cap-1"></span>
+          <button type="button" class="btn js-copy-caption" data-target="cap-1" data-status="status-cap-1">Chép caption đăng Facebook / Zalo</button>
+        </div>
+      </div>
+
+      <section class="poster" aria-label="Infographic 1: Toàn cảnh rủi ro ngập và nắng quanh ĐH Mỏ">
+        <header class="poster-head poster-head-teal">
+          <div>
+            <h2>VÌ SAO QUANH ĐH MỎ - ĐỊA CHẤT VỪA NẮNG GẮT VỪA DỄ NGẬP CỤC BỘ?</h2>
+            <p>Dữ liệu thực tế bán kính 2 km · Phường Đông Ngạc mới (Đức Thắng · Cổ Nhuế · Đông Ngạc), Hà Nội</p>
+          </div>
+          <div class="poster-badge">
+            INFOGRAPHIC 01<br>
+            ECMWF ERA5 · DEM GLO-30
+          </div>
+        </header>
+
+        <div class="poster-body">
+          <div class="stat-row-4">
+            <div class="stat-tile stat-tile-amber">
+              <strong class="stat-num" style="color:var(--orange)">76 ngày</strong>
+              <span class="stat-lbl">Nhiệt cảm nhận ≥40°C năm 2026 tại tọa độ ĐH Mỏ (ERA5)</span>
+            </div>
+            <div class="stat-tile stat-tile-red">
+              <strong class="stat-num" style="color:var(--red)">329,8 mm</strong>
+              <span class="stat-lbl">Tổng mưa 4 ngày bão số 4 (21–24/08/2026); Đông Ngạc đo 99,6 mm</span>
+            </div>
+            <div class="stat-tile stat-tile-red">
+              <strong class="stat-num" style="color:var(--red)">6 – 12 m</strong>
+              <span class="stat-lbl">Cao độ vùng trũng sông Nhuệ – Phố Viên so với 17 m Khu A (DEM)</span>
+            </div>
+            <div class="stat-tile stat-tile-teal">
+              <strong class="stat-num" style="color:var(--teal)">22 điểm</strong>
+              <span class="stat-lbl">Điểm nền xác thực OSM &amp; báo chí (14 Rủi ro · 8 An toàn)</span>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel">
+              <h3>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2" aria-hidden="true"><path d="M3 17l5-5 4 4 9-9"></path><path d="M14 7h7v7"></path></svg>
+                Lát cắt địa hình “Lòng máng” trong bán kính 2 km
+              </h3>
+              <svg viewBox="0 0 420 155" style="width:100%;height:auto;display:block;" role="img" aria-label="Biểu đồ cao độ từ 6m đến 17m quanh ĐH Mỏ">
+                <line x1="20" y1="128" x2="404" y2="128" stroke="#cbd5e1" stroke-width="1"/>
+                <rect x="20" y="53" width="384" height="75" fill="#fef2f2" fill-opacity="0.65"/>
+                <line x1="20" y1="53" x2="404" y2="53" stroke="#fca5a5" stroke-width="1" stroke-dasharray="4 3"/>
+                <text x="26" y="47" font-size="9.5" fill="#b91c1c" font-weight="600">Vùng trũng tiêu thoát chậm (≤12 m DSM)</text>
+                <!-- Cột cao độ thực tế Copernicus DEM -->
+                <rect x="30" y="92" width="42" height="36" rx="3" fill="#b91c1c"/><text x="51" y="87" text-anchor="middle" font-size="10" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono">6m</text><text x="51" y="143" text-anchor="middle" font-size="9" fill="#334155">Tân Nhuệ</text>
+                <rect x="92" y="74" width="42" height="54" rx="3" fill="#b91c1c"/><text x="113" y="69" text-anchor="middle" font-size="10" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono">9m</text><text x="113" y="143" text-anchor="middle" font-size="9" fill="#334155">Hồ TP2/Eco</text>
+                <rect x="154" y="62" width="42" height="66" rx="3" fill="#b91c1c"/><text x="175" y="57" text-anchor="middle" font-size="10" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono">11m</text><text x="175" y="143" text-anchor="middle" font-size="9" fill="#334155">Ngõ Cổ Nhuế</text>
+                <rect x="216" y="56" width="42" height="72" rx="3" fill="#b91c1c"/><text x="237" y="51" text-anchor="middle" font-size="10" font-weight="700" fill="#b91c1c" font-family="JetBrains Mono">12m</text><text x="237" y="143" text-anchor="middle" font-size="9" fill="#334155">Cuối P.Viên</text>
+                <rect x="278" y="32" width="42" height="96" rx="3" fill="#0f766e"/><text x="299" y="27" text-anchor="middle" font-size="10" font-weight="700" fill="#0f766e" font-family="JetBrains Mono">16m</text><text x="299" y="143" text-anchor="middle" font-size="9" fill="#334155">Đê Đ.Ngạc</text>
+                <rect x="340" y="26" width="42" height="102" rx="3" fill="#0f766e"/><text x="361" y="21" text-anchor="middle" font-size="10" font-weight="700" fill="#0f766e" font-family="JetBrains Mono">17m</text><text x="361" y="143" text-anchor="middle" font-size="9" fill="#334155">Khu A HUMG</text>
+              </svg>
+            </div>
+
+            <div class="panel panel-red">
+              <h3>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                Vì sao cần Cư dân cùng chấm điểm trên Web Mở?
+              </h3>
+              <ul>
+                <li><strong>Năm 2025:</strong> Cụm Ecohome 1–3 ngập cổng <span class="mono">1–1,4 m</span>, tê liệt 16 thang máy (<em>Dân Trí, VietNamNet</em>).</li>
+                <li><strong>Giữa năm 2026:</strong> Dự án khẩn cấp <strong>Kênh Thụy Phương 920,6 tỷ</strong> giúp giảm ngập trục lớn khi bão số 4 đổ bộ (23/08/2026).</li>
+                <li><strong>Tháng 9/2026:</strong> Nhưng <strong>cuối Phố Viên</strong> (chỉ cách trường <span class="mono">372 m</span>) vẫn ngập sâu kèm xoáy miệng cống nguy hiểm (<em>Báo Lao Động 18/09/2026</em>).</li>
+                <li><strong>Giải pháp cộng đồng:</strong> Chỉ cư dân và sinh viên đi qua từng con ngõ mỗi ngày mới phát hiện sớm điểm đen vi mô để cảnh báo nhau kịp thời!</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <footer class="poster-foot">
+          <div>
+            <strong>QUÉT QR HOẶC MỞ BẢN ĐỒ CỘNG ĐỒNG MỞ P. ĐÔNG NGẠC (15 GIÂY BẤM +1 XÁC NHẬN NGÕ NHÀ BẠN):</strong><br>
+            Nguồn kiểm chứng: ECMWF ERA5 · Copernicus DEM GLO-30 · OpenStreetMap · Báo Lao Động, Dân Trí, VietNamNet, VnExpress · Đề tài 08 – SV ĐH Mỏ - Địa chất.
+          </div>
+          <img class="qr-mini" src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&amp;margin=4&amp;data=https%3A%2F%2Fbit.ly%2Fbando-dongngac-humg" alt="QR Bản đồ Cộng đồng Mở ĐH Mỏ">
+        </footer>
+      </section>
+      <textarea id="cap-1" hidden>[BẢN ĐỒ CỘNG ĐỒNG MỞ QUANH ĐH MỎ - ĐỊA CHẤT | BÁN KÍNH 2 KM]
+Bạn đang sống, thuê trọ hoặc học tập quanh Phố Viên – Đức Thắng – Cổ Nhuế – Đông Ngạc?
+Số liệu thực tế ECMWF ERA5 & Copernicus DEM cho thấy khu vực quanh trường ghi nhận tới 76 ngày nhiệt cảm nhận ≥40°C trong năm 2026 và dải địa hình lòng máng 6–12 m dọc sông Nhuệ. Dù dự án Kênh Thụy Phương 920 tỷ giúp giảm ngập trục lớn, các điểm đen vi mô như cuối Phố Viên (372 m) hay từng ngõ trọ sâu vẫn cần chính người dân tại chỗ cảnh báo cho nhau!
+
+👉 Chỉ mất 15 giây: Mở Bản đồ Cộng đồng Mở → Bấm "+1 Tôi cũng gặp ở đây" hoặc chấm ghim ngõ ngập / nắng gắt / điểm trú an toàn quanh nhà bạn (100% ẩn danh):
+🔗 Link Bản đồ: [DÁN LINK BITLY CỦA NHÓM]
+#HUMG #PhuongDongNgac #BanDoCongDong #ThichUngThoiTietCucDoan #DeTai08</textarea>
+    </article>
+
+    <!-- ================= INFOGRAPHIC 2 ================= -->
+    <article class="asset-block" data-kind="infographic">
+      <div class="asset-meta-bar">
+        <span class="asset-tag">Ấn phẩm 2/5 · Infographic 02 (Kỹ năng Sống còn — Sơ cứu Sốc nhiệt &amp; Vượt Ngập An toàn)</span>
+        <div class="nav-group">
+          <span class="caption-status" id="status-cap-2"></span>
+          <button type="button" class="btn js-copy-caption" data-target="cap-2" data-status="status-cap-2">Chép caption đăng Facebook / Zalo</button>
+        </div>
+      </div>
+
+      <section class="poster" aria-label="Infographic 2: Quy tắc 3 phút sơ cứu sốc nhiệt và an toàn mưa ngập">
+        <header class="poster-head poster-head-red">
+          <div>
+            <h2>QUY TẮC 3 PHÚT SƠ CỨU SỐC NHIỆT &amp; VƯỢT MƯA NGẬP AN TOÀN</h2>
+            <p>Khuyến cáo chuẩn Bộ Y tế, Trung tâm Dự báo KTTV Quốc gia &amp; Tọa độ cấp cứu thực tế quanh Phố Viên</p>
+          </div>
+          <div class="poster-badge">
+            INFOGRAPHIC 02<br>
+            CẤP CỨU 115 · CỨU NẠN 114
+          </div>
+        </header>
+
+        <div class="poster-body">
+          <div class="grid-2">
+            <div class="panel panel-red">
+              <h3>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2"></path></svg>
+                3 Bước Sơ cứu Sốc nhiệt / Say nắng
+              </h3>
+              <p><strong>Dấu hiệu cảnh báo:</strong> Da nóng đỏ, vã hoặc ngừng mồ hôi, hoa mắt, buồn nôn, nói lơ mơ.</p>
+              <ol>
+                <li><strong>Đưa ngay vào nơi râm mát, thoáng gió:</strong> Nới lỏng cổ áo, cởi bỏ áo khoác chống nắng dày.</li>
+                <li><strong>Chườm mát mạch máu lớn:</strong> Đắp khăn ẩm mát vào <strong>Cổ – Nách – Bẹn</strong> kết hợp quạt nhẹ hạ thân nhiệt từ từ.</li>
+                <li><strong>Bù nước &amp; Gọi cấp cứu:</strong> Chỉ cho uống từng ngụm nước mát/Oresol khi <strong>còn tỉnh táo</strong>. Nếu lơ mơ/sốt &gt;40°C → gọi <strong>115</strong> hoặc đưa tới <strong>BV Đa khoa Phương Đông (Số 9 Phố Viên — cách ĐH Mỏ 310 m)</strong>.</li>
+              </ol>
+              <div class="dont-strip">
+                TUYỆT ĐỐI KHÔNG: Đưa đột ngột vào điều hòa 16°C · Ép uống nước đá lạnh · Bôi dầu gió nóng / cạo gió · Tự uống Paracetamol.
+              </div>
+            </div>
+
+            <div class="panel panel-teal">
+              <h3>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+                3 Nguyên tắc Vượt Ngập &amp; Điện Nhà trọ
+              </h3>
+              <ol>
+                <li><strong>Quy tắc “Nửa bánh xe” &amp; Né xoáy cống:</strong> Không đi xe máy vào đoạn ngập quá nửa bánh xe hoặc vùng có dòng nước chảy xoáy, mặt đường nhiều ổ gà (cuối Phố Viên, Cầu Noi). Dừng ở nền cao chờ rút.</li>
+                <li><strong>Tránh dông sét tuyệt đối:</strong> Không đứng trú dưới tán cây lớn (kể cả Công viên Hòa Bình hay bờ Hồ điều hòa Thụy Phương 2), cột điện hoặc biển quảng cáo.</li>
+                <li><strong>Ngắt điện tầng 1 bằng tay khô:</strong> Khi nước ngoài ngõ bắt đầu tràn vào sàn trọ nền thấp, đứng trên bậc khô <strong>ngắt cầu dao/aptomat ngay lập tức</strong> trước khi kê đồ.</li>
+              </ol>
+              <div class="dont-strip" style="border-color:var(--teal-border);color:var(--teal-dark);">
+                TRA CỨU CHÍNH THỨC: Xem điểm ngập thời gian thực trên <strong>HSDC Maps</strong> (Thoát nước HN), <strong>iHanoi</strong> &amp; dự báo tại <strong>nchmf.gov.vn</strong>.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="poster-foot">
+          <div>
+            <strong>CƠ SỞ Y TẾ GẦN ĐH MỎ NHẤT (OSM XÁC THỰC):</strong> BV Đa khoa Phương Đông (<span class="mono">310 m</span>) · Trạm Y tế Đức Thắng (<span class="mono">826 m</span>) · BV Phạm Ngọc Thạch (<span class="mono">1,2 km</span>) · Trạm Y tế Cổ Nhuế (<span class="mono">1,35 km</span>).
+          </div>
+          <img class="qr-mini" src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&amp;margin=4&amp;data=https%3A%2F%2Fbit.ly%2Fbando-dongngac-humg" alt="QR Bản đồ cơ sở y tế quanh ĐH Mỏ">
+        </footer>
+      </section>
+      <textarea id="cap-2" hidden>[LƯU NGAY KẺO QUÊN] 3 PHÚT SƠ CỨU SỐC NHIỆT & AN TOÀN MƯA NGẬP QUANH ĐH MỎ - ĐỊA CHẤT
+Bạn có biết: Đưa người sốc nhiệt vào phòng điều hòa 16°C hoặc cho uống Paracetamol là SAI KHOA HỌC và cực kỳ nguy hiểm?
+✔️ Đúng chuẩn Bộ Y tế: Đưa vào bóng râm thoáng gió → Chườm mát Cổ – Nách – Bẹn → Uống từng ngụm nước mát/Oresol khi còn tỉnh → Gọi 115 hoặc đưa tới BV Đa khoa Phương Đông (Số 9 Phố Viên — chỉ cách cổng ĐH Mỏ 310 m).
+✔️ Khi mưa lớn ngập cuối Phố Viên / Cầu Noi: Áp dụng quy tắc "Nửa bánh xe", tuyệt đối né miệng cống xoáy và ngắt cầu dao tầng 1 bằng tay khô nếu nước tràn phòng trọ!
+
+👉 Lưu bản PDF Cẩm nang 1 chạm & kiểm tra phản xạ 30 giây tại Bản đồ Cộng đồng Mở:
+🔗 [DÁN LINK BITLY CỦA NHÓM]
+#SoCuuSocNhiet #AnToanMuaNgap #HUMG #DongNgac</textarea>
+    </article>
+
+    <!-- ================= INFOGRAPHIC 3 ================= -->
+    <article class="asset-block" data-kind="infographic">
+      <div class="asset-meta-bar">
+        <span class="asset-tag">Ấn phẩm 3/5 · Infographic 03 (Thích ứng Đời sống Sinh viên — Trọ Mái tôn &amp; Tuyến Buýt 09A · 28 · 31)</span>
+        <div class="nav-group">
+          <span class="caption-status" id="status-cap-3"></span>
+          <button type="button" class="btn js-copy-caption" data-target="cap-3" data-status="status-cap-3">Chép caption đăng Facebook / Zalo</button>
+        </div>
+      </div>
+
+      <section class="poster" aria-label="Infographic 3: Sống sót qua trọ mái tôn 45-50 độ C và chờ buýt an toàn">
+        <header class="poster-head poster-head-orange">
+          <div>
+            <h2>ỨNG PHÓ “LÒ NUNG” TRỌ MÁI TÔN 45–50°C &amp; CHỜ BUÝT 09A · 28 · 31</h2>
+            <p>Giải pháp tiết kiệm chi phí dành riêng cho sinh viên thuê trọ và người đi bộ, xe buýt khu vực ĐH Mỏ - Địa chất</p>
+          </div>
+          <div class="poster-badge">
+            INFOGRAPHIC 03<br>
+            TRẠM LÁNG 40,3°C (04/08/2025)
+          </div>
+        </header>
+
+        <div class="poster-body">
+          <div class="stat-row-4">
+            <div class="stat-tile stat-tile-amber">
+              <strong class="stat-num" style="color:var(--orange)">40,3°C</strong>
+              <span class="stat-lbl">Kỷ lục tháng 8 tại Trạm Láng Hà Nội (04/08/2025 — KTTV / VnExpress)</span>
+            </div>
+            <div class="stat-tile stat-tile-amber">
+              <strong class="stat-num" style="color:var(--orange)">+2 – 4°C</strong>
+              <span class="stat-lbl">Nhiệt cảm nhận mặt đường nhựa cao hơn lều khí tượng do đảo nhiệt UHI</span>
+            </div>
+            <div class="stat-tile stat-tile-red">
+              <strong class="stat-num" style="color:var(--red)">45 – 50°C</strong>
+              <span class="stat-lbl">Nhiệt đo thực tế trong phòng trọ mái tôn khung 11h–16h (Lao Động, VTV)</span>
+            </div>
+            <div class="stat-tile">
+              <strong class="stat-num" style="color:var(--ink)">3.500–4.000đ</strong>
+              <span class="stat-lbl">Giá điện nhà trọ/kWh khiến SV ngại bật điều hòa ban ngày (Dân Trí)</span>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <div class="panel panel-amber">
+              <h3>1. Hạ nhiệt Trọ Mái tôn</h3>
+              <ul>
+                <li><strong>10h00–16h00:</strong> Kéo rèm cản nắng hướng Tây, bọc bìa/tấm phản quang khung cửa kính.</li>
+                <li><strong>Sau 17h30:</strong> Mở cửa đối lưu + bật quạt <strong>thổi ra ngoài 15 phút</strong> đuổi hơi nóng áp mái trước khi bật điều hòa <strong>26–27°C</strong> kèm quạt trần/cây.</li>
+                <li>Tránh đun nấu sinh nhiệt giữa trưa trong phòng kín.</li>
+              </ul>
+            </div>
+
+            <div class="panel panel-teal">
+              <h3>2. Chờ Buýt 09A · 28 · 31</h3>
+              <ul>
+                <li><strong>Trạm BV Phương Đông – Phố Viên</strong> (<span class="mono">121 m</span>) đón <strong>09A, 28, 31</strong>.</li>
+                <li><strong>Trạm 138 Phạm Văn Đồng</strong> (<span class="mono">1,22 km</span>): trục bê tông rộng ít tán cây cổ thụ, bức xạ rất gắt.</li>
+                <li>Luôn mang bình nước/Oresol, mũ rộng vành; canh giờ xe bằng <strong>TimBus</strong> để giảm thời gian đứng phơi nắng.</li>
+              </ul>
+            </div>
+
+            <div class="panel panel-green">
+              <h3>3. Không gian Hạ nhiệt Quanh trường</h3>
+              <ul>
+                <li><strong>Khu A &amp; Thư viện ĐH Mỏ</strong> (18 Phố Viên, nền cao <span class="mono">17 m</span>): nghỉ chuyển tiết tránh khung 11h30–14h30.</li>
+                <li><strong>Công viên Hòa Bình</strong> (<span class="mono">1,5 km</span>) &amp; <strong>Hồ điều hòa Thụy Phương 2</strong> (<span class="mono">793 m</span>): mảng xanh – mặt nước hạ nhiệt ngày khô ráo.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <footer class="poster-foot">
+          <div>
+            <strong>NGUỒN BÁO CHÍ &amp; DỮ LIỆU XÁC THỰC:</strong> KTTV Quốc gia (Trạm Láng 04/08/2025) · Báo Lao Động, VTV, Dân Trí, VietnamPlus, Thanh Niên · TimBus Hà Nội · OpenStreetMap (<span class="mono">node/11515782290</span>, <span class="mono">node/7294677886</span>, <span class="mono">way/1555357769</span>).
+          </div>
+          <img class="qr-mini" src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&amp;margin=4&amp;data=https%3A%2F%2Fbit.ly%2Fbando-dongngac-humg" alt="QR Bản đồ điểm nóng và trạm buýt ĐH Mỏ">
+        </footer>
+      </section>
+      <textarea id="cap-3" hidden>[GÓC SINH VIÊN Ở TRỌ & ĐI BUÝT 09A · 28 · 31 QUANH ĐH MỎ]
+Ngày 04/08/2025, Trạm Láng Hà Nội lập kỷ lục tháng 8 tới 40,3°C; mặt đường nhựa Phạm Văn Đồng nóng hơn lều khí tượng 2–4°C còn phòng trọ mái tôn buổi trưa đo thực tế lên tới 45–50°C trong khi giá điện trọ 3.500–4.000đ/kWh!
+👉 Áp dụng ngay 3 mẹo tiết kiệm điện & tránh sốc nhiệt:
+1️⃣ Sau 17h30 mở cửa bật quạt hướng RA NGOÀI 15 phút đuổi khí nóng rồi mới đóng cửa bật điều hòa 26–27°C + quạt.
+2️⃣ Canh app TimBus trước khi ra trạm BV Phương Đông – Phố Viên (tuyến 09A, 28, 31) hoặc trạm 138 Phạm Văn Đồng để giảm đứng phơi nắng khung 11h30–14h30.
+3️⃣ Tranh thủ nghỉ chuyển tiết tại Thư viện HUMG và mang sẵn bình nước/Oresol.
+
+👉 Ngõ trọ bạn nóng hầm hập hay thiếu bóng mát? Vào đánh dấu ngay lên Bản đồ Cộng đồng Mở: [DÁN LINK BITLY CỦA NHÓM]
+#TroMaiTon #XeBuytHUMG #NangNongHaNoi #DongNgac</textarea>
+    </article>
+
+    <!-- ================= BẢN TIN MẪU 1: CẤP ĐỘ VÀNG ================= -->
+    <article class="asset-block" data-kind="bulletin">
+      <div class="asset-meta-bar">
+        <span class="asset-tag">Ấn phẩm 4/5 · Bản tin Diễn tập CẤP ĐỘ VÀNG (Phát sóng Zalo / Facebook ngày 29/11)</span>
+        <div class="nav-group">
+          <span class="caption-status" id="status-cap-4"></span>
+          <button type="button" class="btn js-copy-caption" data-target="cap-4" data-status="status-cap-4">Chép tin nhắn phát trên Zalo / Group lớp</button>
+        </div>
+      </div>
+
+      <section class="bulletin bulletin-yellow" aria-label="Bản tin mẫu diễn tập cấp độ Vàng - Nắng nóng">
+        <div class="sim-banner sim-banner-yellow">
+          MẪU BẢN TIN DIỄN TẬP PHẢN XẠ HỌC TẬP (TÌNH HUỐNG MÔ PHỎNG) — KHÔNG PHẢI CẢNH BÁO THỜI GIAN THỰC · XEM DỰ BÁO THẬT TẠI NCHMF.GOV.VN
+        </div>
+        <header class="bulletin-head bulletin-head-yellow">
+          <div>
+            <h2>CẢNH BÁO CẤP ĐỘ VÀNG · NẮNG NÓNG GAY GẮT &amp; CHỈ SỐ NHIỆT CẢM NHẬN &gt; 41°C</h2>
+            <p style="margin:4px 0 0;font-size:0.83rem;opacity:0.95;">Phạm vi mô phỏng: Phường Đông Ngạc mới (Phố Viên · Cổ Nhuế · Trục Phạm Văn Đồng) · Khung giờ cao điểm 11h30 – 15h30</p>
+          </div>
+          <div class="poster-badge">
+            CẤP ĐỘ VÀNG<br>
+            CHỦ ĐỘNG PHÒNG NGỪA
+          </div>
+        </header>
+        <div class="bulletin-body">
+          <div class="grid-2">
+            <div class="panel panel-amber">
+              <h3>Dữ liệu nền thực tế dẫn chiếu tình huống</h3>
+              <ul>
+                <li>Tại tọa độ ĐH Mỏ (ECMWF ERA5 2024–2026), mỗi năm xảy ra <strong>63 – 76 ngày</strong> nhiệt cảm nhận <span class="mono">≥40°C</span>.</li>
+                <li>Trạm Láng ghi nhận đỉnh <span class="mono">40,3°C</span> (04/08/2025); phòng trọ mái tôn đạt <span class="mono">45–50°C</span> buổi trưa.</li>
+                <li>Nhóm rủi ro cao: sinh viên đứng chờ buýt <strong>09A, 28, 31</strong>, người đi bộ trên trục <strong>Phạm Văn Đồng</strong> và ở gác xép mái tôn.</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <h3>3 Hành động Phản xạ trong 30 giây</h3>
+              <ol>
+                <li><strong>CHUẨN BỊ ĐỒ CHE CHẮN:</strong> Mang mũ rộng vành, áo chống nắng thoáng khí và chai nước/Oresol trước khi rời giảng đường hoặc phòng trọ.</li>
+                <li><strong>CHỌN ĐIỂM NGHỈ TRƯA:</strong> Tận dụng Thư viện / khuôn viên Khu A ĐH Mỏ thay vì đi bộ phơi nắng khung 11h30–14h30.</li>
+                <li><strong>KIỂM TRA KỸ NĂNG:</strong> Làm thử Mini-Quiz 5 câu để kiểm chứng quy tắc sơ cứu sốc nhiệt 3 phút chuẩn Bộ Y tế!</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        <footer class="poster-foot">
+          <div>
+            <strong>ĐIỂM CẤP CỨU GẦN NHẤT:</strong> BV Đa khoa Phương Đông (Số 9 Phố Viên — <span class="mono">310 m</span>) · Trạm Y tế Đức Thắng (<span class="mono">826 m</span>) · Cấp cứu <span class="mono">115</span>.<br>
+            Nguồn dự báo khí tượng chính thức của Nhà nước: <strong>Trung tâm Dự báo KTTV Quốc gia (nchmf.gov.vn)</strong>.
+          </div>
+          <img class="qr-mini" src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&amp;margin=4&amp;data=https%3A%2F%2Fbit.ly%2Fbando-dongngac-humg" alt="QR Diễn tập Cấp độ Vàng">
+        </footer>
+      </section>
+      <textarea id="cap-4" hidden>[MẪU DIỄN TẬP CẤP ĐỘ VÀNG — TÌNH HUỐNG MÔ PHỎNG HỌC TẬP]
+Khu vực: Phường Đông Ngạc mới (Phố Viên · Cổ Nhuế · Phạm Văn Đồng)
+Tình huống giả định dựa trên chuỗi ERA5 thực tế (76 ngày nhiệt cảm nhận ≥40°C năm 2026): Nhiệt độ ngoài trời 38°C, cảm nhận mặt đường nhựa >41°C khung 11h30–15h30.
+✅ 3 việc cần làm ngay:
+1. Mang sẵn nước/Oresol, mũ rộng vành khi ra trạm chờ buýt 09A, 28, 31 hoặc trạm 138 Phạm Văn Đồng.
+2. Nghỉ chuyển tiết tại Thư viện / sảnh mát trong trường thay vì ở phòng trọ mái tôn 45–50°C giờ trưa.
+3. Mở Bản đồ Cộng đồng & thử Mini-Quiz 5 câu (mất 60 giây) để luyện phản xạ sơ cứu sốc nhiệt: [DÁN LINK BITLY / MINI-QUIZ]
+(Lưu ý: Đây là diễn tập môn học Đề tài 08; theo dõi dự báo thời gian thực tại nchmf.gov.vn)</textarea>
+    </article>
+
+    <!-- ================= BẢN TIN MẪU 2: CẤP ĐỘ ĐỎ ================= -->
+    <article class="asset-block" data-kind="bulletin">
+      <div class="asset-meta-bar">
+        <span class="asset-tag">Ấn phẩm 5/5 · Bản tin Diễn tập CẤP ĐỘ ĐỎ (Diễn tập Phản xạ Cao điểm ngày 30/11 + Mini-Quiz)</span>
+        <div class="nav-group">
+          <span class="caption-status" id="status-cap-5"></span>
+          <button type="button" class="btn js-copy-caption" data-target="cap-5" data-status="status-cap-5">Chép tin nhắn phát Diễn tập Cấp độ Đỏ</button>
+        </div>
+      </div>
+
+      <section class="bulletin bulletin-red" aria-label="Bản tin mẫu diễn tập cấp độ Đỏ - Mưa lớn ngập sâu">
+        <div class="sim-banner sim-banner-red">
+          [DIỄN TẬP CẢNH BÁO SỐ 17h00 — TÌNH HUỐNG GIẢ ĐỊNH HỌC TẬP] · XEM CẢNH BÁO NGẬP THẬT TẠI HSDC MAPS &amp; IHANOI
+        </div>
+        <header class="bulletin-head bulletin-head-red">
+          <div>
+            <h2>CẢNH BÁO CẤP ĐỘ ĐỎ · MƯA LỚN &gt; 70 MM GÂY NGẬP SÂU &amp; XOÁY CỐNG CỤC BỘ</h2>
+            <p style="margin:4px 0 0;font-size:0.83rem;opacity:0.95;">Tình huống mô phỏng theo sự kiện thực tế 15/09/2026 (71,3 mm) &amp; 23/08/2026 (99,6–116 mm) quanh ĐH Mỏ - Địa chất</p>
+          </div>
+          <div class="poster-badge">
+            CẤP ĐỘ ĐỎ<br>
+            HÀNH ĐỘNG KHẨN CẤP
+          </div>
+        </header>
+        <div class="bulletin-body">
+          <div class="grid-2">
+            <div class="panel panel-red">
+              <h3>Các điểm rủi ro cần tránh tuyệt đối trong tình huống</h3>
+              <ul>
+                <li><strong>Cuối Phố Viên</strong> (<span class="mono">372 m</span>): Mặt đường gồ ghề ổ gà, từng xảy ra dòng xoáy miệng cống nguy hiểm (<em>Báo Lao Động 18/09/2026</em>).</li>
+                <li><strong>Cầu Noi &amp; Đường Tân Nhuệ</strong> (DEM <span class="mono">6–12 m</span>): Trũng sâu sát bờ sông Nhuệ.</li>
+                <li><strong>Ngõ sâu Cổ Nhuế, Resco &amp; Ecohome</strong>: Nguy cơ ngập quá nửa bánh xe và nước tràn tầng 1 phòng trọ nền thấp.</li>
+              </ul>
+            </div>
+            <div class="panel panel-green">
+              <h3>3 Bước Phản xạ An toàn trong 30 giây</h3>
+              <ol>
+                <li><strong>DỪNG LẠI Ở NỀN CAO:</strong> Ở lại khuôn viên Khu A ĐH Mỏ (<span class="mono">17 m</span>) hoặc sảnh kiên cố chờ nước rút; không phóng xe qua vùng ngập che khuất mặt đường.</li>
+                <li><strong>NGẮT ĐIỆN TẦNG 1 NGAY:</strong> Nếu đang ở nhà trọ nền thấp thấy nước tràn sàn, đứng bậc khô tắt aptomat tổng trước khi di chuyển đồ.</li>
+                <li><strong>ĐỊNH VỊ NƠI TRÚ GẦN NHẤT:</strong> Mở Bản đồ Cộng đồng → bấm <strong>“Tìm nơi trú gần nhất”</strong> (ưu tiên cơ sở y tế &amp; công trình có mái che) và hoàn thành <strong>Mini-Quiz 5 câu</strong>!</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        <footer class="poster-foot">
+          <div>
+            <strong>THỬ THÁCH DIỄN TẬP 60 GIÂY:</strong> Quét QR để vào Bản đồ &amp; trả lời Mini-Quiz 5 câu tình huống thực tế (mục tiêu ≥30 sinh viên &amp; cư dân vượt qua bài kiểm tra phản xạ).<br>
+            Kênh cảnh báo chính thức TP. Hà Nội: <strong>HSDC Maps</strong> · <strong>iHanoi</strong> · <strong>nchmf.gov.vn</strong> · Khẩn cấp: <span class="mono">114 / 115</span>.
+          </div>
+          <img class="qr-mini" src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&amp;margin=4&amp;data=https%3A%2F%2Fbit.ly%2Fbando-dongngac-humg" alt="QR Diễn tập Cấp độ Đỏ và Mini-Quiz">
+        </footer>
+      </section>
+      <textarea id="cap-5" hidden>🔴 [DIỄN TẬP CẢNH BÁO SỐ 17h00 — TÌNH HUỐNG MÔ PHỎNG HỌC TẬP]
+Giả sử lúc 17h00 tan học, khu vực ĐH Mỏ - Địa chất mưa lớn >70 mm (như trận mưa 15/09/2026 làm ngập sâu cuối Phố Viên):
+1️⃣ KHÔNG cố lao xe qua đoạn cuối Phố Viên, Cầu Noi nơi nước ngập che ổ gà và miệng cống xoáy! Dừng ở nền cao Khu A (17 m) chờ ngớt mưa.
+2️⃣ Đang ở trọ nền thấp thấy nước tràn sàn → đứng bậc khô NGẮT APTOMAT ngay!
+3️⃣ Mở Bản đồ Cộng đồng bấm "Tìm nơi trú gần nhất" và làm ngay Mini-Quiz 5 câu phản xạ (60 giây, có chấm điểm giải thích ngay):
+🔗 Link Bản đồ & Diễn tập: [DÁN LINK BITLY CỦA NHÓM]
+📝 Link Google Form Mini-Quiz: [DÁN LINK FORM QUIZ]
+(Lưu ý: Tình huống diễn tập học tập Đề tài 08; xem ngập thật trên HSDC Maps / iHanoi)</textarea>
+    </article>
+  </main>
+
+  <script>
+    const tabs = document.querySelectorAll('.btn-tab');
+    const blocks = document.querySelectorAll('.asset-block');
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        tabs.forEach((t) => t.classList.remove('is-active'));
+        tab.classList.add('is-active');
+        const filter = tab.dataset.filter;
+        blocks.forEach((b) => {
+          b.hidden = filter !== 'all' && b.dataset.kind !== filter;
+        });
+      });
+    });
+
+    document.querySelectorAll('.js-copy-caption').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const txt = document.getElementById(btn.dataset.target)?.value || '';
+        const statusEl = document.getElementById(btn.dataset.status);
+        try {
+          await navigator.clipboard.writeText(txt);
+          if (statusEl) statusEl.textContent = 'Đã sao chép caption!';
+        } catch {
+          const area = document.createElement('textarea');
+          area.value = txt;
+          document.body.appendChild(area);
+          area.select();
+          document.execCommand('copy');
+          area.remove();
+          if (statusEl) statusEl.textContent = 'Đã sao chép caption!';
+        }
+        setTimeout(() => {
+          if (statusEl) statusEl.textContent = '';
+        }, 2600);
+      });
+    });
+  </script>
+</body>
+</html>
