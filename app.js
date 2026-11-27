@@ -581,7 +581,8 @@ function initApp() {
   const state = {
     center: saved?.center || structuredClone(HUMG_CENTER),
     radiusKm: Number(saved?.radiusKm) || PROJECT_CONFIG.defaultRadiusKm,
-    showRings: saved?.showRings !== undefined ? Boolean(saved.showRings) : true,
+    showRings: false,
+    isExpertMode: false,
     showFloodCorridors: saved?.showFloodCorridors !== undefined ? Boolean(saved.showFloodCorridors) : true,
     showRiskLayer: true,
     showSafeLayer: true,
@@ -680,8 +681,8 @@ function initApp() {
 
   const centerMarker = L.marker([state.center.lat, state.center.lng], {
     icon: centerIcon,
-    draggable: true,
-    title: 'Tâm vùng khảo sát (Kéo thả để dời vùng khoanh)'
+    draggable: false,
+    title: 'Trường Đại học Mỏ - Địa chất (18 Phố Viên)'
   }).addTo(map);
 
   const els = {
@@ -689,6 +690,9 @@ function initApp() {
     modeInspectBtn: document.getElementById('mode-inspect-btn'),
     modeMarkBtn: document.getElementById('mode-mark-btn'),
     modeNearestBtn: document.getElementById('mode-nearest-btn'),
+    btnSimpleReport: document.getElementById('btn-simple-report'),
+    btnToggleExpert: document.getElementById('btn-toggle-expert'),
+    rainPills: document.querySelectorAll('.rain-pill'),
     btnCenterMode: document.getElementById('btn-center-mode'),
     mobBtnInspect: document.getElementById('mob-btn-inspect'),
     mobBtnReport: document.getElementById('mob-btn-report'),
@@ -1123,7 +1127,7 @@ function initApp() {
     if (els.sbPaneAi) els.sbPaneAi.hidden = tabKey !== 'ai';
     if (document.body.classList.contains('is-sidebar-collapsed')) {
       document.body.classList.remove('is-sidebar-collapsed');
-      if (els.sidebarFabLabel) els.sidebarFabLabel.textContent = '◂ Mở rộng Bản đồ';
+      if (els.sidebarFabLabel) els.sidebarFabLabel.textContent = '◂ Thu gọn bảng';
       setTimeout(() => map.invalidateSize(), 210);
     }
   }
@@ -1135,9 +1139,32 @@ function initApp() {
   els.btnToggleSidebar?.addEventListener('click', () => {
     const collapsed = document.body.classList.toggle('is-sidebar-collapsed');
     if (els.sidebarFabLabel) {
-      els.sidebarFabLabel.textContent = collapsed ? '▸ Mở bảng điều khiển' : '◂ Mở rộng Bản đồ';
+      els.sidebarFabLabel.textContent = collapsed ? '▸ Mở bảng tìm kiếm' : '◂ Thu gọn bảng';
     }
     setTimeout(() => map.invalidateSize(), 220);
+  });
+
+  els.btnToggleExpert?.addEventListener('click', () => {
+    state.isExpertMode = !state.isExpertMode;
+    document.body.classList.toggle('is-expert-mode', state.isExpertMode);
+    els.btnToggleExpert.setAttribute('aria-pressed', String(state.isExpertMode));
+    const span = els.btnToggleExpert.querySelector('span');
+    if (span) span.textContent = state.isExpertMode ? 'Chuyên sâu: Bật' : 'Chuyên sâu';
+    state.showRings = state.isExpertMode;
+    if (els.toggleRings) els.toggleRings.checked = state.isExpertMode;
+    if (state.isExpertMode) centerMarker.dragging?.enable();
+    else centerMarker.dragging?.disable();
+    if (!state.isExpertMode && els.transectDrawer && !els.transectDrawer.hidden) {
+      els.transectDrawer.hidden = true;
+      transectLayerGroup.clearLayers();
+    }
+    recomputeAndRender(false);
+    setTimeout(() => map.invalidateSize(), 80);
+    showToast(
+      state.isExpertMode
+        ? 'Đã bật Chế độ Chuyên sâu (hiện cao độ DEM, ERA5, vòng bán kính & xuất dữ liệu GIS).'
+        : 'Đã chuyển về Chế độ Đơn giản cho người dân.'
+    );
   });
 
   document.addEventListener('click', (e) => {
@@ -1183,29 +1210,31 @@ function initApp() {
     }
     els.mapContainer.classList.toggle('cursor-crosshair', nextMode !== 'pan');
     if (nextMode === 'inspect') {
-      els.modeBannerText.textContent = 'Chạm vào bất kỳ ngõ, dãy trọ hay tuyến đường nào để đo cao độ DEM vệ tinh & chỉ số nguy cơ ngập (0–100)';
+      els.modeBannerText.textContent = 'Chạm vào bất kỳ ngõ hoặc nhà nào trên bản đồ để kiểm tra nguy cơ ngập';
       els.modeBanner.hidden = false;
     } else if (nextMode === 'mark') {
-      els.modeBannerText.textContent = 'Chạm vào đúng đoạn ngõ / đường trên bản đồ để mở phiếu báo điểm';
+      els.modeBannerText.textContent = 'Chạm vào đúng đoạn ngõ / đường trên bản đồ để báo điểm ngập hoặc nắng gắt';
       els.modeBanner.hidden = false;
     } else if (nextMode === 'nearest') {
-      els.modeBannerText.textContent = 'Chạm vào vị trí bạn đang đứng để tìm Bệnh viện / Trạm Y tế / Điểm tránh trú gần nhất';
+      els.modeBannerText.textContent = 'Chạm vào vị trí bạn đang đứng để tìm Bệnh viện / Điểm trú mưa gần nhất';
       els.modeBanner.hidden = false;
     } else if (nextMode === 'center') {
       els.modeBannerText.textContent = `Chạm lên bản đồ để dời tâm vùng khảo sát ${state.radiusKm} km`;
       els.modeBanner.hidden = false;
     } else if (nextMode === 'transect') {
       state.transectFirstPt = null;
-      els.modeBannerText.textContent = 'Bước 1/2: Chạm chọn Điểm đầu A trên bản đồ để đo mặt cắt địa hình DEM';
+      els.modeBannerText.textContent = 'Bước 1/2: Chạm chọn Điểm đầu A trên bản đồ để đo mặt cắt địa hình';
       els.modeBanner.hidden = false;
     } else {
       els.modeBanner.hidden = true;
     }
+    document.body.classList.toggle('has-mode-banner', !els.modeBanner.hidden);
   }
 
   els.modePanBtn.addEventListener('click', () => setMode('pan'));
   els.modeInspectBtn?.addEventListener('click', () => setMode(state.mode === 'inspect' ? 'pan' : 'inspect'));
   els.modeMarkBtn.addEventListener('click', () => setMode(state.mode === 'mark' ? 'pan' : 'mark'));
+  els.btnSimpleReport?.addEventListener('click', () => setMode(state.mode === 'mark' ? 'pan' : 'mark'));
   els.modeNearestBtn.addEventListener('click', () => setMode(state.mode === 'nearest' ? 'pan' : 'nearest'));
   els.btnCenterMode.addEventListener('click', () => setMode(state.mode === 'center' ? 'pan' : 'center'));
   els.modeBannerCancel.addEventListener('click', () => setMode('pan'));
@@ -1213,8 +1242,8 @@ function initApp() {
   // Mobile Bottom Bar triggers
   els.mobBtnInspect?.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    setMode('inspect');
-    showToast('Chạm vào ngõ hoặc nhà trọ bất kỳ trên bản đồ để chẩn đoán nguy cơ ngập.');
+    setMode('pan');
+    showToast('Chạm trực tiếp vào bất kỳ ngõ nào trên bản đồ để kiểm tra ngay.');
   });
   els.mobBtnReport.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1411,46 +1440,50 @@ function initApp() {
       fillOpacity: 1
     }).addTo(spotInspectGroup);
 
-    const diffStr =
+    const plainVerdict =
+      diag.score >= 70
+        ? 'Rất dễ ngập sâu khi mưa to'
+        : diag.score >= 45
+          ? 'Khá dễ đọng nước khi mưa lớn'
+          : diag.score >= 25
+            ? 'Ít ngập sâu — chỉ lưu ý đọng nước ngõ'
+            : 'Nền đất cao ráo, thoát nước tốt';
+
+    const plainTerrainNote =
       diag.diffVsHumgM !== null
-        ? diag.diffVsHumgM < 0
-          ? `thấp hơn Khu A ĐH Mỏ ${Math.abs(diag.diffVsHumgM)}m`
-          : diag.diffVsHumgM > 0
-            ? `cao hơn Khu A ĐH Mỏ +${diag.diffVsHumgM}m`
-            : 'ngang gò Khu A ĐH Mỏ'
-        : 'ngoài lưới DEM 2km';
+        ? diag.diffVsHumgM <= -2
+          ? `Khu đất trũng (thấp hơn cổng ĐH Mỏ khoảng ${Math.abs(diag.diffVsHumgM)}m)`
+          : diag.diffVsHumgM < 0
+            ? `Nền đất thấp hơn cổng ĐH Mỏ khoảng ${Math.abs(diag.diffVsHumgM)}m`
+            : 'Nền đất cao ráo tương đương gò ĐH Mỏ'
+        : 'Đang kiểm tra địa hình khu vực';
 
-    const corrText = diag.nearestCorridor
-      ? `Cách hành lang ngập <strong>${escapeHtml(diag.nearestCorridor.name)}</strong> <span class="mono-num">${diag.nearestCorridor.distanceMeters} m</span> (ngập khi mưa ≥<span class="mono-num">${diag.nearestCorridor.rainThresholdMm} mm</span>).`
-      : '';
+    const corrText =
+      diag.nearestCorridor && diag.nearestCorridor.distanceMeters <= 250
+        ? `Nằm gần tuyến hay ngập: <strong>${escapeHtml(diag.nearestCorridor.name)}</strong> (cách ${diag.nearestCorridor.distanceMeters}m).`
+        : '';
     const safeText = diag.nearestSafe
-      ? `Nơi trú/Y tế gần nhất: <strong>${escapeHtml(diag.nearestSafe.point.name)}</strong> (<span class="mono-num">${diag.nearestSafe.distanceMeters} m</span> · ~${diag.nearestSafe.walkingMinutes} phút đi bộ).`
+      ? `Nơi trú mưa &amp; Y tế gần nhất: <strong>${escapeHtml(diag.nearestSafe.point.name)}</strong> (đi bộ ~${diag.nearestSafe.walkingMinutes} phút · ${diag.nearestSafe.distanceMeters}m).`
       : '';
 
-    els.inspTitle.textContent = 'Chẩn đoán Thủy văn & Địa hình tại vị trí chấm';
+    els.inspTitle.textContent = 'Kiểm tra nhanh vị trí này';
     els.inspBody.innerHTML = `
-      <div id="insp-addr-line" style="font-size:0.75rem;color:#475569;margin-bottom:6px;">
-        Tọa độ <span class="mono-num">${diag.lat.toFixed(5)}, ${diag.lng.toFixed(5)}</span> (đang tra tên ngõ...)
+      <div id="insp-addr-line" style="font-size:0.78rem;color:#475569;margin-bottom:8px;">
+        Đang tìm tên ngõ / đường...
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 9px;border-radius:7px;background:#f8fafc;border:1px solid #e2e8f0;margin-bottom:7px;">
-        <span>Cao độ vệ tinh DEM: <strong class="mono-num" style="color:#0369a1;">${diag.dem !== null ? `~${diag.dem} m DSM` : 'Đang đo'}</strong></span>
-        <span style="font-size:0.71rem;color:#64748b;">(${escapeHtml(diffStr)})</span>
-      </div>
-      <div style="padding:8px 10px;border-radius:8px;background:${diag.bgHex};border:1px solid ${diag.colorHex}40;margin-bottom:7px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-          <strong style="font-size:0.74rem;color:${diag.colorHex};">${escapeHtml(diag.levelLabel)}</strong>
-          <strong class="mono-num" style="font-size:0.84rem;color:${diag.colorHex};">${diag.score}/100</strong>
-        </div>
-        <div style="height:6px;border-radius:999px;background:rgba(15,23,42,0.09);overflow:hidden;">
-          <div style="height:100%;width:${diag.score}%;background:${diag.colorHex};border-radius:999px;"></div>
+      <div style="padding:9px 11px;border-radius:9px;background:${diag.bgHex};border:1px solid ${diag.colorHex}40;margin-bottom:8px;">
+        <strong style="display:block;font-size:0.86rem;color:${diag.colorHex};margin-bottom:2px;">${escapeHtml(plainVerdict)}</strong>
+        <span style="font-size:0.75rem;color:#334155;">${escapeHtml(plainTerrainNote)}</span>
+        <div class="expert-only" style="margin-top:6px;padding-top:5px;border-top:1px dashed ${diag.colorHex}40;font-size:0.72rem;color:#475569;">
+          Copernicus DEM: <strong class="mono-num">${diag.dem !== null ? `~${diag.dem} m DSM` : '—'}</strong> · Chỉ số nhạy cảm thủy văn: <strong class="mono-num">${diag.score}/100</strong>
         </div>
       </div>
-      ${corrText ? `<p style="margin:0 0 5px;font-size:0.75rem;color:#334155;line-height:1.42;">• ${corrText}</p>` : ''}
-      ${safeText ? `<p style="margin:0 0 8px;font-size:0.75rem;color:#14532d;line-height:1.42;">• ${safeText}</p>` : ''}
-      <div style="display:flex;flex-wrap:wrap;gap:5px;">
-        ${diag.nearestSafe ? `<button type="button" class="btn btn-primary btn-compact js-insp-walk">Vẽ đường bộ tới nơi trú</button>` : ''}
-        <button type="button" class="btn btn-secondary btn-compact js-insp-ai">Hỏi AI Gemini vị trí này</button>
-        <button type="button" class="btn btn-secondary btn-compact js-insp-report">+ Báo điểm tại đây</button>
+      ${corrText ? `<p style="margin:0 0 5px;font-size:0.76rem;color:#334155;line-height:1.45;">• ${corrText}</p>` : ''}
+      ${safeText ? `<p style="margin:0 0 10px;font-size:0.76rem;color:#14532d;line-height:1.45;">• ${safeText}</p>` : ''}
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${diag.nearestSafe ? `<button type="button" class="btn btn-primary btn-compact js-insp-walk">Chỉ đường đi bộ tới nơi trú</button>` : ''}
+        <button type="button" class="btn btn-secondary btn-compact js-insp-report">+ Báo ngập / nắng tại đây</button>
+        <button type="button" class="btn btn-secondary btn-compact js-insp-ai">Hỏi AI</button>
       </div>
     `;
     els.spotInspectorCard.hidden = false;
@@ -1472,12 +1505,12 @@ function initApp() {
         .bindTooltip(`Lối đi bộ tới ${sp.name} (~${diag.nearestSafe.walkingMinutes} phút)`)
         .addTo(spotInspectGroup);
       map.fitBounds(walkLine.getBounds(), { padding: [70, 70], maxZoom: 17 });
-      showToast(`Đã vẽ đường đi bộ thực tế tới "${sp.name}"!`);
+      showToast(`Đã vẽ đường đi bộ tới "${sp.name}"!`);
     });
 
     els.inspBody.querySelector('.js-insp-ai')?.addEventListener('click', () => {
-      const addrLabel = state.lastInspectedSpot?.label || `tọa độ ${diag.lat.toFixed(5)}, ${diag.lng.toFixed(5)}`;
-      const q = `Tại ${addrLabel} (cao độ DEM ${diag.dem ?? '?'}m, chỉ số nhạy cảm ngập ${diag.score}/100), nếu mưa lớn 70–100mm thì nguy cơ thế nào và đi hướng nào tới nơi trú an toàn?`;
+      const addrLabel = state.lastInspectedSpot?.label || 'vị trí đang chọn';
+      const q = `Mưa to ở khu vực ${addrLabel} thì có dễ ngập không và đi hướng nào tới nơi trú an toàn?`;
       switchSidebarTab('ai');
       if (els.sbAiInput) els.sbAiInput.value = q;
       askInlineSidebarAi(q, {
@@ -1497,17 +1530,29 @@ function initApp() {
     });
 
     const streetName = await reverseGeocodeVN(lat, lng);
+    const addrEl = document.getElementById('insp-addr-line');
     if (streetName && state.lastInspectedSpot && Math.abs(state.lastInspectedSpot.lat - diag.lat) < 1e-5) {
       state.lastInspectedSpot.label = streetName;
-      const addrEl = document.getElementById('insp-addr-line');
       if (addrEl) {
-        addrEl.innerHTML = `<strong>${escapeHtml(streetName)}</strong> · <span class="mono-num">${diag.lat.toFixed(5)}, ${diag.lng.toFixed(5)}</span>`;
+        addrEl.innerHTML = `<strong>${escapeHtml(streetName)}</strong>`;
       }
+    } else if (addrEl) {
+      addrEl.textContent = 'Vị trí bạn vừa chạm trên bản đồ';
     }
   }
 
+  let isPopupOpen = false;
+  map.on('popupopen', () => {
+    isPopupOpen = true;
+  });
+  map.on('popupclose', () => {
+    setTimeout(() => {
+      isPopupOpen = false;
+    }, 120);
+  });
+
   map.on('click', (e) => {
-    if (state.mode === 'inspect') {
+    if (state.mode === 'inspect' || (state.mode === 'pan' && !isPopupOpen)) {
       inspectSpotAt(e.latlng.lat, e.latlng.lng);
     } else if (state.mode === 'mark') {
       openPointDialogForNew(e.latlng.lat, e.latlng.lng);
@@ -1730,7 +1775,9 @@ function initApp() {
     bufferLayerGroup.clearLayers();
     const bufferGeoLayer = L.geoJSON(state.analysis.bufferPolygon, {
       interactive: false,
-      style: { color: '#0F766E', weight: 2.5, opacity: 0.95, fillColor: '#0F766E', fillOpacity: 0.08 }
+      style: state.isExpertMode
+        ? { color: '#0F766E', weight: 2.5, opacity: 0.95, fillColor: '#0F766E', fillOpacity: 0.06 }
+        : { color: '#0F766E', weight: 1.2, opacity: 0.25, dashArray: '6 6', fill: false }
     }).addTo(bufferLayerGroup);
 
     ringsLayerGroup.clearLayers();
@@ -1902,7 +1949,7 @@ function initApp() {
         title: `[Hạng ${pt.confidenceTier}] ${pt.name}`
       }).addTo(targetGroup);
 
-      marker.bindTooltip(`[${pt.id}] ${pt.name}`, {
+      marker.bindTooltip(`${pt.name}`, {
         direction: 'top',
         offset: [0, -10]
       });
@@ -1911,31 +1958,31 @@ function initApp() {
       const demVal = pt.elevationM ?? sampleDemBilinear(pt.lat, pt.lng);
       const hazardHtml =
         pt.hazardFlags && pt.hazardFlags.length > 0
-          ? `<p class="popup-meta" style="color:#B91C1C;font-weight:600;">Cảnh báo: ${pt.hazardFlags.map((f) => escapeHtml(HAZARD_FLAGS_META[f] || f)).join(' · ')}</p>`
+          ? `<p class="popup-meta" style="color:#B91C1C;font-weight:600;">Lưu ý: ${pt.hazardFlags.map((f) => escapeHtml(HAZARD_FLAGS_META[f] || f)).join(' · ')}</p>`
           : '';
       const photoHtml =
         pt.photoDataUrl && pt.photoDataUrl.startsWith('data:image/')
-          ? `<img class="popup-photo" src="${pt.photoDataUrl}" alt="Ảnh hiện trường (đã xóa EXIF)">`
+          ? `<img class="popup-photo" src="${pt.photoDataUrl}" alt="Ảnh hiện trường">`
           : '';
 
       const popupEl = document.createElement('div');
       popupEl.className = 'popup-card';
       popupEl.innerHTML = `
-        <h3>[${escapeHtml(pt.id)}] ${escapeHtml(pt.name)}</h3>
+        <h3><span class="expert-only">[${escapeHtml(pt.id)}] </span>${escapeHtml(pt.name)}</h3>
         <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
-          <span class="tier-tag tier-${escapeHtml(pt.confidenceTier)}">Hạng ${escapeHtml(pt.confidenceTier)}</span>
+          <span class="tier-tag tier-${escapeHtml(pt.confidenceTier)} expert-only">Hạng ${escapeHtml(pt.confidenceTier)}</span>
           <span class="sev-badge ${pt.confidenceTier === 'C' ? 'sev-pending' : pt.layerGroup === 'safe' ? 'sev-safe' : `sev-${pt.severity}`}">
             ${escapeHtml(CATEGORY_LABELS[pt.category] || pt.category)}
           </span>
-          ${demVal !== null ? `<span class="dem-pill ${demVal <= 12 ? 'is-low' : ''}">DEM ~${demVal}m</span>` : ''}
+          ${demVal !== null ? `<span class="dem-pill ${demVal <= 12 ? 'is-low' : ''} expert-only">DEM ~${demVal}m</span>` : ''}
         </div>
         ${photoHtml}
-        ${pt.layerGroup === 'risk' ? `<p class="popup-meta"><strong>Mức ghi nhận:</strong> ${escapeHtml(pt.waterScaleLabel)}</p>` : ''}
+        ${pt.layerGroup === 'risk' ? `<p class="popup-meta"><strong>Tình trạng:</strong> ${escapeHtml(pt.waterScaleLabel)}</p>` : ''}
         ${hazardHtml}
-        <div class="popup-source-box">
-          <strong>Nguồn:</strong> ${escapeHtml(pt.sourceCitation || pt.sourceType)}
+        <p class="popup-meta" style="font-size:0.75rem;">Đã có <strong class="mono-num">${pt.confirmCount}</strong> người xác nhận · Cách ĐH Mỏ <span class="mono-num">${pt.distanceMeters} m</span></p>
+        <div class="popup-source-box expert-only">
+          <strong>Nguồn kiểm chứng:</strong> ${escapeHtml(pt.sourceCitation || pt.sourceType)}
           ${pt.observedDate ? `<br><strong>Mốc ghi nhận:</strong> ${escapeHtml(pt.observedDate)}` : ''}
-          <br><strong>Cộng đồng xác nhận:</strong> <span class="mono-num">${pt.confirmCount}</span> lượt · Cách ĐH Mỏ <span class="mono-num">${pt.distanceMeters} m</span>
         </div>
         ${pt.notes ? `<p class="popup-meta">${escapeHtml(pt.notes)}</p>` : ''}
         <div class="popup-actions">
@@ -1943,7 +1990,7 @@ function initApp() {
             ${hasVoted ? `Đã xác nhận (${pt.confirmCount})` : `+1 Tôi cũng gặp (${pt.confirmCount})`}
           </button>
           ${pt.layerGroup === 'risk' ? `<button type="button" class="btn btn-primary btn-compact js-find-shelter">Nơi trú gần đây</button>` : ''}
-          <button type="button" class="btn btn-secondary btn-compact js-share-pt" title="Sao chép đường link dẫn thẳng tới điểm này">Chép link</button>
+          <button type="button" class="btn btn-secondary btn-compact js-share-pt" title="Sao chép đường link dẫn thẳng tới điểm này">Chia sẻ</button>
         </div>
       `;
 
@@ -1955,7 +2002,7 @@ function initApp() {
       popupEl.querySelector('.js-share-pt').addEventListener('click', async () => {
         const shareUrl = `${window.location.origin}${window.location.pathname}?point=${encodeURIComponent(pt.id)}`;
         await navigator.clipboard?.writeText(shareUrl);
-        showToast(`Đã sao chép link điểm [${pt.id}] để gửi qua Zalo / Facebook!`);
+        showToast('Đã sao chép đường dẫn vị trí để gửi qua Zalo / Facebook!');
       });
 
       marker.bindPopup(popupEl, {
@@ -1979,26 +2026,28 @@ function initApp() {
           const hasVoted = Boolean(votedIds[pt.id]);
           const badgeClass = pt.confidenceTier === 'C' ? 'sev-pending' : pt.layerGroup === 'safe' ? 'sev-safe' : `sev-${pt.severity}`;
           const demVal = pt.elevationM ?? sampleDemBilinear(pt.lat, pt.lng);
-          const subLine =
+          const simpleSub =
             pt.layerGroup === 'risk' && pt.waterScaleLabel && pt.waterScale !== 'none'
-              ? `${pt.waterScaleLabel} · ${pt.sourceCitation || pt.sourceType}`
-              : pt.sourceCitation || pt.sourceType;
+              ? pt.waterScaleLabel
+              : pt.notes
+                ? pt.notes.slice(0, 90)
+                : pt.sourceCitation || pt.sourceType;
           return `<article class="pt-item-card ${pt.insideBuffer ? '' : 'is-outside'}">
             <div class="pt-card-top">
               <div class="pt-card-badges">
-                <span class="tier-tag tier-${escapeHtml(pt.confidenceTier)}">Hạng ${escapeHtml(pt.confidenceTier)}</span>
+                <span class="tier-tag tier-${escapeHtml(pt.confidenceTier)} expert-only">Hạng ${escapeHtml(pt.confidenceTier)}</span>
                 <span class="sev-badge ${badgeClass}">${escapeHtml(CATEGORY_LABELS[pt.category] || pt.category)}</span>
-                ${demVal !== null ? `<span class="dem-pill ${demVal <= 12 ? 'is-low' : ''}">DEM ${demVal}m</span>` : ''}
+                ${demVal !== null ? `<span class="dem-pill ${demVal <= 12 ? 'is-low' : ''} expert-only">DEM ${demVal}m</span>` : ''}
               </div>
               <span class="pt-card-dist">${pt.distanceMeters} m</span>
             </div>
-            <button type="button" class="pt-title-btn js-focus-pt" data-id="${escapeHtml(pt.id)}">[${escapeHtml(pt.id)}] ${escapeHtml(pt.name)}</button>
-            <span class="pt-meta-sub">${escapeHtml(subLine)}</span>
+            <button type="button" class="pt-title-btn js-focus-pt" data-id="${escapeHtml(pt.id)}"><span class="expert-only">[${escapeHtml(pt.id)}] </span>${escapeHtml(pt.name)}</button>
+            <span class="pt-meta-sub">${escapeHtml(simpleSub)}</span>
             <div class="pt-card-foot">
               <button type="button" class="btn btn-compact btn-upvote ${hasVoted ? 'is-voted' : ''} js-upvote-row" data-id="${escapeHtml(pt.id)}">
-                ${hasVoted ? `Đã xác nhận (${pt.confirmCount})` : `+1 Xác nhận (${pt.confirmCount})`}
+                ${hasVoted ? `Đã xác nhận (${pt.confirmCount})` : `+1 Tôi cũng gặp (${pt.confirmCount})`}
               </button>
-              <button type="button" class="btn btn-secondary btn-compact js-focus-pt" data-id="${escapeHtml(pt.id)}">Xem trên bản đồ →</button>
+              <button type="button" class="btn btn-secondary btn-compact js-focus-pt" data-id="${escapeHtml(pt.id)}">Xem bản đồ →</button>
             </div>
           </article>`;
         })
@@ -2395,6 +2444,7 @@ function initApp() {
       sessionStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), payload: data }));
       renderLiveWeather(data);
     } catch {
+      els.liveWeatherPill.textContent = '18 Phố Viên · Sẵn sàng';
       els.liveWeatherSummary.textContent =
         'Nền khí tượng ĐH Mỏ (ERA5 2026): 76 ngày nhiệt cảm nhận ≥40°C · Đỉnh mưa tháng 8/2026 đạt 624,8 mm.';
     }
@@ -2421,15 +2471,19 @@ function initApp() {
       uvMax: uv
     };
 
+    const roundedTemp = Math.round(Number(temp));
     if (rain >= 10 || dRain >= 40) {
       els.liveWeatherPill.className = 'live-pill live-pill-danger';
-      els.liveWeatherPill.textContent = 'Cảnh báo Mưa lớn tại P. Đông Ngạc';
+      els.liveWeatherPill.textContent = `${roundedTemp}°C · Cảnh báo mưa lớn`;
+    } else if (rain > 0.2) {
+      els.liveWeatherPill.className = 'live-pill live-pill-warn';
+      els.liveWeatherPill.textContent = `${roundedTemp}°C · Đang có mưa (${rain}mm)`;
     } else if (app >= 38 || dMax >= 39) {
       els.liveWeatherPill.className = 'live-pill live-pill-warn';
-      els.liveWeatherPill.textContent = 'Chú ý Bức xạ Nắng nóng';
+      els.liveWeatherPill.textContent = `${roundedTemp}°C · Trời nắng gắt`;
     } else {
       els.liveWeatherPill.className = 'live-pill live-pill-ok';
-      els.liveWeatherPill.textContent = 'Thời tiết 18 Phố Viên ổn định';
+      els.liveWeatherPill.textContent = `${roundedTemp}°C · Trời tạnh ráo`;
     }
 
     els.liveWeatherSummary.innerHTML = `Hiện tại: <strong class="mono-num">${temp}°C</strong> (cảm nhận <strong class="mono-num">${app}°C</strong>) · Độ ẩm <span class="mono-num">${hum}%</span> · Mưa hiện tại <strong class="mono-num">${rain} mm</strong>`;
@@ -3025,9 +3079,36 @@ function initApp() {
     els.rainSimVal.textContent = `${mm} mm (${tag})`;
   }
 
+  function syncRainPillsUI(mm) {
+    if (!els.rainPills?.length) return;
+    let closestBtn = null;
+    let bestDiff = Infinity;
+    els.rainPills.forEach((btn) => {
+      const val = Number(btn.dataset.rain) || 0;
+      const diff = Math.abs(val - mm);
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        closestBtn = btn;
+      }
+    });
+    els.rainPills.forEach((btn) => btn.classList.toggle('is-active', btn === closestBtn));
+  }
+
+  els.rainPills?.forEach((pill) => {
+    pill.addEventListener('click', () => {
+      const mm = Number(pill.dataset.rain) || 0;
+      state.simRainMm = mm;
+      if (els.rainSimRange) els.rainSimRange.value = String(mm);
+      updateRainLabel(mm);
+      syncRainPillsUI(mm);
+      renderFloodCorridorsAndBasins();
+    });
+  });
+
   els.rainSimRange?.addEventListener('input', () => {
     state.simRainMm = Number(els.rainSimRange.value) || 0;
     updateRainLabel(state.simRainMm);
+    syncRainPillsUI(state.simRainMm);
     renderFloodCorridorsAndBasins();
   });
 
@@ -3040,6 +3121,7 @@ function initApp() {
     else state.simRainMm = 70;
     if (els.rainSimRange) els.rainSimRange.value = String(state.simRainMm);
     updateRainLabel(state.simRainMm);
+    syncRainPillsUI(state.simRainMm);
 
     const scMeta = WEATHER_SCENARIOS[state.activeScenario] || WEATHER_SCENARIOS.normal;
     const ev = evaluateWeatherScenario(state.points, state.activeScenario);

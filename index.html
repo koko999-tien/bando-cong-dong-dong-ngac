@@ -17,104 +17,110 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <svg class="brand-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="9"></circle>
-        <circle cx="12" cy="12" r="4.5" stroke-dasharray="2.5 2"></circle>
-        <circle cx="12" cy="12" r="1.5" fill="currentColor"></circle>
-        <path d="M12 2v2M12 20v2M2 12h2M20 12h2"></path>
+      <svg class="brand-icon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"></path>
+        <circle cx="12" cy="10" r="2.5"></circle>
       </svg>
       <div>
         <div class="brand-title-row">
-          <h1 class="brand-title">Bản đồ Cộng đồng Đông Ngạc · ĐH Mỏ - Địa chất</h1>
+          <h1 class="brand-title">Bản đồ Ngập &amp; Nắng Đông Ngạc</h1>
+          <span id="live-weather-pill" class="live-pill live-pill-ok">Đang cập nhật thời tiết...</span>
         </div>
-        <p class="brand-subtitle">60 điểm xác thực · 625 điểm vệ tinh DEM 30m · Trợ lý AI Thực chứng Gemini</p>
+        <p class="brand-subtitle">Khu vực quanh Trường ĐH Mỏ - Địa chất · Chạm vào ngõ bất kỳ để kiểm tra ngay</p>
       </div>
     </div>
 
-    <div class="mode-toolbar" role="group" aria-label="Chế độ thao tác bản đồ">
-      <button type="button" id="mode-pan-btn" class="mode-btn is-active" aria-pressed="true" title="Rê bản đồ và bấm xem chi tiết từng điểm">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+    <div class="mode-toolbar expert-only" role="group" aria-label="Chế độ thao tác bản đồ chuyên sâu">
+      <button type="button" id="mode-pan-btn" class="mode-btn is-active" aria-pressed="true">
         <span>Khám phá</span>
       </button>
-      <button type="button" id="mode-inspect-btn" class="mode-btn mode-btn-inspect" aria-pressed="false" title="Chạm vào bất kỳ ngõ/nhà nào để đo cao độ DEM vệ tinh & chỉ số nguy cơ ngập">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path><circle cx="12" cy="12" r="6"></circle></svg>
-        <span>Chẩn đoán vị trí</span>
+      <button type="button" id="mode-inspect-btn" class="mode-btn mode-btn-inspect" aria-pressed="false">
+        <span>Đo cao độ</span>
       </button>
-      <button type="button" id="mode-mark-btn" class="mode-btn mode-btn-accent" aria-pressed="false" title="Đóng góp điểm ngập, cống hở, nắng gắt hoặc nơi trú mới">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"></path><path d="M12 7v6M9 10h6"></path></svg>
-        <span>+ Báo điểm</span>
+      <button type="button" id="mode-mark-btn" class="mode-btn mode-btn-accent" aria-pressed="false">
+        <span>+ Chấm điểm</span>
       </button>
-      <button type="button" id="mode-nearest-btn" class="mode-btn mode-btn-safe" aria-pressed="false" title="Tìm cơ sở y tế / điểm tránh trú có mái che gần nhất">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
+      <button type="button" id="mode-nearest-btn" class="mode-btn mode-btn-safe" aria-pressed="false">
         <span>Tìm nơi trú</span>
       </button>
     </div>
 
-    <nav class="action-toolbar" aria-label="Công cụ chính và danh mục trang">
-      <button type="button" id="btn-open-route" class="btn btn-secondary" command="show-modal" commandfor="route-dialog" title="Kiểm tra lộ trình đường bộ thực tế OSRM tránh vùng ngập">
+    <nav class="action-toolbar" aria-label="Công cụ chính">
+      <button type="button" id="btn-open-route" class="btn btn-secondary" command="show-modal" commandfor="route-dialog">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="6" cy="19" r="3"></circle><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"></path><circle cx="18" cy="5" r="3"></circle></svg>
-        <span>Định tuyến Né ngập</span>
+        <span>Tìm đường né ngập</span>
       </button>
-      <button type="button" id="btn-open-drill" class="btn btn-alert" command="show-modal" commandfor="drill-dialog">
-        <span>Diễn tập &amp; Quiz</span>
+      <button type="button" id="btn-simple-report" class="btn btn-primary" style="background:var(--color-accent);border-color:var(--color-accent);">
+        <span>+ Báo điểm ngập / nắng</span>
       </button>
-      <a href="./khao-sat.html" class="btn btn-primary" title="Làm Phiếu Khảo sát Đầu vào (15 câu) & Đầu ra (6 câu)">
-        <span>Khảo sát Pre/Post</span>
-      </a>
+      <button type="button" id="btn-toggle-expert" class="btn btn-secondary btn-expert-toggle" aria-pressed="false" title="Bật/tắt các công cụ phân tích GIS chuyên sâu (DEM, ERA5, KML, Hạng tin cậy)">
+        <span>Chuyên sâu</span>
+      </button>
 
       <details class="nav-dropdown" id="top-more-menu">
-        <summary class="btn btn-secondary" aria-label="Mở danh mục tài liệu, dữ liệu mở và quản trị">
-          <span>Tài liệu &amp; Quản trị</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+        <summary class="btn btn-secondary" aria-label="Mở thêm tính năng và tài liệu">
+          <span>Menu ☰</span>
         </summary>
         <div class="nav-dropdown-menu">
-          <button type="button" id="btn-open-notebook" command="show-modal" commandfor="notebook-dialog">
-            <span>Kho Notebook &amp; Xuất .MD</span>
-            <span class="mono-num" style="font-size:0.7rem;color:#0f766e;">AI</span>
+          <button type="button" id="btn-open-drill" command="show-modal" commandfor="drill-dialog">
+            <span>Trắc nghiệm tình huống (5 câu)</span>
           </button>
-          <a href="./du-lieu-mo.html"><span>Biểu đồ ERA5, DEM &amp; Số liệu Mở</span></a>
-          <a href="./cam-nang-1-cham.html"><span>Cẩm nang Ứng phó 1 Chạm (PDF)</span></a>
-          <a href="./infographics-va-ban-tin.html"><span>03 Infographic &amp; Bản tin mẫu</span></a>
-          <a href="./thuyet-trinh.html"><span>10 Slide Bảo vệ &amp; Video 45s</span></a>
-          <a href="./phieu-thuc-dia.html"><span>Phiếu Khảo sát Thực địa A4</span></a>
+          <a href="./khao-sat.html"><span>Phiếu khảo sát nhanh (2 phút)</span></a>
+          <a href="./cam-nang-1-cham.html"><span>Cẩm nang ứng phó mưa &amp; nắng</span></a>
           <div class="menu-divider"></div>
-          <button type="button" id="btn-open-sync" command="show-modal" commandfor="sync-dialog"><span>Đồng bộ Cloud &amp; Tạo Mã QR</span></button>
-          <a href="./admin.html" style="font-weight:700;color:#0f766e;"><span>Trung tâm Quản trị Duyệt điểm →</span></a>
+          <button type="button" id="btn-open-notebook" command="show-modal" commandfor="notebook-dialog">
+            <span>Kho tri thức &amp; NotebookLM</span>
+          </button>
+          <a href="./du-lieu-mo.html"><span>Biểu đồ khí hậu &amp; Số liệu mở</span></a>
+          <a href="./infographics-va-ban-tin.html"><span>Infographic &amp; Bản tin mẫu</span></a>
+          <a href="./thuyet-trinh.html"><span>Slide báo cáo &amp; Video Đề tài 08</span></a>
+          <a href="./phieu-thuc-dia.html"><span>Phiếu khảo sát thực địa A4</span></a>
+          <div class="menu-divider"></div>
+          <button type="button" id="btn-open-sync" command="show-modal" commandfor="sync-dialog"><span>Tạo mã QR chia sẻ &amp; Cloud</span></button>
+          <a href="./admin.html" style="font-weight:700;color:#0f766e;"><span>Dành cho Quản trị viên →</span></a>
         </div>
       </details>
     </nav>
   </header>
 
-  <!-- Dải Khí tượng Trực tiếp (Open-Meteo Live API tại 18 Phố Viên) & Trạng thái Mạng PWA -->
-  <div id="live-telemetry-bar" class="live-telemetry-bar" role="region" aria-label="Thời tiết trực tiếp tại ĐH Mỏ - Địa chất">
+  <!-- Dải Khí tượng Chi tiết (chỉ hiện khi bật Chế độ Chuyên sâu để không làm rối người dân) -->
+  <div id="live-telemetry-bar" class="live-telemetry-bar expert-only" role="region" aria-label="Thời tiết chi tiết tại ĐH Mỏ - Địa chất">
     <div class="live-weather-items">
-      <span id="live-weather-pill" class="live-pill live-pill-ok">Trực tiếp tại 18 Phố Viên</span>
-      <span id="live-weather-summary">Đang tải số liệu thời tiết thực tế từ trạm lưới Open-Meteo...</span>
+      <span id="live-weather-summary">Đang tải số liệu thời tiết thực tế...</span>
       <span id="live-forecast-24h" style="color:#cbd5e1;"></span>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <span id="net-status-badge" class="net-badge">PWA Sẵn sàng</span>
+      <span id="net-status-badge" class="net-badge">Trực tuyến</span>
     </div>
   </div>
 
-  <!-- Dải Bản tin Điều hành Trực tiếp (Đồng bộ thời gian thực từ Trung tâm Quản trị admin.html) -->
+  <!-- Dải Bản tin Cảnh báo Khẩn cấp từ Phường / Quản trị viên -->
   <div id="admin-broadcast-banner" class="admin-broadcast-banner bc-yellow" hidden role="status" aria-live="polite">
     <span id="admin-broadcast-text"></span>
-    <button type="button" id="btn-dismiss-broadcast" class="btn-link" style="color:inherit;">Ẩn thông báo</button>
+    <button type="button" id="btn-dismiss-broadcast" class="btn-link" style="color:inherit;">Đóng</button>
   </div>
 
   <div class="workspace">
-    <aside class="sidebar" aria-label="Bảng điều khiển khảo sát cộng đồng và dữ liệu thực tế">
-      <!-- Đầu bảng cố định: Tìm kiếm nhanh + 3 Chỉ số chính + Thanh 3 Phân hệ -->
+    <aside class="sidebar" aria-label="Bảng tìm kiếm và bộ lọc đơn giản">
       <div class="sidebar-top-fixed">
         <form id="search-location-form" class="search-box" autocomplete="off">
           <label for="location-query" class="visually-hidden">Tìm ngõ, đường phố quanh Đông Ngạc – Cổ Nhuế</label>
-          <input type="search" id="location-query" placeholder="Tìm nhanh ngõ, phố (VD: Ngõ 43 Cổ Nhuế, Phố Viên)...">
+          <input type="search" id="location-query" placeholder="Tìm tên ngõ, đường, xóm trọ...">
           <button type="submit" class="btn btn-primary btn-compact">Tìm</button>
         </form>
         <ul id="search-results" class="search-results" hidden aria-label="Kết quả tìm kiếm địa điểm"></ul>
 
-        <div class="stats-strip" aria-label="Thống kê dữ liệu thực tế và cộng đồng">
+        <div class="quick-assist-row">
+          <button type="button" id="btn-quick-shelter" class="btn btn-compact btn-soft-safe">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
+            <span>Nơi trú &amp; Y tế gần tôi</span>
+          </button>
+          <button type="button" id="btn-geolocate" class="btn btn-secondary btn-compact">
+            <span>Vị trí của tôi</span>
+          </button>
+        </div>
+
+        <div class="stats-strip expert-only" aria-label="Thống kê dữ liệu nghiên cứu">
           <div class="stat-cell stat-risk-cell">
             <span class="stat-label">Điểm rủi ro (<span id="stat-radius-label">2</span>km)</span>
             <strong id="stat-risk-inside" class="stat-value stat-severe mono-num">0</strong>
@@ -132,44 +138,54 @@
           </div>
         </div>
 
-        <div class="sidebar-tabs" role="tablist" aria-label="Chuyển phân hệ bảng điều khiển">
-          <button type="button" class="sb-tab-btn is-active" data-sbtab="explore" role="tab" aria-selected="true">1. Mô phỏng &amp; Lớp</button>
-          <button type="button" class="sb-tab-btn" data-sbtab="list" role="tab" aria-selected="false">2. Điểm (<span id="shown-count" class="mono-num">0</span>)</button>
-          <button type="button" class="sb-tab-btn" data-sbtab="ai" role="tab" aria-selected="false">3. Hỏi AI &amp; Cứu hộ</button>
+        <div class="sidebar-tabs" role="tablist" aria-label="Chuyển mục">
+          <button type="button" class="sb-tab-btn is-active" data-sbtab="explore" role="tab" aria-selected="true">Bản đồ</button>
+          <button type="button" class="sb-tab-btn" data-sbtab="ai" role="tab" aria-selected="false">Hỏi AI</button>
+          <button type="button" class="sb-tab-btn" data-sbtab="list" role="tab" aria-selected="false">Danh sách (<span id="shown-count" class="mono-num">0</span>)</button>
         </div>
       </div>
 
-      <!-- ================= PHÂN HỆ 1: MÔ PHỎNG MƯA NGẬP & LỚP BẢN ĐỒ ================= -->
+      <!-- ================= MỤC 1: BẢN ĐỒ ĐƠN GIẢN CHO NGƯỜI DÂN ================= -->
       <div id="sb-pane-explore" class="sidebar-pane">
         <section class="sb-card">
           <div class="section-head">
-            <h2>Lọc nhanh trên Bản đồ</h2>
-            <button type="button" id="btn-quick-shelter" class="btn-link">Nơi trú gần tôi</button>
+            <h2>Bạn muốn xem điểm nào?</h2>
           </div>
-          <div class="quick-cat-pills" role="group" aria-label="Lọc nhanh theo loại hiện tượng">
+          <div class="quick-cat-pills" role="group" aria-label="Lọc nhanh theo nhu cầu">
             <button type="button" class="qcat-pill is-active" data-qcat="all">Tất cả</button>
-            <button type="button" class="qcat-pill" data-qcat="flood">Chỉ Ngập &amp; Cống</button>
-            <button type="button" class="qcat-pill" data-qcat="heat">Nắng &amp; Trạm buýt</button>
-            <button type="button" class="qcat-pill" data-qcat="safe">Y tế &amp; Tránh trú</button>
+            <button type="button" class="qcat-pill" data-qcat="flood">Chỗ hay ngập</button>
+            <button type="button" class="qcat-pill" data-qcat="heat">Đoạn nắng gắt</button>
+            <button type="button" class="qcat-pill" data-qcat="safe">Y tế &amp; Nơi trú</button>
           </div>
         </section>
 
         <section class="sb-card">
           <div class="section-head">
-            <h2>Mô phỏng Ngập Thủy văn &amp; Lớp hiển thị</h2>
-            <button type="button" id="btn-open-climate" class="btn-link" command="show-modal" commandfor="climate-dialog">Số liệu ERA5</button>
+            <h2>Xem vùng ngập theo mức mưa</h2>
+            <button type="button" id="btn-open-climate" class="btn-link expert-only" command="show-modal" commandfor="climate-dialog">Bảng ERA5</button>
           </div>
 
-          <div class="scenario-box">
-            <label for="scenario-select" style="display:block;font-size:0.75rem;font-weight:700;margin-bottom:4px;color:#0c4a6e;">Chọn kịch bản thời tiết cực đoan:</label>
-            <select id="scenario-select" aria-label="Chọn kịch bản thời tiết cực đoan để lọc phân tầng rủi ro"></select>
+          <div class="rain-preset-pills" role="group" aria-label="Chọn nhanh mức mưa">
+            <button type="button" class="rain-pill" data-rain="0">Tạnh ráo</button>
+            <button type="button" class="rain-pill" data-rain="35">Mưa vừa</button>
+            <button type="button" class="rain-pill is-active" data-rain="70">Mưa to</button>
+            <button type="button" class="rain-pill" data-rain="120">Mưa rất to</button>
+          </div>
+          <p style="margin:8px 0 0;font-size:0.75rem;color:var(--color-muted);line-height:1.45;">
+            Vùng tô màu xanh trên bản đồ là các khu đất trũng dễ đọng nước khi mưa lớn.
+          </p>
+
+          <!-- Điều khiển chi tiết dành riêng cho Chế độ Chuyên sâu -->
+          <div class="scenario-box expert-only" style="margin-top:12px;">
+            <label for="scenario-select" style="display:block;font-size:0.75rem;font-weight:700;margin-bottom:4px;color:#0c4a6e;">Kịch bản phân tích chuyên sâu:</label>
+            <select id="scenario-select" aria-label="Chọn kịch bản thời tiết cực đoan"></select>
 
             <div style="margin-top:9px;padding-top:8px;border-top:1px dashed #7dd3fc;">
               <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.76rem;margin-bottom:3px;">
-                <label for="rain-sim-range" style="font-weight:700;color:#0369a1;">Kéo thử lượng mưa:</label>
+                <label for="rain-sim-range" style="font-weight:700;color:#0369a1;">Tùy chỉnh lượng mưa (mm):</label>
                 <strong id="rain-sim-val" class="mono-num" style="color:#0369a1;">70 mm (Mưa to)</strong>
               </div>
-              <input type="range" id="rain-sim-range" min="0" max="140" step="5" value="70" style="width:100%;accent-color:#0284c7;" aria-label="Kéo để xem vùng ngập mở rộng theo lượng mưa từ 0 đến 140 mm">
+              <input type="range" id="rain-sim-range" min="0" max="140" step="5" value="70" style="width:100%;accent-color:#0284c7;" aria-label="Thanh trượt lượng mưa 0 đến 140 mm">
               <div class="rain-scale-legend">
                 <span><i class="rain-swatch" style="background:#38bdf8;"></i>Đọng mặt ngõ</span>
                 <span><i class="rain-swatch" style="background:#0284c7;"></i>Nửa bánh xe</span>
@@ -179,71 +195,70 @@
             <div id="scenario-summary-note" class="scenario-note" hidden></div>
           </div>
 
-          <div class="layer-cards">
+          <div class="layer-cards expert-only" style="margin-top:10px;">
             <label class="layer-toggle-card layer-card-risk">
               <input type="checkbox" id="toggle-layer-risk" checked>
               <span class="layer-card-body">
-                <span class="layer-card-title">Điểm Rủi ro Ngập &amp; Nắng (Hạng A/B)</span>
-                <span class="layer-card-desc">Báo chí, Cty Thoát nước HN, OSM &amp; DEM</span>
+                <span class="layer-card-title">Lớp Rủi ro Xác thực (Hạng A/B)</span>
+                <span class="layer-card-desc">Báo chí, Cty Thoát nước HN &amp; OSM</span>
               </span>
               <strong id="count-layer-risk" class="layer-count mono-num">0</strong>
             </label>
             <label class="layer-toggle-card layer-card-safe">
               <input type="checkbox" id="toggle-layer-safe" checked>
               <span class="layer-card-body">
-                <span class="layer-card-title">Điểm Y tế, Nhà thuốc &amp; Tránh trú (Hạng A)</span>
-                <span class="layer-card-desc">Bệnh viện, Trạm Y tế, Hội trường sơ tán</span>
+                <span class="layer-card-title">Lớp Y tế &amp; Tránh trú (Hạng A)</span>
+                <span class="layer-card-desc">Bệnh viện, Trạm Y tế, Hội trường</span>
               </span>
               <strong id="count-layer-safe" class="layer-count mono-num">0</strong>
             </label>
             <label class="layer-toggle-card layer-card-pending">
               <input type="checkbox" id="toggle-layer-pending" checked>
               <span class="layer-card-body">
-                <span class="layer-card-title">Cộng đồng mới báo (Hạng C)</span>
-                <span class="layer-card-desc">Tự lên Hạng B khi đủ ≥3 người xác nhận</span>
+                <span class="layer-card-title">Lớp Cộng đồng mới báo (Hạng C)</span>
+                <span class="layer-card-desc">Tự lên Hạng B khi đủ ≥3 xác nhận</span>
               </span>
               <strong id="count-layer-pending" class="layer-count mono-num">0</strong>
             </label>
           </div>
 
-          <div style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">
+          <div class="expert-only" style="margin-top:10px;display:flex;flex-direction:column;gap:6px;">
             <label class="checkbox-inline">
               <input type="checkbox" id="toggle-flood-corridors" checked>
-              <span>Hiện <strong>Lớp loang nước vệ tinh DEM &amp; 18 tuyến ngõ ngập</strong></span>
+              <span>Hiện lớp nước loang địa hình &amp; 18 tuyến ngõ ngập</span>
             </label>
             <label class="checkbox-inline">
               <input type="checkbox" id="toggle-smart-cluster" checked>
-              <span>Gom cụm thông minh khi thu nhỏ bản đồ (đỡ rối mắt)</span>
+              <span>Gom cụm điểm khi thu nhỏ bản đồ</span>
             </label>
             <label class="checkbox-inline">
-              <input type="checkbox" id="toggle-rings" checked>
+              <input type="checkbox" id="toggle-rings">
               <span>Hiện vòng bán kính 500m &amp; lộ trình nền cao</span>
             </label>
             <label class="checkbox-inline">
               <input type="checkbox" id="toggle-heatmap">
-              <span>Hiện bản đồ nhiệt mật độ rủi ro (Heatmap)</span>
+              <span>Hiện bản đồ nhiệt mật độ (Heatmap)</span>
             </label>
           </div>
         </section>
 
         <section class="sb-card">
           <div class="section-head">
-            <h2>Nhảy nhanh tới Khu dân cư</h2>
-            <button type="button" id="btn-geolocate" class="btn-link">Vị trí GPS của tôi</button>
+            <h2>Xem nhanh các khu dân cư</h2>
           </div>
           <div class="preset-row" aria-label="Các cụm dân cư quanh trường">
-            <button type="button" class="chip-btn is-selected" data-lat="21.072514" data-lng="105.773870" data-label="ĐH Mỏ - Địa chất (18 Phố Viên)">18 Phố Viên</button>
+            <button type="button" class="chip-btn is-selected" data-lat="21.072514" data-lng="105.773870" data-label="ĐH Mỏ - Địa chất (18 Phố Viên)">ĐH Mỏ - Phố Viên</button>
             <button type="button" class="chip-btn" data-lat="21.068090" data-lng="105.772610" data-label="Ngõ 199 - Cuối Phố Viên">Cuối Phố Viên</button>
-            <button type="button" class="chip-btn" data-lat="21.069050" data-lng="105.761224" data-label="Khu B ĐH Mỏ - Địa chất">Khu B ĐH Mỏ</button>
             <button type="button" class="chip-btn" data-lat="21.061634" data-lng="105.772358" data-label="Cầu Noi - Phú Minh">Cầu Noi</button>
             <button type="button" class="chip-btn" data-lat="21.058954" data-lng="105.780221" data-label="Ngõ 43 - Chợ Cổ Nhuế">Ngõ 43 Cổ Nhuế</button>
             <button type="button" class="chip-btn" data-lat="21.073800" data-lng="105.785800" data-label="KĐT Resco - Phạm Văn Đồng">KĐT Resco</button>
             <button type="button" class="chip-btn" data-lat="21.084909" data-lng="105.784291" data-label="Cụm Ecohome 1-3">Ecohome</button>
+            <button type="button" class="chip-btn" data-lat="21.069050" data-lng="105.761224" data-label="Khu B ĐH Mỏ - Địa chất">Khu B ĐH Mỏ</button>
             <button type="button" class="chip-btn" data-lat="21.065654" data-lng="105.791273" data-label="KĐT Ngoại Giao Đoàn">Ngoại Giao Đoàn</button>
           </div>
 
-          <details style="margin-top:6px;">
-            <summary style="cursor:pointer;font-size:0.76rem;font-weight:600;color:var(--color-muted);">Tùy chỉnh Bán kính khoanh vùng &amp; Hệ tọa độ UTM 48N</summary>
+          <details class="expert-only" style="margin-top:8px;">
+            <summary style="cursor:pointer;font-size:0.76rem;font-weight:600;color:var(--color-muted);">Bán kính khoanh vùng &amp; Tọa độ UTM 48N</summary>
             <div class="radius-control">
               <div class="radius-label-row">
                 <label for="radius-number">Bán kính vùng khảo sát (km)</label>
@@ -278,20 +293,19 @@
         </section>
 
         <section class="era5-mini-box">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
-            <strong>Mẹo sử dụng nhanh (15 giây):</strong>
-            <button type="button" id="btn-open-privacy" class="btn-link" command="show-modal" commandfor="privacy-dialog">Quyền riêng tư</button>
+          <strong>Mẹo nhanh:</strong> Bạn chỉ cần <strong>chạm trực tiếp vào bất kỳ con ngõ hoặc dãy trọ nào trên bản đồ</strong> để xem ngay chỗ đó cao hay trũng, mưa to có dễ ngập không và lối đi bộ tới nơi trú gần nhất.
+          <div style="margin-top:5px;">
+            <button type="button" id="btn-open-privacy" class="btn-link" command="show-modal" commandfor="privacy-dialog">Cam kết ẩn danh &amp; quyền riêng tư</button>
           </div>
-          Bấm nút <strong>“Chẩn đoán vị trí”</strong> trên thanh đầu trang rồi chạm vào bất kỳ ngõ/dãy trọ nào để xem ngay cao độ vệ tinh DEM, điểm nguy cơ ngập 0–100 và đường đi bộ tới nơi trú gần nhất!
         </section>
       </div>
 
-      <!-- ================= PHÂN HỆ 2: DANH SÁCH THẺ ĐIỂM HIỆN ĐẠI & XUẤT DỮ LIỆU ================= -->
+      <!-- ================= MỤC 2: DANH SÁCH ĐỊA ĐIỂM DỄ TRA CỨU ================= -->
       <div id="sb-pane-list" class="sidebar-pane" hidden>
         <section class="sb-card">
           <div class="section-head">
-            <h2>Bộ lọc &amp; Xuất Dữ liệu Mở</h2>
-            <div class="inline-actions">
+            <h2>Tìm trong danh sách</h2>
+            <div class="inline-actions expert-only">
               <button type="button" id="btn-import" class="btn-link" command="show-modal" commandfor="import-dialog">Nhập tệp</button>
               <span class="sep">·</span>
               <button type="button" id="btn-load-sample" class="btn-link">Khôi phục gốc</button>
@@ -299,86 +313,85 @@
           </div>
 
           <div class="filter-bar">
-            <select id="filter-layer" aria-label="Lọc theo lớp dữ liệu">
+            <select id="filter-layer" class="expert-only" aria-label="Lọc theo lớp dữ liệu">
               <option value="all">Tất cả các lớp (A, B, C)</option>
               <option value="risk">Chỉ Điểm Rủi ro (Ngập / Nắng)</option>
               <option value="safe">Chỉ Điểm An toàn &amp; Y tế</option>
               <option value="tierC">Chỉ Điểm Cộng đồng mới báo (Hạng C)</option>
             </select>
-            <select id="filter-scope" aria-label="Lọc theo phạm vi vùng khoanh">
+            <select id="filter-scope" class="expert-only" aria-label="Lọc theo phạm vi vùng khoanh">
               <option value="all">Mọi khoảng cách</option>
               <option value="inside">Trong vùng 2km</option>
               <option value="outside">Ngoài vùng 2km</option>
             </select>
-            <input type="search" id="filter-search" placeholder="Lọc theo tên ngõ, nguồn báo chí, mã R-xx..." aria-label="Tìm kiếm điểm trong danh sách">
+            <input type="search" id="filter-search" placeholder="Gõ tên ngõ, đường để lọc nhanh..." aria-label="Tìm kiếm điểm trong danh sách">
           </div>
 
-          <label class="checkbox-inline export-scope-toggle">
+          <label class="checkbox-inline export-scope-toggle expert-only">
             <input type="checkbox" id="export-only-inside" checked>
             <span>Chỉ xuất các điểm nằm trong bán kính khoanh vùng</span>
           </label>
 
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
+          <div class="expert-only" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">
             <button type="button" id="btn-export-kml" class="btn btn-secondary btn-compact">Xuất .KML</button>
             <button type="button" id="btn-export-csv" class="btn btn-secondary btn-compact">Xuất .CSV</button>
             <button type="button" id="btn-export-geojson" class="btn btn-secondary btn-compact">GeoJSON</button>
           </div>
         </section>
 
-        <div id="flood-cards-list" class="point-cards-list" role="region" aria-label="Danh sách thẻ điểm rủi ro và an toàn"></div>
+        <div id="flood-cards-list" class="point-cards-list" role="region" aria-label="Danh sách địa điểm"></div>
         <table id="flood-table" hidden><tbody id="flood-tbody"></tbody></table>
         <div id="empty-state" class="empty-state" hidden>
-          <p class="empty-title">Chưa có điểm nào khớp bộ lọc</p>
-          <p class="empty-desc">Hãy đổi bộ lọc hoặc bấm <strong>+ Báo điểm</strong> để đóng góp vị trí mới.</p>
+          <p class="empty-title">Chưa có địa điểm nào khớp từ khóa</p>
+          <p class="empty-desc">Hãy thử gõ từ khóa ngắn hơn hoặc bấm <strong>+ Báo điểm ngập / nắng</strong> để đóng góp vị trí mới.</p>
         </div>
       </div>
 
-      <!-- ================= PHÂN HỆ 3: TRỢ LÝ AI GEMINI TRỰC TIẾP CẠNH BẢN ĐỒ & DANH BẠ KHẨN CẤP ================= -->
+      <!-- ================= MỤC 3: HỎI TRỢ LÝ AI & GỌI CỨU HỘ 1 CHẠM ================= -->
       <div id="sb-pane-ai" class="sidebar-pane" hidden>
         <section class="sb-card inline-ai-chat-box">
           <div class="section-head" style="margin-bottom:2px;">
-            <h2>Hỏi Trợ lý AI Thực chứng (Gemini)</h2>
-            <span class="dem-pill is-low">60 điểm + DEM</span>
+            <h2>Hỏi đường đi &amp; cách xử lý an toàn</h2>
           </div>
-          <p style="margin:0;font-size:0.75rem;color:var(--color-muted);">
-            Hỏi trực tiếp vừa đọc tư vấn vừa đối chiếu trên bản đồ bên phải (tự động trích dẫn mã điểm để bay tới ngay):
+          <p style="margin:0;font-size:0.76rem;color:var(--color-muted);">
+            Đặt câu hỏi tự nhiên, Trợ lý AI sẽ chỉ rõ ngõ cần tránh và điểm trú gần nhất ngay bên cạnh bản đồ:
           </p>
           <div class="search-box" style="margin-bottom:2px;">
-            <input type="search" id="sb-ai-input" placeholder="VD: Mưa 80mm ở Ngõ 43 Cổ Nhuế đi đường nào an toàn?">
-            <button type="button" id="btn-sb-ai-send" class="btn btn-primary btn-compact">Hỏi AI</button>
+            <input type="search" id="sb-ai-input" placeholder="VD: Mưa to ở Ngõ 43 Cổ Nhuế đi lối nào an toàn?">
+            <button type="button" id="btn-sb-ai-send" class="btn btn-primary btn-compact">Hỏi</button>
           </div>
           <div class="inline-ai-prompt-chips">
-            <button type="button" class="chip-btn js-sb-ai-chip" data-q="Mưa to lúc tan học 17h từ ĐH Mỏ về Cầu Noi và Phú Minh tránh đoạn nào?">Từ ĐH Mỏ → Cầu Noi</button>
-            <button type="button" class="chip-btn js-sb-ai-chip" data-q="Các ngõ xóm trọ Cổ Nhuế và Phố Viên nào ngập sâu nhất, cách xử lý điện an toàn?">Ngõ trọ ngập sâu</button>
-            <button type="button" class="chip-btn js-sb-ai-chip" data-q="Say nắng ở trạm buýt Phạm Văn Đồng sơ cứu 3 phút thế nào và cơ sở y tế nào gần nhất?">Sơ cứu sốc nhiệt</button>
+            <button type="button" class="chip-btn js-sb-ai-chip" data-q="Mưa to lúc tan học 17h từ ĐH Mỏ về Cầu Noi và Phú Minh tránh đoạn nào?">Từ ĐH Mỏ về Cầu Noi</button>
+            <button type="button" class="chip-btn js-sb-ai-chip" data-q="Các ngõ xóm trọ Cổ Nhuế và Phố Viên nào ngập sâu nhất, cách xử lý điện an toàn?">Ngõ trọ hay ngập sâu</button>
+            <button type="button" class="chip-btn js-sb-ai-chip" data-q="Say nắng ở trạm buýt Phạm Văn Đồng sơ cứu 3 phút thế nào và cơ sở y tế nào gần nhất?">Cách sơ cứu say nắng</button>
           </div>
           <div id="sb-ai-output" class="inline-ai-answer" hidden></div>
         </section>
 
         <section class="sb-card">
           <div class="section-head">
-            <h2>Danh bạ Gọi Khẩn cấp Phường Đông Ngạc</h2>
+            <h2>Số điện thoại hỗ trợ khẩn cấp</h2>
           </div>
           <div id="sb-emergency-cards" style="display:flex;flex-direction:column;gap:7px;"></div>
         </section>
       </div>
     </aside>
 
-    <!-- Không gian Bản đồ Sắc nét -->
-    <main class="map-stage" aria-label="Bản đồ khảo sát cộng đồng phường Đông Ngạc">
-      <button type="button" id="btn-toggle-sidebar" class="sidebar-collapse-fab" title="Thu gọn hoặc mở rộng bảng bên trái để xem bản đồ toàn màn hình">
-        <span id="sidebar-fab-label">◂ Mở rộng Bản đồ</span>
+    <!-- Không gian Bản đồ Rộng, Thoáng, Chạm đâu xem đó -->
+    <main class="map-stage" aria-label="Bản đồ khu vực phường Đông Ngạc">
+      <button type="button" id="btn-toggle-sidebar" class="sidebar-collapse-fab" title="Ẩn hoặc hiện bảng bên trái">
+        <span id="sidebar-fab-label">◂ Thu gọn bảng</span>
       </button>
 
       <div id="mode-banner" class="mode-banner" hidden>
-        <span id="mode-banner-text">Nhấp lên vị trí trên bản đồ</span>
-        <button type="button" id="mode-banner-cancel" class="btn-link">Thoát (Esc)</button>
+        <span id="mode-banner-text">Chạm lên vị trí trên bản đồ</span>
+        <button type="button" id="mode-banner-cancel" class="btn-link">Hủy (Esc)</button>
       </div>
 
-      <!-- Thẻ Chẩn đoán Thủy văn Tức thì tại mọi điểm chạm -->
+      <!-- Thẻ Kiểm tra Nhanh Vị trí (Tự hiện ngay khi chạm vào bất kỳ ngõ/đường nào) -->
       <div id="spot-inspector-card" class="spot-inspector-card" hidden>
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;">
-          <strong id="insp-title" style="font-size:0.86rem;color:var(--color-fg);">Chẩn đoán Địa hình &amp; Nguy cơ Ngập</strong>
+          <strong id="insp-title" style="font-size:0.88rem;color:var(--color-fg);">Kiểm tra nhanh vị trí này</strong>
           <button type="button" id="btn-close-inspector" class="icon-close-btn" style="width:24px;height:24px;font-size:1rem;" aria-label="Đóng">×</button>
         </div>
         <div id="insp-body"></div>
@@ -390,28 +403,28 @@
       </div>
 
       <div class="map-overlay-top">
-        <label for="basemap-select" class="visually-hidden">Chọn bản đồ nền</label>
+        <label for="basemap-select" class="visually-hidden">Chọn kiểu bản đồ</label>
         <select id="basemap-select" class="basemap-select">
-          <option value="clean" selected>Nền Sáng GIS Rõ Số Ngõ (Khuyên dùng)</option>
-          <option value="osm">Bản đồ Màu Gốc Chi tiết (OSM)</option>
-          <option value="dark">Nền Tối Trực ban Khẩn cấp (Dark GIS)</option>
-          <option value="sat">Ảnh Vệ tinh Thực tế (Esri Imagery)</option>
-          <option value="topo">Đường Đồng mức Địa hình (OpenTopo)</option>
+          <option value="clean" selected>Bản đồ Đường phố Sáng</option>
+          <option value="osm">Bản đồ Màu Chi tiết</option>
+          <option value="sat">Ảnh Vệ tinh Thực tế</option>
+          <option value="dark">Bản đồ Nền tối</option>
+          <option value="topo">Bản đồ Địa hình</option>
         </select>
-        <button type="button" id="btn-toggle-transect" class="btn btn-primary btn-compact" title="Đo và vẽ biểu đồ mặt cắt địa hình Copernicus DEM giữa 2 điểm">
+        <button type="button" id="btn-toggle-transect" class="btn btn-primary btn-compact expert-only" title="Đo và vẽ biểu đồ mặt cắt địa hình Copernicus DEM giữa 2 điểm">
           <span>Lát cắt DEM</span>
         </button>
-        <button type="button" id="btn-center-mode" class="btn btn-secondary btn-compact" title="Dời tâm khoanh vùng sang vị trí khác">
+        <button type="button" id="btn-center-mode" class="btn btn-secondary btn-compact expert-only" title="Dời tâm khoanh vùng sang vị trí khác">
           <span>Dời tâm</span>
         </button>
         <button type="button" id="btn-fit-buffer" class="btn btn-secondary btn-compact">
-          <span>Khớp 2km</span>
+          <span>Về quanh trường</span>
         </button>
       </div>
 
       <div id="map" class="map-canvas"></div>
 
-      <!-- Khay Lát cắt Địa hình Động (Copernicus DEM GLO-30 Cross-Section Profiler) -->
+      <!-- Khay Lát cắt Địa hình Động (hiện trong Chế độ Chuyên sâu) -->
       <section id="transect-drawer" class="transect-drawer" hidden aria-label="Biểu đồ mặt cắt địa hình động Copernicus DEM">
         <div class="transect-head">
           <strong style="font-size:0.83rem;color:var(--color-primary);">Mặt cắt Địa hình Thực tế Copernicus DEM GLO-30 (m DSM)</strong>
@@ -425,46 +438,42 @@
         <div id="transect-svg-container"></div>
       </section>
 
-      <details class="map-legend" open aria-label="Chú giải ký hiệu & Độ tin cậy">
+      <details class="map-legend" open aria-label="Chú giải ký hiệu đơn giản">
         <summary>
-          <span>Chú giải Bản đồ</span>
-          <span style="font-size:0.68rem;color:var(--color-subtle);font-weight:500;">Ẩn/Hiện</span>
+          <span>Ký hiệu trên bản đồ</span>
+          <span style="font-size:0.68rem;color:var(--color-subtle);font-weight:500;">Thu gọn</span>
         </summary>
         <ul class="legend-list">
           <li>
             <svg class="legend-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,3 22,20 2,20" fill="#B91C1C" stroke="#FFFFFF" stroke-width="2"></polygon></svg>
-            <span>Điểm Rủi ro Ngập / Xoáy cống (A/B)</span>
+            <span>Ngõ / đường hay bị ngập</span>
           </li>
           <li>
-            <svg class="legend-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="#0284C7" stroke-width="6" stroke-opacity="0.45" stroke-linecap="round"></line><line x1="2" y1="12" x2="22" y2="12" stroke="#DC2626" stroke-width="2.2"></line></svg>
-            <span>18 Tuyến ngõ ngập &amp; Nước loang DEM</span>
+            <svg class="legend-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="4" fill="#0284C7" fill-opacity="0.45" stroke="#0284C7" stroke-width="1.5"></rect></svg>
+            <span>Vùng đất trũng dễ đọng nước</span>
           </li>
           <li>
             <svg class="legend-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,2 22,12 12,22 2,12" fill="#C2410C" stroke="#FFFFFF" stroke-width="2"></polygon></svg>
-            <span>Đường nắng gắt / Trạm buýt</span>
+            <span>Đoạn nắng gắt / thiếu bóng cây</span>
           </li>
           <li>
             <svg class="legend-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#15803D" stroke="#FFFFFF" stroke-width="2"></circle><path d="M12 8v8M8 12h8" stroke="#FFFFFF" stroke-width="2.2"></path></svg>
-            <span>Bệnh viện / Nhà thuốc (OSM Hạng A)</span>
-          </li>
-          <li>
-            <svg class="legend-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" fill="#0F766E" stroke="#FFFFFF" stroke-width="2"></rect></svg>
-            <span>Điểm tránh trú / Gò an toàn 17m</span>
+            <span>Bệnh viện, Y tế &amp; Nơi trú mưa</span>
           </li>
         </ul>
       </details>
 
-      <footer class="map-statusbar" aria-live="off">
-        <span id="cursor-coords" class="mono-num">WGS84: 21.07251, 105.77387 · Cách ĐH Mỏ: 0 m · DEM: ~17m (Gò cao)</span>
+      <footer class="map-statusbar expert-only" aria-live="off">
+        <span id="cursor-coords" class="mono-num">WGS84: 21.07251, 105.77387 · Cách ĐH Mỏ: 0 m · DEM: ~17m</span>
       </footer>
     </main>
   </div>
 
-  <!-- Thanh thao tác nhanh cho Người dân mở bằng điện thoại (Mobile-First 4 nút) -->
-  <nav class="mobile-bottom-bar" aria-label="Thao tác nhanh cho cư dân trên điện thoại">
+  <!-- Thanh thao tác 4 nút cực gọn trên điện thoại -->
+  <nav class="mobile-bottom-bar" aria-label="Thao tác nhanh trên điện thoại">
     <button type="button" id="mob-btn-inspect" class="mob-action-btn">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle><path d="M12 2v4M12 18v4M2 12h4M18 12h4"></path></svg>
-      <span>Đo điểm ngập</span>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+      <span>Xem bản đồ</span>
     </button>
     <button type="button" id="mob-btn-report" class="mob-action-btn mob-btn-accent">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"></path><path d="M12 7v6M9 10h6"></path></svg>
@@ -472,7 +481,7 @@
     </button>
     <button type="button" id="mob-btn-nearest" class="mob-action-btn mob-btn-safe">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
-      <span>Tìm nơi trú</span>
+      <span>Nơi trú gần</span>
     </button>
     <button type="button" id="mob-btn-drill" class="mob-action-btn">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
