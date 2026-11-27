@@ -28,6 +28,8 @@ import {
   HAZARD_FLAGS_META,
   SAMPLE_HUMG_POINTS,
   SAFE_DETOUR_ROUTES,
+  FLOOD_STREET_CORRIDORS,
+  LOW_DEM_BASINS,
   ALERT_BULLETINS,
   DRILL_QUIZ_QUESTIONS
 } from './humg-data.js';
@@ -38,7 +40,7 @@ import {
   buildNotebookLmSourceMarkdown
 } from './knowledge-engine.js';
 
-const STORAGE_KEY = 'humg_dongngac_community_gis_v7';
+const STORAGE_KEY = 'humg_dongngac_community_gis_v8';
 const VOTES_KEY = 'humg_dongngac_resident_votes_v3';
 const API_URL_KEY = 'humg_dongngac_api_url_v3';
 const BROADCAST_KEY = 'humg_dongngac_broadcast_v1';
@@ -441,6 +443,7 @@ function initApp() {
     center: saved?.center || structuredClone(HUMG_CENTER),
     radiusKm: Number(saved?.radiusKm) || PROJECT_CONFIG.defaultRadiusKm,
     showRings: saved?.showRings !== undefined ? Boolean(saved.showRings) : true,
+    showFloodCorridors: saved?.showFloodCorridors !== undefined ? Boolean(saved.showFloodCorridors) : true,
     showRiskLayer: true,
     showSafeLayer: true,
     showPendingLayer: true,
@@ -465,6 +468,7 @@ function initApp() {
           center: state.center,
           radiusKm: state.radiusKm,
           showRings: state.showRings,
+          showFloodCorridors: state.showFloodCorridors,
           points: state.points
         })
       );
@@ -501,7 +505,9 @@ function initApp() {
   L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
 
   const bufferLayerGroup = L.layerGroup().addTo(map);
+  const floodBasinLayerGroup = L.layerGroup().addTo(map);
   const ringsLayerGroup = L.layerGroup().addTo(map);
+  const floodCorridorLayerGroup = L.layerGroup().addTo(map);
   const detourLayerGroup = L.layerGroup().addTo(map);
   const riskLayerGroup = L.layerGroup().addTo(map);
   const safeLayerGroup = L.layerGroup().addTo(map);
@@ -564,6 +570,7 @@ function initApp() {
     radiusRange: document.getElementById('radius-range'),
     radiusNumber: document.getElementById('radius-number'),
     toggleRings: document.getElementById('toggle-rings'),
+    toggleFloodCorridors: document.getElementById('toggle-flood-corridors'),
     toggleHeatmap: document.getElementById('toggle-heatmap'),
     scenarioSelect: document.getElementById('scenario-select'),
     scenarioSummaryNote: document.getElementById('scenario-summary-note'),
@@ -1234,6 +1241,78 @@ function initApp() {
     persistState();
   });
 
+  if (els.toggleFloodCorridors) {
+    els.toggleFloodCorridors.checked = state.showFloodCorridors;
+    els.toggleFloodCorridors.addEventListener('change', () => {
+      state.showFloodCorridors = els.toggleFloodCorridors.checked;
+      renderFloodCorridorsAndBasins();
+      persistState();
+    });
+  }
+
+  function renderFloodCorridorsAndBasins() {
+    floodBasinLayerGroup.clearLayers();
+    floodCorridorLayerGroup.clearLayers();
+    if (!state.showFloodCorridors || state.activeScenario === 'heat_uhi') return;
+
+    const scenRainMm =
+      state.activeScenario === 'rain_120'
+        ? 125
+        : state.activeScenario === 'rain_70'
+          ? 75
+          : state.activeScenario === 'rain_30'
+            ? 40
+            : 55;
+    const isRainSim = state.activeScenario.startsWith('rain_');
+
+    for (const basin of LOW_DEM_BASINS) {
+      if (isRainSim && scenRainMm < basin.rainThresholdMm) continue;
+      const poly = L.polygon(basin.coordinates, {
+        color: '#0284c7',
+        weight: isRainSim ? 1.5 : 1,
+        dashArray: '5 5',
+        opacity: isRainSim ? 0.68 : 0.42,
+        fillColor: scenRainMm >= 70 ? '#0369a1' : '#0ea5e9',
+        fillOpacity: isRainSim ? (scenRainMm >= 115 ? 0.24 : 0.17) : 0.09
+      }).addTo(floodBasinLayerGroup);
+      poly.bindPopup(
+        `<div class="popup-card"><h3>${escapeHtml(basin.name)}</h3><p class="popup-meta"><strong>Cao độ vệ tinh Copernicus DEM:</strong> ${escapeHtml(basin.demRange)} (thấp hơn 6–11m so với gò Khu A ĐH Mỏ 17m).<br><strong>Ngưỡng bắt đầu tích nước:</strong> Mưa ≥ ${basin.rainThresholdMm} mm.</p></div>`
+      );
+    }
+
+    for (const fc of FLOOD_STREET_CORRIDORS) {
+      const activeInScen = !isRainSim || scenRainMm >= fc.rainThresholdMm;
+      if (!activeInScen) continue;
+      const latLngs = fc.coordinates.map(([lng, lat]) => [lat, lng]);
+
+      // Lớp viền nước xanh lam bên dưới + lõi cảnh báo đỏ/cam bên trên để nổi bật rõ dải đường ngập
+      L.polyline(latLngs, {
+        color: '#0284c7',
+        weight: isRainSim ? 10 : 7.5,
+        opacity: isRainSim ? 0.42 : 0.28,
+        lineCap: 'round',
+        interactive: false
+      }).addTo(floodCorridorLayerGroup);
+
+      const coreLine = L.polyline(latLngs, {
+        color: fc.severity === 'severe' ? '#dc2626' : '#ea580c',
+        weight: isRainSim ? 3.8 : 2.8,
+        dashArray: fc.severity === 'severe' ? undefined : '6 5',
+        opacity: isRainSim ? 0.95 : 0.82,
+        lineCap: 'round'
+      }).addTo(floodCorridorLayerGroup);
+
+      coreLine.bindPopup(
+        `<div class="popup-card">
+          <h3>${escapeHtml(fc.name)}</h3>
+          <p class="popup-meta"><strong>Ngưỡng mưa gây ngập:</strong> ≥ <span class="mono-num">${fc.rainThresholdMm} mm</span></p>
+          <div class="popup-source-box"><strong>Nguồn hình học &amp; báo chí:</strong> ${escapeHtml(fc.source)}</div>
+          <p class="popup-meta">${escapeHtml(fc.note)}</p>
+        </div>`
+      );
+    }
+  }
+
   els.toggleHeatmap.addEventListener('change', () => {
     if (els.toggleHeatmap.checked) {
       riskHeatmapLayer.addTo(map);
@@ -1244,10 +1323,12 @@ function initApp() {
 
   els.filterLayer.addEventListener('change', () => {
     state.filters.layer = els.filterLayer.value;
+    renderFloodCorridorsAndBasins();
     renderMarkersAndTable();
   });
   els.filterScope.addEventListener('change', () => {
     state.filters.scope = els.filterScope.value;
+    renderFloodCorridorsAndBasins();
     renderMarkersAndTable();
   });
   els.filterSearch.addEventListener(
@@ -1318,6 +1399,7 @@ function initApp() {
       }
     }
 
+    renderFloodCorridorsAndBasins();
     renderMarkersAndTable();
     if (els.toggleHeatmap?.checked) riskHeatmapLayer.redraw();
     if (flyToBuffer) map.fitBounds(bufferGeoLayer.getBounds(), { padding: [26, 26] });
@@ -2388,6 +2470,7 @@ function initApp() {
       els.scenarioSummaryNote.hidden = false;
       els.scenarioSummaryNote.innerHTML = `<strong>${escapeHtml(scMeta.headline)}</strong><br>${escapeHtml(scMeta.desc)}<br>Đang làm nổi bật: <strong class="mono-num">${ev.activeRiskCount}</strong> điểm rủi ro kích hoạt &amp; <strong class="mono-num">${ev.recommendedSafeCount}</strong> điểm hỗ trợ khuyến nghị.`;
     }
+    renderFloodCorridorsAndBasins();
     renderMarkersAndTable();
   });
 

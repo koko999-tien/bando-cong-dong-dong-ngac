@@ -16,11 +16,11 @@
       <Placemark>
         <name>[Hạng A] Cuối Phố Viên (giáp ranh Đông Ngạc – Thượng Cát)</name>
         <description>Độ tin cậy: Hạng A (5 xác nhận)
-Nguồn dữ liệu: Báo Lao Động 18/09/2026 (&quot;Người dân mong xử lý dứt điểm úng ngập cuối phố Viên, Hà Nội&quot;); ERA5 15/09/2026: 71,3 mm
+Nguồn dữ liệu: Báo Lao Động, VietNamNet, Tuổi Trẻ &amp; Tiền Phong 17–18/09/2026 (&quot;Người dân mong xử lý dứt điểm úng ngập cuối phố Viên&quot;); ERA5 15–17/09/2026: 71,3 mm
 Mốc ghi nhận: 2026-09-18
 Mức ghi nhận: Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)
 Khoảng cách tới ĐH Mỏ - Địa chất: 371 m (Nam (202°))
-Thông tin thực tế: Cách cổng trường ~372 m. Báo Lao Động ghi nhận mặt đường gồ ghề nhiều ổ gà, mưa lớn ngập sâu kèm dòng xoáy miệng cống (từng xảy ra tai nạn thương tâm tháng 9/2026). Người dân/SV thường phải quay đầu tìm đường vòng.</description>
+Thông tin thực tế: Cách cổng trường ~372 m (osm:way/1255456395). Báo chí ngày 17–18/09/2026 ghi nhận mặt đường gồ ghề nhiều ổ gà, mưa lớn ngập sâu kèm dòng nước xiết cuốn vào miệng cống thông ra sông Nhuệ gây tai nạn đặc biệt thương tâm với tân sinh viên ĐH Mỏ trên hướng đi Khu B. Tuyệt đối không đi xe máy qua khi mưa lớn.</description>
         <styleUrl>#style-risk-severe</styleUrl>
         <Point>
           <coordinates>105.772544,21.069413,0</coordinates>
@@ -232,6 +232,162 @@ Thông tin thực tế: Điểm trung chuyển xe buýt phục vụ cư dân c�
         <styleUrl>#style-risk-moderate</styleUrl>
         <Point>
           <coordinates>105.785074,21.082815,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Đoạn Nam Phố Viên – Hướng rẽ Khu B ĐH Mỏ &amp; Cống tiêu Sông Nhuệ (DEM 9 m)</name>
+        <description>Độ tin cậy: Hạng A (5 xác nhận)
+Nguồn dữ liệu: VietNamNet, Tuổi Trẻ &amp; Dân Việt 18/09/2026 (dòng chảy xiết cống thoát ra sông Nhuệ); osm:way/37768189; DEM GLO-30 = 9 m
+Mốc ghi nhận: 2026-09-18
+Mức ghi nhận: Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 891 m (Nam (186°))
+Thông tin thực tế: Cách ĐH Mỏ ~891 m về phía Nam. Cao độ vệ tinh hạ tụt từ 17 m (Khu A) xuống chỉ còn 9 m dọc đoạn kéo dài Phố Viên nối ra Cầu Noi / đường sang Khu B, khiến toàn bộ nước mặt dồn thành dòng chảy xiết đổ ra cửa xả sông Nhuệ.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.772986,21.064543,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Điểm đen ngập Đường Phạm Văn Đồng – Đoạn đối diện Công viên Hòa Bình</name>
+        <description>Độ tin cậy: Hạng A (5 xác nhận)
+Nguồn dữ liệu: Danh sách trọng điểm ứng trực Cty Thoát nước HN; Tuổi Trẻ &amp; Dân Trí (ngập trục Phạm Văn Đồng – CV Hòa Bình); osm:way/1411062723
+Mốc ghi nhận: 2025-10-07
+Mức ghi nhận: Ngập bắp chân / nửa bánh xe máy (~20–30 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1357 m (Đông Nam (126°))
+Thông tin thực tế: Cách trường ~1.357 m, DEM 11 m. Một trong các điểm đen ngập kinh điển của khu vực Tây Bắc Hà Nội trên làn gom Vành đai 3 khiến xe máy và ô tô gầm thấp dễ chết máy giờ cao điểm.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.784463,21.065360,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Nút giao Đường Phạm Văn Đồng – Ngã tư Cổ Nhuế / Ngõ 218 Phạm Văn Đồng</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: VOV Giao thông &amp; Dân Trí (ngập ùn tắc nút giao Cổ Nhuế – Phạm Văn Đồng); osm:node/4224823335 &amp; osm:way/967878676
+Mốc ghi nhận: 2025-10-07
+Mức ghi nhận: Ngập bắp chân / nửa bánh xe máy (~20–30 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1530 m (Đông Nam (139°))
+Thông tin thực tế: Cách ĐH Mỏ ~1.530 m. Cửa ngõ sinh viên và cư dân từ trục Phạm Văn Đồng rẽ vào đường Cổ Nhuế; nước từ mặt đường lớn dồn về gây ngập mặt đường gom và ùn tắc dây chuyền.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.783600,21.062171,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Đường gom KĐT Thành phố Giao Lưu – Green Stars (370 Phạm Văn Đồng)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: Tuổi Trẻ, Lao Động &amp; Thanh Niên (ngập nhánh rẽ KĐT Thành phố Giao Lưu – Green Stars); osm:node/8831420065
+Mốc ghi nhận: 2025-10-02
+Mức ghi nhận: Ngập bắp chân / nửa bánh xe máy (~20–30 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1844 m (Đông Nam (151°))
+Thông tin thực tế: Cách ĐH Mỏ ~1.844 m ở rìa Đông Nam vùng 2 km. Báo chí phản ánh các nhánh rẽ và đường nội bộ quanh KĐT Thành phố Giao Lưu / Green Stars bị đọng nước sâu khi lượng mưa vượt công suất tiêu thoát ra hồ.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.782548,21.058045,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Đầu tuyến Phố Trần Cung – Giáp Cổ Nhuế 1 &amp; Phạm Văn Đồng</name>
+        <description>Độ tin cậy: Hạng A (5 xác nhận)
+Nguồn dữ liệu: VietNamNet, VOV Giao thông &amp; Lao Động (ngập sâu phố Trần Cung – Cổ Nhuế 1, mương Cầu Đá chậm cống hóa); osm:node/8954351037
+Mốc ghi nhận: 2025-10-07
+Mức ghi nhận: Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1871 m (Đông Nam (148°))
+Thông tin thực tế: Cách ĐH Mỏ ~1.871 m. Phố Trần Cung là trục tập trung đông phòng trọ sinh viên nối sang BV E và Hoàng Quốc Việt, thường xuyên ngập 30–50 cm khi mưa lớn do hạ tầng cống cũ chưa đồng bộ.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.783458,21.058266,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Phố Đỗ Nhuận – Cổng Đông Nam Công viên Hòa Bình (DEM 10 m)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: Tuổi Trẻ &amp; Thể thao Văn hóa (ngập sâu phố Đỗ Nhuận – Công viên Hòa Bình làm ô tô chết máy); osm:way/962215931; DEM = 10 m
+Mốc ghi nhận: 2025-08-27
+Mức ghi nhận: Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1556 m (Đông Nam (114°))
+Thông tin thực tế: Cách trường ~1.556 m, cốt nền thấp 9–10 m tiếp giáp Ngoại giao đoàn – Xuân Đỉnh, nước mưa dồn nhanh gây ngập nửa bánh xe đến đầu gối.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.787587,21.066857,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng B] Trục giữa Đường Cổ Nhuế – Cụm ngõ xóm trọ Cổ Nhuế Trù (Ngõ 145 – 347)</name>
+        <description>Độ tin cậy: Hạng B (4 xác nhận)
+Nguồn dữ liệu: Báo Dân Việt &amp; Lao Động (quá tải thoát nước trục đường &amp; ngõ dân cư Cổ Nhuế); osm:way/29111948
+Mốc ghi nhận: 2025-09-29
+Mức ghi nhận: Ngập bắp chân / nửa bánh xe máy (~20–30 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 823 m (Đông Nam (139°))
+Thông tin thực tế: Cách trường ~823 m. Mặt đường Cổ Nhuế nhỏ hẹp, mật độ nhà trọ sinh viên dày đặc hai bên; khi mưa lớn nước từ các ngõ dồn ra trục giữa không thoát kịp gây ngập lênh láng.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.779100,21.066950,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Đường Đức Thắng – Đoạn trũng khu dân cư Đức Thắng / Cổng Đôi (DEM 11 m)</name>
+        <description>Độ tin cậy: Hạng A (3 xác nhận)
+Nguồn dữ liệu: VnExpress, Dân Việt &amp; Lao Động (ngập ngõ ngách &amp; hạ tầng thoát nước Đức Thắng – Thụy Phương); osm:way/572354323; DEM = 11 m
+Mốc ghi nhận: 2026-08-23
+Mức ghi nhận: Ngập bắp chân / nửa bánh xe máy (~20–30 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 711 m (Đông Bắc (34°))
+Thông tin thực tế: Cách ĐH Mỏ ~711 m về phía Đông Bắc (DEM 11 m, thấp hơn 6 m so với Khu A). Nhiều ngõ dân sinh và nhà trọ sinh viên dọc tuyến dễ đọng nước khi mưa dồn dập.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.777666,21.077837,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng B] Đoạn yên ngựa trũng Đường Lê Văn Hiến – Ngã ba Đức Thắng (DEM 11 m)</name>
+        <description>Độ tin cậy: Hạng B (3 xác nhận)
+Nguồn dữ liệu: osm:way/399593885 (Đường Lê Văn Hiến, cách ĐH Mỏ 251 m); Copernicus DEM GLO-30 = 11 m (thấp hơn 2 gò 17 m liền kề)
+Mốc ghi nhận: 2026-08-23
+Mức ghi nhận: Ngập mắt cá chân / ngập lốp dưới (~10–15 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 251 m (Đông Bắc (41°))
+Thông tin thực tế: Cách cổng 18 Phố Viên chỉ ~251 m. Đoạn đường võng xuống 11 m nằm kẹp giữa gò Khu A ĐH Mỏ (17 m) và HV Cảnh sát CS2 (17 m), khiến nước mưa mặt đường từ hai phía đổ dồn nhanh gây ngập mắt cá đến nửa bánh xe trước khi thoát kịp.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.775455,21.074215,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Nút giao Phố Kẻ Vẽ – Đường Thụy Phương (Đông Ngạc)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: Tiền Phong, Báo Mới &amp; Lao Động (điểm ngập cục bộ phố Kẻ Vẽ – Đông Ngạc – Thụy Phương); osm:way/146725514
+Mốc ghi nhận: 2025-10-07
+Mức ghi nhận: Ngập bắp chân / nửa bánh xe máy (~20–30 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1429 m (Bắc (14°))
+Thông tin thực tế: Cách trường ~1.429 m về phía Bắc. Khu dân cư lâu đời có hệ thống cống nhỏ, khi mưa to nước dồn về nút giao Kẻ Vẽ – Thụy Phương rút chậm.</description>
+        <styleUrl>#style-risk-moderate</styleUrl>
+        <Point>
+          <coordinates>105.777225,21.084975,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Đường Tân Xuân – Đoạn qua Cụm Ecohome / Chân cầu Thăng Long</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: Tiền Phong &amp; Lao Động (điểm ngập cục bộ đường Tân Xuân – Đông Ngạc); osm:way/339282226; DEM = 12 m
+Mốc ghi nhận: 2025-10-02
+Mức ghi nhận: Ngập bắp chân / nửa bánh xe máy (~20–30 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1732 m (Đông Bắc (43°))
+Thông tin thực tế: Cách ĐH Mỏ ~1.732 m. Trục đường sát chân đê và cụm chung cư Ecohome có lưu lượng xe tải, xe buýt lớn; thường đọng nước kéo dài tại các đoạn giao cắt khi mưa lớn.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.785210,21.083942,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>[Hạng A] Khu dân cư Phú Minh – Ven sông Nhuệ / Đầu đường K3 (Rốn trũng DEM 6 m)</name>
+        <description>Độ tin cậy: Hạng A (4 xác nhận)
+Nguồn dữ liệu: Báo Mới &amp; Tiền Phong (ngập úng cục bộ khu tập thể Phú Minh – Cổ Nhuế 2); osm:node/8934749257; DEM GLO-30 = 6 m
+Mốc ghi nhận: 2025-10-07
+Mức ghi nhận: Ngập đầu gối / quá nửa bánh xe — chết máy (~40–50 cm)
+Khoảng cách tới ĐH Mỏ - Địa chất: 1319 m (Nam (183°))
+Thông tin thực tế: Cách ĐH Mỏ ~1.319 m về phía Nam Cầu Noi. Cùng với đường Tân Nhuệ, đây là rốn địa hình thấp nhất bán kính 2 km (chỉ 6 m DSM sát bờ sông Nhuệ), hệ thống thoát nước khu tập thể cũ rất dễ quá tải.</description>
+        <styleUrl>#style-risk-severe</styleUrl>
+        <Point>
+          <coordinates>105.773123,21.060668,0</coordinates>
         </Point>
       </Placemark>
     </Folder>

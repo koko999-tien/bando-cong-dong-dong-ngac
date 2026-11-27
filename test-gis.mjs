@@ -22,13 +22,15 @@ import {
   exportToCSV,
   parseImportedPoints
 } from './gis-utils.js';
-import { HUMG_CENTER, ERA5_CLIMATE_FACTS, MONTHLY_2026_CLIMATE, EMERGENCY_DIRECTORY, ROUTE_PRESETS, TRANSECT_PRESETS, SAMPLE_HUMG_POINTS } from './humg-data.js';
+import { HUMG_CENTER, ERA5_CLIMATE_FACTS, MONTHLY_2026_CLIMATE, EMERGENCY_DIRECTORY, ROUTE_PRESETS, TRANSECT_PRESETS, FLOOD_STREET_CORRIDORS, LOW_DEM_BASINS, SAMPLE_HUMG_POINTS } from './humg-data.js';
 import { searchKnowledgeNotebook, synthesizeSituationalAnswer, buildNotebookLmSourceMarkdown } from './knowledge-engine.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // 1. Đảm bảo 100% điểm dữ liệu nền có nguồn xác thực & KHÔNG còn trường depthCm/tempC tự đặt
-assert.equal(SAMPLE_HUMG_POINTS.length, 32);
+assert.equal(SAMPLE_HUMG_POINTS.length, 44);
+assert.equal(FLOOD_STREET_CORRIDORS.length, 10);
+assert.equal(LOW_DEM_BASINS.length, 4);
 for (const pt of SAMPLE_HUMG_POINTS) {
   assert.ok(pt.sourceCitation && pt.sourceCitation.length > 10, `Thiếu trích dẫn nguồn cho ${pt.id}`);
   assert.ok(['A', 'B'].includes(pt.confidenceTier), `Điểm gốc phải đạt Hạng A hoặc B: ${pt.id}`);
@@ -42,7 +44,7 @@ assert.equal(MONTHLY_2026_CLIMATE[7].rainMm, 624.8); // Tháng 8/2026
 assert.ok(EMERGENCY_DIRECTORY.length >= 6);
 
 const qaRes = auditPointsQuality(turf, SAMPLE_HUMG_POINTS, HUMG_CENTER.lat, HUMG_CENTER.lng, 2.0);
-assert.equal(qaRes.issueCount, 0, 'Tất cả 32 điểm gốc phải vượt qua kiểm toán Data QA 100%');
+assert.equal(qaRes.issueCount, 0, 'Tất cả 44 điểm gốc phải vượt qua kiểm toán Data QA 100%');
 
 const nbHit = searchKnowledgeNotebook('kenh 920 ty cuoi pho vien', SAMPLE_HUMG_POINTS);
 assert.ok(nbHit.matchedCards.length > 0 && nbHit.matchedCards[0].id === 'KB-01', 'Tìm kiếm không dấu Notebook phải trả đúng thẻ KB-01');
@@ -127,9 +129,10 @@ assert.equal(rounded, 21.0726);
 
 // 5. Phân tích không gian bán kính 2km & tìm bệnh viện / nơi trú có mái che gần nhất
 const res2km = analyzeSurveyPoints(turf, SAMPLE_HUMG_POINTS, HUMG_CENTER.lat, HUMG_CENTER.lng, 2.0);
-assert.equal(res2km.stats.total, 32);
-assert.equal(res2km.stats.inside, 32, 'Tất cả 32 điểm nền phải nằm trọn trong bán kính <= 2.0 km');
-assert.equal(res2km.stats.riskInside, 17);
+assert.equal(res2km.stats.total, 44);
+assert.equal(res2km.stats.inside, 44, 'Tất cả 44 điểm nền phải nằm trọn trong bán kính <= 2.0 km');
+assert.equal(res2km.stats.riskInside, 29);
+assert.equal(res2km.stats.floodInside, 21, 'Phải có 21 điểm ngập úng xác thực trong 2km');
 assert.equal(res2km.stats.heatInside, 6, 'Phải có 6 điểm nắng nóng / buýt / chợ dân sinh xác thực');
 assert.equal(res2km.stats.safeInside, 15);
 
@@ -152,7 +155,7 @@ const geoStr = JSON.stringify(exportToGeoJSON(res2km, meta2km, false), null, 2);
 const nbMdStr = buildNotebookLmSourceMarkdown(SAMPLE_HUMG_POINTS, res2km.stats);
 
 const reimported = parseImportedPoints(csvStr, 'HUMG_DuLieuThucTe.csv');
-assert.equal(reimported.length, 32);
+assert.equal(reimported.length, 44);
 assert.ok(nbMdStr.includes('PHẦN 4. DANH MỤC ĐẦY ĐỦ CÁC ĐIỂM RỦI RO'));
 
 await Promise.all([

@@ -203,6 +203,10 @@
             <span>Hiện vòng chia 500m &amp; hướng di chuyển nền cao</span>
           </label>
           <label class="checkbox-inline" style="margin-top:4px;">
+            <input type="checkbox" id="toggle-flood-corridors" checked>
+            <span>Hiện <strong>10 tuyến phố ngập &amp; vùng trũng DEM 6–11m</strong> (75% diện tích)</span>
+          </label>
+          <label class="checkbox-inline" style="margin-top:4px;">
             <input type="checkbox" id="toggle-heatmap">
             <span>Hiện lớp bản đồ nhiệt mật độ rủi ro (Canvas 60fps)</span>
           </label>
@@ -353,7 +357,11 @@
         <ul class="legend-list">
           <li>
             <svg class="legend-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,3 22,20 2,20" fill="#B91C1C" stroke="#FFFFFF" stroke-width="2"></polygon></svg>
-            <span>Rủi ro Ngập / Xoáy cống (Hạng A/B)</span>
+            <span>Điểm Rủi ro Ngập / Xoáy cống (Hạng A/B)</span>
+          </li>
+          <li>
+            <svg class="legend-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><line x1="2" y1="12" x2="22" y2="12" stroke="#0284C7" stroke-width="5" stroke-linecap="round"></line><line x1="2" y1="12" x2="22" y2="12" stroke="#DC2626" stroke-width="2" stroke-dasharray="4 3"></line></svg>
+            <span>Tuyến phố ngập &amp; Vùng trũng DEM ≤11m</span>
           </li>
           <li>
             <svg class="legend-icon" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><polygon points="12,2 22,12 12,22 2,12" fill="#C2410C" stroke="#FFFFFF" stroke-width="2"></polygon></svg>

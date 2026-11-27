@@ -155,9 +155,9 @@ export const TRANSECT_PRESETS = [
 export const WEATHER_SCENARIOS = {
   normal: {
     key: 'normal',
-    shortLabel: 'Mặc định (Tất cả 32 điểm)',
-    headline: 'Hiển thị đầy đủ 32 điểm dữ liệu thực tế trong bán kính 2 km',
-    desc: 'Bao gồm toàn bộ 17 điểm rủi ro ngập/nắng/điểm chờ buýt và 15 cơ sở y tế, nhà thuốc, trụ sở hành chính, hồ điều hòa.'
+    shortLabel: 'Mặc định (Đầy đủ 44 điểm + Tuyến ngập)',
+    headline: 'Hiển thị đầy đủ 44 điểm xác thực, 10 tuyến đường ngập & 4 dải rốn trũng DEM trong 2 km',
+    desc: 'Bao gồm 29 điểm rủi ro (21 điểm ngập úng, 2 hạ tầng cống/thi công, 6 điểm nắng/buýt) và 15 cơ sở y tế, nhà thuốc, trụ sở hành chính.'
   },
   rain_30: {
     key: 'rain_30',
@@ -240,10 +240,10 @@ export const SAMPLE_HUMG_POINTS = [
     elevationM: 12,
     confidenceTier: 'A',
     confirmCount: 5,
-    sourceType: 'Báo Lao Động (18/09/2026) & Đại Đoàn Kết',
-    sourceCitation: 'Báo Lao Động 18/09/2026 ("Người dân mong xử lý dứt điểm úng ngập cuối phố Viên, Hà Nội"); ERA5 15/09/2026: 71,3 mm',
+    sourceType: 'Báo Lao Động, VietNamNet, Tuổi Trẻ & Tiền Phong (17–18/09/2026)',
+    sourceCitation: 'Báo Lao Động, VietNamNet, Tuổi Trẻ & Tiền Phong 17–18/09/2026 ("Người dân mong xử lý dứt điểm úng ngập cuối phố Viên"); ERA5 15–17/09/2026: 71,3 mm',
     observedDate: '2026-09-18',
-    notes: 'Cách cổng trường ~372 m. Báo Lao Động ghi nhận mặt đường gồ ghề nhiều ổ gà, mưa lớn ngập sâu kèm dòng xoáy miệng cống (từng xảy ra tai nạn thương tâm tháng 9/2026). Người dân/SV thường phải quay đầu tìm đường vòng.'
+    notes: 'Cách cổng trường ~372 m (osm:way/1255456395). Báo chí ngày 17–18/09/2026 ghi nhận mặt đường gồ ghề nhiều ổ gà, mưa lớn ngập sâu kèm dòng nước xiết cuốn vào miệng cống thông ra sông Nhuệ gây tai nạn đặc biệt thương tâm với tân sinh viên ĐH Mỏ trên hướng đi Khu B. Tuyệt đối không đi xe máy qua khi mưa lớn.'
   },
   {
     id: 'R-02',
@@ -565,6 +565,246 @@ export const SAMPLE_HUMG_POINTS = [
     observedDate: '2026-06-15',
     notes: 'Điểm trung chuyển xe buýt phục vụ cư dân cụm Ecohome và người lao động khu vực Tân Xuân – Đông Ngạc; ít mái che cây xanh lớn vào khung 11h30–15h00.'
   },
+  {
+    id: 'R-18',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Đoạn Nam Phố Viên – Hướng rẽ Khu B ĐH Mỏ & Cống tiêu Sông Nhuệ (DEM 9 m)',
+    lat: 21.064543,
+    lng: 105.772986,
+    severity: 'severe',
+    waterScale: 'knee_stall',
+    hazardFlags: ['open_drain_vortex', 'uneven_pothole'],
+    frequency: 'Mỗi đợt mưa vừa đến mưa to (>40–50 mm)',
+    drainDuration: '> 2 giờ do sát cốt mực nước sông Nhuệ',
+    elevationM: 9,
+    confidenceTier: 'A',
+    confirmCount: 5,
+    sourceType: 'VietNamNet, Tuổi Trẻ, Dân Việt (18/09/2026) & OSM',
+    sourceCitation: 'VietNamNet, Tuổi Trẻ & Dân Việt 18/09/2026 (dòng chảy xiết cống thoát ra sông Nhuệ); osm:way/37768189; DEM GLO-30 = 9 m',
+    observedDate: '2026-09-18',
+    notes: 'Cách ĐH Mỏ ~891 m về phía Nam. Cao độ vệ tinh hạ tụt từ 17 m (Khu A) xuống chỉ còn 9 m dọc đoạn kéo dài Phố Viên nối ra Cầu Noi / đường sang Khu B, khiến toàn bộ nước mặt dồn thành dòng chảy xiết đổ ra cửa xả sông Nhuệ.'
+  },
+  {
+    id: 'R-19',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Điểm đen ngập Đường Phạm Văn Đồng – Đoạn đối diện Công viên Hòa Bình',
+    lat: 21.06536,
+    lng: 105.784463,
+    severity: 'severe',
+    waterScale: 'half_wheel',
+    hazardFlags: ['uneven_pothole'],
+    frequency: 'Mưa lớn kéo dài (>50 mm) — Trọng điểm ứng trực Cty Thoát nước HN',
+    drainDuration: '1 – 2 giờ',
+    elevationM: 11,
+    confidenceTier: 'A',
+    confirmCount: 5,
+    sourceType: 'Công ty Thoát nước Hà Nội, Tuổi Trẻ & Dân Trí',
+    sourceCitation: 'Danh sách trọng điểm ứng trực Cty Thoát nước HN; Tuổi Trẻ & Dân Trí (ngập trục Phạm Văn Đồng – CV Hòa Bình); osm:way/1411062723',
+    observedDate: '2025-10-07',
+    notes: 'Cách trường ~1.357 m, DEM 11 m. Một trong các điểm đen ngập kinh điển của khu vực Tây Bắc Hà Nội trên làn gom Vành đai 3 khiến xe máy và ô tô gầm thấp dễ chết máy giờ cao điểm.'
+  },
+  {
+    id: 'R-20',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Nút giao Đường Phạm Văn Đồng – Ngã tư Cổ Nhuế / Ngõ 218 Phạm Văn Đồng',
+    lat: 21.062171,
+    lng: 105.7836,
+    severity: 'severe',
+    waterScale: 'half_wheel',
+    hazardFlags: ['uneven_pothole'],
+    frequency: 'Mỗi trận mưa lớn >50 mm giờ tan tầm',
+    drainDuration: '1 – 2 giờ',
+    elevationM: 12,
+    confidenceTier: 'A',
+    confirmCount: 4,
+    sourceType: 'Công ty Thoát nước HN, VOV Giao thông & Dân Trí',
+    sourceCitation: 'VOV Giao thông & Dân Trí (ngập ùn tắc nút giao Cổ Nhuế – Phạm Văn Đồng); osm:node/4224823335 & osm:way/967878676',
+    observedDate: '2025-10-07',
+    notes: 'Cách ĐH Mỏ ~1.530 m. Cửa ngõ sinh viên và cư dân từ trục Phạm Văn Đồng rẽ vào đường Cổ Nhuế; nước từ mặt đường lớn dồn về gây ngập mặt đường gom và ùn tắc dây chuyền.'
+  },
+  {
+    id: 'R-21',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Đường gom KĐT Thành phố Giao Lưu – Green Stars (370 Phạm Văn Đồng)',
+    lat: 21.058045,
+    lng: 105.782548,
+    severity: 'moderate',
+    waterScale: 'half_wheel',
+    hazardFlags: ['isolation_deep'],
+    frequency: 'Các đợt mưa rất to dồn dập (>60–70 mm)',
+    drainDuration: '1 – 2 giờ',
+    elevationM: 14,
+    confidenceTier: 'A',
+    confirmCount: 4,
+    sourceType: 'Tuổi Trẻ, Lao Động & Thanh Niên',
+    sourceCitation: 'Tuổi Trẻ, Lao Động & Thanh Niên (ngập nhánh rẽ KĐT Thành phố Giao Lưu – Green Stars); osm:node/8831420065',
+    observedDate: '2025-10-02',
+    notes: 'Cách ĐH Mỏ ~1.844 m ở rìa Đông Nam vùng 2 km. Báo chí phản ánh các nhánh rẽ và đường nội bộ quanh KĐT Thành phố Giao Lưu / Green Stars bị đọng nước sâu khi lượng mưa vượt công suất tiêu thoát ra hồ.'
+  },
+  {
+    id: 'R-22',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Đầu tuyến Phố Trần Cung – Giáp Cổ Nhuế 1 & Phạm Văn Đồng',
+    lat: 21.058266,
+    lng: 105.783458,
+    severity: 'severe',
+    waterScale: 'knee_stall',
+    hazardFlags: ['elec_leak_risk', 'uneven_pothole'],
+    frequency: 'Điểm đen ngập thường xuyên mỗi trận mưa lớn',
+    drainDuration: '> 2 giờ do nghẽn tiêu mương Cầu Đá',
+    elevationM: 14,
+    confidenceTier: 'A',
+    confirmCount: 5,
+    sourceType: 'VietNamNet, VOV Giao thông & Lao Động (2025–2026)',
+    sourceCitation: 'VietNamNet, VOV Giao thông & Lao Động (ngập sâu phố Trần Cung – Cổ Nhuế 1, mương Cầu Đá chậm cống hóa); osm:node/8954351037',
+    observedDate: '2025-10-07',
+    notes: 'Cách ĐH Mỏ ~1.871 m. Phố Trần Cung là trục tập trung đông phòng trọ sinh viên nối sang BV E và Hoàng Quốc Việt, thường xuyên ngập 30–50 cm khi mưa lớn do hạ tầng cống cũ chưa đồng bộ.'
+  },
+  {
+    id: 'R-23',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Phố Đỗ Nhuận – Cổng Đông Nam Công viên Hòa Bình (DEM 10 m)',
+    lat: 21.066857,
+    lng: 105.787587,
+    severity: 'severe',
+    waterScale: 'knee_stall',
+    hazardFlags: ['isolation_deep'],
+    frequency: 'Mưa lớn >50 mm trên tiểu lưu vực Xuân Đỉnh – Cổ Nhuế',
+    drainDuration: '1 – 3 giờ',
+    elevationM: 10,
+    confidenceTier: 'A',
+    confirmCount: 4,
+    sourceType: 'Tuổi Trẻ, Thể thao & Văn hóa, Lao Động',
+    sourceCitation: 'Tuổi Trẻ & Thể thao Văn hóa (ngập sâu phố Đỗ Nhuận – Công viên Hòa Bình làm ô tô chết máy); osm:way/962215931; DEM = 10 m',
+    observedDate: '2025-08-27',
+    notes: 'Cách trường ~1.556 m, cốt nền thấp 9–10 m tiếp giáp Ngoại giao đoàn – Xuân Đỉnh, nước mưa dồn nhanh gây ngập nửa bánh xe đến đầu gối.'
+  },
+  {
+    id: 'R-24',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Trục giữa Đường Cổ Nhuế – Cụm ngõ xóm trọ Cổ Nhuế Trù (Ngõ 145 – 347)',
+    lat: 21.06695,
+    lng: 105.7791,
+    severity: 'moderate',
+    waterScale: 'half_wheel',
+    hazardFlags: ['elec_leak_risk', 'uneven_pothole'],
+    frequency: 'Các trận mưa rào lớn >40 mm',
+    drainDuration: '1 – 2 giờ (chờ trạm bơm Cổ Nhuế hạ mực nước)',
+    elevationM: 13,
+    confidenceTier: 'B',
+    confirmCount: 4,
+    sourceType: 'Báo Dân Việt, Lao Động & OpenStreetMap',
+    sourceCitation: 'Báo Dân Việt & Lao Động (quá tải thoát nước trục đường & ngõ dân cư Cổ Nhuế); osm:way/29111948',
+    observedDate: '2025-09-29',
+    notes: 'Cách trường ~823 m. Mặt đường Cổ Nhuế nhỏ hẹp, mật độ nhà trọ sinh viên dày đặc hai bên; khi mưa lớn nước từ các ngõ dồn ra trục giữa không thoát kịp gây ngập lênh láng.'
+  },
+  {
+    id: 'R-25',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Đường Đức Thắng – Đoạn trũng khu dân cư Đức Thắng / Cổng Đôi (DEM 11 m)',
+    lat: 21.077837,
+    lng: 105.777666,
+    severity: 'moderate',
+    waterScale: 'half_wheel',
+    hazardFlags: ['elec_leak_risk', 'uneven_pothole'],
+    frequency: 'Mưa lớn kéo dài & thời điểm thi công khớp nối cống',
+    drainDuration: '1 – 2 giờ',
+    elevationM: 11,
+    confidenceTier: 'A',
+    confirmCount: 3,
+    sourceType: 'VnExpress, Dân Việt & Lao Động (2025–2026)',
+    sourceCitation: 'VnExpress, Dân Việt & Lao Động (ngập ngõ ngách & hạ tầng thoát nước Đức Thắng – Thụy Phương); osm:way/572354323; DEM = 11 m',
+    observedDate: '2026-08-23',
+    notes: 'Cách ĐH Mỏ ~711 m về phía Đông Bắc (DEM 11 m, thấp hơn 6 m so với Khu A). Nhiều ngõ dân sinh và nhà trọ sinh viên dọc tuyến dễ đọng nước khi mưa dồn dập.'
+  },
+  {
+    id: 'R-26',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Đoạn yên ngựa trũng Đường Lê Văn Hiến – Ngã ba Đức Thắng (DEM 11 m)',
+    lat: 21.074215,
+    lng: 105.775455,
+    severity: 'moderate',
+    waterScale: 'ankle',
+    hazardFlags: ['uneven_pothole'],
+    frequency: 'Mưa rào cường độ lớn (>40 mm/giờ) giờ tan học',
+    drainDuration: '30 – 60 phút',
+    elevationM: 11,
+    confidenceTier: 'B',
+    confirmCount: 3,
+    sourceType: 'OpenStreetMap, Copernicus DEM & Báo chí Bắc Từ Liêm',
+    sourceCitation: 'osm:way/399593885 (Đường Lê Văn Hiến, cách ĐH Mỏ 251 m); Copernicus DEM GLO-30 = 11 m (thấp hơn 2 gò 17 m liền kề)',
+    observedDate: '2026-08-23',
+    notes: 'Cách cổng 18 Phố Viên chỉ ~251 m. Đoạn đường võng xuống 11 m nằm kẹp giữa gò Khu A ĐH Mỏ (17 m) và HV Cảnh sát CS2 (17 m), khiến nước mưa mặt đường từ hai phía đổ dồn nhanh gây ngập mắt cá đến nửa bánh xe trước khi thoát kịp.'
+  },
+  {
+    id: 'R-27',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Nút giao Phố Kẻ Vẽ – Đường Thụy Phương (Đông Ngạc)',
+    lat: 21.084975,
+    lng: 105.777225,
+    severity: 'moderate',
+    waterScale: 'half_wheel',
+    hazardFlags: ['uneven_pothole'],
+    frequency: 'Các đợt mưa lớn kéo dài (>50 mm)',
+    drainDuration: '1 – 2 giờ',
+    elevationM: 13,
+    confidenceTier: 'A',
+    confirmCount: 4,
+    sourceType: 'Tiền Phong, Báo Mới & Lao Động',
+    sourceCitation: 'Tiền Phong, Báo Mới & Lao Động (điểm ngập cục bộ phố Kẻ Vẽ – Đông Ngạc – Thụy Phương); osm:way/146725514',
+    observedDate: '2025-10-07',
+    notes: 'Cách trường ~1.429 m về phía Bắc. Khu dân cư lâu đời có hệ thống cống nhỏ, khi mưa to nước dồn về nút giao Kẻ Vẽ – Thụy Phương rút chậm.'
+  },
+  {
+    id: 'R-28',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Đường Tân Xuân – Đoạn qua Cụm Ecohome / Chân cầu Thăng Long',
+    lat: 21.083942,
+    lng: 105.78521,
+    severity: 'severe',
+    waterScale: 'half_wheel',
+    hazardFlags: ['uneven_pothole'],
+    frequency: 'Mưa lớn kéo dài (>50–70 mm)',
+    drainDuration: '1 – 2 giờ',
+    elevationM: 12,
+    confidenceTier: 'A',
+    confirmCount: 4,
+    sourceType: 'Tiền Phong, Lao Động & Dân Trí',
+    sourceCitation: 'Tiền Phong & Lao Động (điểm ngập cục bộ đường Tân Xuân – Đông Ngạc); osm:way/339282226; DEM = 12 m',
+    observedDate: '2025-10-02',
+    notes: 'Cách ĐH Mỏ ~1.732 m. Trục đường sát chân đê và cụm chung cư Ecohome có lưu lượng xe tải, xe buýt lớn; thường đọng nước kéo dài tại các đoạn giao cắt khi mưa lớn.'
+  },
+  {
+    id: 'R-29',
+    layerGroup: 'risk',
+    category: 'flood',
+    name: 'Khu dân cư Phú Minh – Ven sông Nhuệ / Đầu đường K3 (Rốn trũng DEM 6 m)',
+    lat: 21.060668,
+    lng: 105.773123,
+    severity: 'severe',
+    waterScale: 'knee_stall',
+    hazardFlags: ['elec_leak_risk', 'isolation_deep'],
+    frequency: 'Mưa lớn >40–50 mm kết hợp nước sông Nhuệ dâng',
+    drainDuration: '> 2 giờ',
+    elevationM: 6,
+    confidenceTier: 'A',
+    confirmCount: 4,
+    sourceType: 'Báo Mới, Tiền Phong & Copernicus DEM GLO-30',
+    sourceCitation: 'Báo Mới & Tiền Phong (ngập úng cục bộ khu tập thể Phú Minh – Cổ Nhuế 2); osm:node/8934749257; DEM GLO-30 = 6 m',
+    observedDate: '2025-10-07',
+    notes: 'Cách ĐH Mỏ ~1.319 m về phía Nam Cầu Noi. Cùng với đường Tân Nhuệ, đây là rốn địa hình thấp nhất bán kính 2 km (chỉ 6 m DSM sát bờ sông Nhuệ), hệ thống thoát nước khu tập thể cũ rất dễ quá tải.'
+  },
 
   // ================= LỚP 2: 15 ĐIỂM AN TOÀN, Y TẾ, HÀNH CHÍNH & KHÔNG GIAN HẠ NHIỆT (OSM XÁC THỰC ≤ 2 KM) =================
   {
@@ -879,6 +1119,228 @@ export const SAFE_DETOUR_ROUTES = [
       [105.774942, 21.069922],
       [105.777269, 21.070783],
       [105.780118, 21.061801]
+    ]
+  }
+];
+
+/**
+ * 10 Tuyến phố & Đoạn đường ngập thực tế theo tọa độ hình học OpenStreetMap (LineString)
+ * Giải thích vì sao khi mưa lớn xảy ra, nước ngập kéo dài thành từng dải đường liên hoàn chứ không chỉ tại 1 chấm đơn lẻ.
+ */
+export const FLOOD_STREET_CORRIDORS = [
+  {
+    id: 'FC-01',
+    name: 'Tuyến ngập dọc Cầu Phố Viên → Cuối Phố Viên → Nam Phố Viên / Cầu Noi (DEM 9–12 m)',
+    rainThresholdMm: 35,
+    severity: 'severe',
+    source: 'osm:way/1255456395 & osm:way/37768189 · Báo Lao Động & VietNamNet (17–18/09/2026)',
+    note: 'Dải đường dài ~1,1 km hạ thấp từ 12m xuống 9m sát sông Nhuệ; có ổ gà và miệng cống thoát nước xoáy cực kỳ nguy hiểm.',
+    coordinates: [
+      [105.77125, 21.07168],
+      [105.77249, 21.07153],
+      [105.7725, 21.07093],
+      [105.77253, 21.06996],
+      [105.77254, 21.06859],
+      [105.7726, 21.0673],
+      [105.77298, 21.06525],
+      [105.77308, 21.06321],
+      [105.77311, 21.06163]
+    ]
+  },
+  {
+    id: 'FC-02',
+    name: 'Tuyến ngập Đường Cổ Nhuế & Cụm ngõ xóm trọ sinh viên (Ngõ 103 – 521 Cổ Nhuế)',
+    rainThresholdMm: 45,
+    severity: 'moderate',
+    source: 'osm:way/29111948 · Báo Dân Việt & Lao Động (2025–2026)',
+    note: 'Trục đường hẹp đông nhà trọ sinh viên; nước từ các ngõ nhánh dồn ra mặt đường chờ Trạm bơm Cổ Nhuế tiêu thoát.',
+    coordinates: [
+      [105.78068, 21.06212],
+      [105.77994, 21.06341],
+      [105.77942, 21.06551],
+      [105.77912, 21.06687],
+      [105.77874, 21.06834],
+      [105.77808, 21.06961],
+      [105.7771, 21.07094]
+    ]
+  },
+  {
+    id: 'FC-03',
+    name: 'Dải điểm đen ngập Đường Phạm Văn Đồng (Công viên Hòa Bình → Ngã tư Cổ Nhuế → TP Giao Lưu)',
+    rainThresholdMm: 50,
+    severity: 'severe',
+    source: 'osm:way/1411062723 & osm:way/967878676 · Danh sách Cty Thoát nước HN, Tuổi Trẻ & Dân Trí',
+    note: 'Làn gom Vành đai 3 qua đối diện Công viên Hòa Bình và nút giao Cổ Nhuế thường ngập nửa bánh xe khi mưa dồn dập.',
+    coordinates: [
+      [105.78493, 21.06712],
+      [105.78438, 21.06505],
+      [105.78401, 21.06359],
+      [105.78385, 21.06123],
+      [105.78355, 21.06019],
+      [105.78255, 21.05805]
+    ]
+  },
+  {
+    id: 'FC-04',
+    name: 'Tuyến ngập Phố Đỗ Nhuận – Cổng Đông Nam Công viên Hòa Bình (DEM 9–10 m)',
+    rainThresholdMm: 40,
+    severity: 'severe',
+    source: 'osm:way/962215931 · Tuổi Trẻ & Thể thao Văn hóa',
+    note: 'Đoạn phố cốt nền thấp 9–10m hay ngập 25–45 cm làm phương tiện chết máy.',
+    coordinates: [
+      [105.78693, 21.06737],
+      [105.78736, 21.06704],
+      [105.78814, 21.06643],
+      [105.78949, 21.0655]
+    ]
+  },
+  {
+    id: 'FC-05',
+    name: 'Tuyến đọng nước Đường Đức Thắng – Khu dân cư Cổng Đôi (DEM 11 m)',
+    rainThresholdMm: 50,
+    severity: 'moderate',
+    source: 'osm:way/572354323 · VnExpress & Dân Việt (2025–2026)',
+    note: 'Hành lang khu dân cư cũ Đức Thắng cao độ 11m dọc kênh tiêu thoát.',
+    coordinates: [
+      [105.77714, 21.07189],
+      [105.77731, 21.07457],
+      [105.77742, 21.07614],
+      [105.7777, 21.07836],
+      [105.77793, 21.0804],
+      [105.7782, 21.08336]
+    ]
+  },
+  {
+    id: 'FC-06',
+    name: 'Đoạn võng Đường Lê Văn Hiến – Ngã ba Đức Thắng (DEM 11 m sát ĐH Mỏ)',
+    rainThresholdMm: 45,
+    severity: 'moderate',
+    source: 'osm:way/399593885 · Copernicus DEM GLO-30 = 11 m',
+    note: 'Đoạn yên ngựa thấp 11m hứng nước mặt đổ dồn từ hai gò 17m liền kề khi mưa lớn.',
+    coordinates: [
+      [105.77364, 21.07424],
+      [105.77453, 21.07418],
+      [105.77547, 21.07422],
+      [105.77729, 21.07429]
+    ]
+  },
+  {
+    id: 'FC-07',
+    name: 'Tuyến ngập Đường Tân Xuân – Đường Đông Thắng – Cụm Ecohome 1–3 (DEM 9–12 m)',
+    rainThresholdMm: 50,
+    severity: 'severe',
+    source: 'osm:way/339282226 & osm:way/37765862 · Dân Trí, VietNamNet & Tiền Phong',
+    note: 'Cụm đường bao quanh Ecohome từng ngập sâu năm 2025; từ 8/2026 rút nhanh hơn nhờ kênh Thụy Phương nhưng vẫn cần cảnh giác khi mưa >70mm.',
+    coordinates: [
+      [105.78533, 21.08548],
+      [105.78522, 21.08408],
+      [105.78512, 21.0824],
+      [105.78429, 21.08491],
+      [105.78064, 21.08542]
+    ]
+  },
+  {
+    id: 'FC-08',
+    name: 'Tuyến ngập Phố Kẻ Vẽ – Đường Thụy Phương – Rốn trũng Tân Nhuệ (DEM 6–13 m)',
+    rainThresholdMm: 35,
+    severity: 'severe',
+    source: 'osm:way/146725514 & osm:way/146724866 · Tiền Phong, VietnamPlus & Lao Động',
+    note: 'Nối từ nút giao Kẻ Vẽ – Thụy Phương xuống rốn trũng 6m đường Tân Nhuệ sát sông Nhuệ.',
+    coordinates: [
+      [105.77803, 21.08373],
+      [105.77739, 21.08474],
+      [105.77679, 21.08627],
+      [105.7741, 21.08635],
+      [105.7714, 21.0864]
+    ]
+  },
+  {
+    id: 'FC-09',
+    name: 'Hành lang ngập Tây Thăng Long – Cầu Noi – Phú Minh / K3 Sông Nhuệ (DEM 6–11 m)',
+    rainThresholdMm: 30,
+    severity: 'severe',
+    source: 'osm:way/1434617049 & osm:node/8934749257 · Báo Mới, Tiền Phong & VietnamPlus',
+    note: 'Vùng rốn trũng 6–7m ven sông Nhuệ kết hợp công trường Tây Thăng Long chưa đồng bộ thoát nước.',
+    coordinates: [
+      [105.7648, 21.0642],
+      [105.76968, 21.06276],
+      [105.77236, 21.06163],
+      [105.77312, 21.06067],
+      [105.77328, 21.06008]
+    ]
+  },
+  {
+    id: 'FC-10',
+    name: 'Đường nội khu KĐT Resco Cổ Nhuế (OCT1 – OCT2 – Phạm Văn Đồng)',
+    rainThresholdMm: 50,
+    severity: 'severe',
+    source: 'Công ty Thoát nước HN, Tuổi Trẻ & VOV Giao thông',
+    note: 'Cốt sân nội khu thấp hơn mặt đường Phạm Văn Đồng dễ biến thành túi trũng khi mưa lớn.',
+    coordinates: [
+      [105.7836, 21.0739],
+      [105.78545, 21.07451],
+      [105.7865, 21.07375],
+      [105.7858, 21.07295]
+    ]
+  }
+];
+
+/**
+ * 4 Vùng rốn trũng địa hình vệ tinh Copernicus DEM GLO-30 (6 m – 11 m DSM)
+ * Dựa trên kết quả quét lưới 100 điểm vệ tinh: 54/72 ô lưới (75% diện tích bán kính 2 km) có cao độ ≤ 11 m bao quanh gò cao 17 m của Khu A ĐH Mỏ.
+ */
+export const LOW_DEM_BASINS = [
+  {
+    id: 'BASIN-01',
+    name: 'Dải lòng máng Sông Nhuệ – Nam Phố Viên – Cầu Noi – Phú Minh (DEM 6–11 m)',
+    rainThresholdMm: 30,
+    demRange: '6 – 11 m DSM',
+    coordinates: [
+      [21.0748, 105.7698],
+      [21.0718, 105.7728],
+      [21.0665, 105.7745],
+      [21.0595, 105.7752],
+      [21.0595, 105.7705],
+      [21.066, 105.7685],
+      [21.0725, 105.7682]
+    ]
+  },
+  {
+    id: 'BASIN-02',
+    name: 'Vùng trũng Tây Sông Nhuệ – Tây Thăng Long – Khu B ĐH Mỏ (DEM 7–9 m)',
+    rainThresholdMm: 35,
+    demRange: '7 – 9 m DSM',
+    coordinates: [
+      [21.0715, 105.756],
+      [21.071, 105.7675],
+      [21.0622, 105.7698],
+      [21.0628, 105.7565]
+    ]
+  },
+  {
+    id: 'BASIN-03',
+    name: 'Rốn trũng Bắc Đông Ngạc – Đường Tân Nhuệ – Ven sông Nhuệ (DEM 6–10 m)',
+    rainThresholdMm: 30,
+    demRange: '6 – 10 m DSM',
+    coordinates: [
+      [21.0882, 105.769],
+      [21.0875, 105.7768],
+      [21.0792, 105.7798],
+      [21.0785, 105.7708]
+    ]
+  },
+  {
+    id: 'BASIN-04',
+    name: 'Túi trũng Đông Bắc & Đông Nam (Ecohome – Resco – CV Hòa Bình – Đỗ Nhuận, DEM 9–11 m)',
+    rainThresholdMm: 50,
+    demRange: '9 – 11 m DSM',
+    coordinates: [
+      [21.0862, 105.7802],
+      [21.0858, 105.7862],
+      [21.0732, 105.7875],
+      [21.0648, 105.7895],
+      [21.0635, 105.7832],
+      [21.074, 105.7825]
     ]
   }
 ];
