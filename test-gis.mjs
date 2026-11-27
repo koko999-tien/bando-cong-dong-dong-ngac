@@ -23,7 +23,7 @@ import {
   parseImportedPoints
 } from './gis-utils.js';
 import { HUMG_CENTER, ERA5_CLIMATE_FACTS, MONTHLY_2026_CLIMATE, EMERGENCY_DIRECTORY, ROUTE_PRESETS, TRANSECT_PRESETS, SAMPLE_HUMG_POINTS } from './humg-data.js';
-import { searchKnowledgeNotebook, buildNotebookLmSourceMarkdown } from './knowledge-engine.js';
+import { searchKnowledgeNotebook, synthesizeSituationalAnswer, buildNotebookLmSourceMarkdown } from './knowledge-engine.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -46,6 +46,21 @@ assert.equal(qaRes.issueCount, 0, 'Tất cả 32 điểm gốc phải vượt qu
 
 const nbHit = searchKnowledgeNotebook('kenh 920 ty cuoi pho vien', SAMPLE_HUMG_POINTS);
 assert.ok(nbHit.matchedCards.length > 0 && nbHit.matchedCards[0].id === 'KB-01', 'Tìm kiếm không dấu Notebook phải trả đúng thẻ KB-01');
+
+// 1b-2. Kiểm tra Bộ máy Tổng hợp Tình huống Ngôn ngữ Tự nhiên (Situational Q&A)
+const sitRoute = synthesizeSituationalAnswer('Mưa lớn từ ĐH Mỏ về Cầu Noi đi đường nào an toàn?', SAMPLE_HUMG_POINTS, {
+  temp: 29.5,
+  apparentTemp: 34.2,
+  rainMm: 18.4,
+  dailyRainMm: 65.0,
+  uvMax: 6
+});
+assert.ok(sitRoute && sitRoute.riskLevel === 'danger', 'Câu hỏi đi qua vùng ngập phải kích hoạt mức danger');
+assert.ok(sitRoute.routeAction && sitRoute.routeAction.originIdx === 0 && sitRoute.routeAction.destIdx === 3, 'Phải bắt đúng cặp Khu A (0) -> Cầu Noi (3)');
+assert.ok(sitRoute.recommendedSafePt && sitRoute.recommendedSafePt.distanceMeters <= 400, 'Phải gợi ý điểm an toàn có mái che gần nhất');
+
+const sitElec = synthesizeSituationalAnswer('Phòng trọ ngõ Cổ Nhuế nước tràn vào ổ điện làm sao?', SAMPLE_HUMG_POINTS);
+assert.ok(sitElec.hotlines.some((h) => h.phone === '1900 1288'), 'Câu hỏi rò điện phải trả tổng đài EVNHANOI 1900 1288');
 
 // 1c. Kiểm tra phân tích lộ trình, lát cắt địa hình DEM, mô phỏng kịch bản mưa & máy tính Pre/Post
 const routeCheck = analyzeRouteCorridor(turf, ROUTE_PRESETS[0], ROUTE_PRESETS[3], SAMPLE_HUMG_POINTS, 165);

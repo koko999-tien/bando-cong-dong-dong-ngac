@@ -134,6 +134,21 @@
       box-shadow: 0 8px 20px rgba(15, 23, 42, 0.22);
     }
 
+    .auth-gate-overlay {
+      position: fixed; inset: 0; z-index: 900;
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+      background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(4px);
+    }
+    .auth-gate-card {
+      width: min(460px, 100%); background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 22px 24px; box-shadow: 0 20px 42px rgba(15, 23, 42, 0.28);
+    }
+    .auth-gate-card h2 { margin: 0 0 6px; font-size: 1.06rem; }
+    .auth-err {
+      margin-top: 8px; padding: 8px 10px; border-radius: 6px;
+      background: #fef2f2; border: 1px solid #fecaca; color: var(--red); font-size: 0.79rem; font-weight: 600;
+    }
+
     @media (max-width: 920px) {
       .grid-4, .qr-grid { grid-template-columns: repeat(2, 1fr); }
       .grid-2, .grid-3, .filter-grid { grid-template-columns: 1fr; }
@@ -148,13 +163,41 @@
       <span class="topbar-sub">Kiểm duyệt A/B/C · Gộp điểm trùng 50m · Theo dõi 8 KPI · Phát bản tin thời gian thực · Xuất Google NotebookLM</span>
     </div>
     <div class="nav-row">
-      <span id="adm-source-pill" class="mode-pill">Chế độ: Cục bộ (Trình duyệt)</span>
+      <span id="adm-source-pill" class="mode-pill">Đang kiểm tra xác thực...</span>
       <a href="./index.html" class="btn btn-primary">← Mở Bản đồ Cộng đồng</a>
+      <a href="./khao-sat.html" class="btn">Trang Khảo sát Pre/Post</a>
       <a href="./thuyet-trinh.html" class="btn">Slide &amp; Video 45s</a>
-      <a href="./infographics-va-ban-tin.html" class="btn">03 Infographic &amp; Bản tin</a>
       <a href="./du-lieu-mo.html" class="btn">Số liệu Mở</a>
+      <button type="button" id="btn-admin-logout" class="btn btn-danger" hidden>Đăng xuất</button>
     </div>
   </header>
+
+  <!-- Cổng Khóa Xác Thực Quản Trị Phía Máy Chủ (HMAC-SHA256 Bearer Token) -->
+  <div id="admin-auth-gate" class="auth-gate-overlay" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+    <div class="auth-gate-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0f766e" stroke-width="2" aria-hidden="true">
+          <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <h2 id="gate-title" style="margin:0;">Xác thực Trung tâm Quản trị Đám mây</h2>
+      </div>
+      <p class="sub">
+        Khu vực điều hành được bảo vệ bằng chữ ký mật mã <strong>HMAC-SHA256</strong> trên máy chủ <code>/api/community</code>. Mọi thao tác duyệt điểm, chỉnh sửa và phát cảnh báo chỉ được phép khi đăng nhập hợp lệ.
+      </p>
+      <form id="admin-gate-form">
+        <div style="margin-bottom:10px;">
+          <label for="gate-pass-input">Mật khẩu Quản trị viên Dự án</label>
+          <input type="password" id="gate-pass-input" required autocomplete="current-password" placeholder="Nhập mật khẩu quản trị...">
+        </div>
+        <div id="gate-error-msg" class="auth-err" hidden></div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+          <button type="submit" id="btn-gate-submit" class="btn btn-primary" style="padding:9px 14px;">Đăng nhập Quản trị Cloud</button>
+          <button type="button" id="btn-gate-local-demo" class="btn" style="padding:8px 12px;">Chế độ xem thử Cục bộ (Chỉ trên trình duyệt này, không ghi lên Cloud)</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <nav class="tabbar" role="tablist" aria-label="Các phân hệ quản trị">
     <button type="button" class="tab-btn is-active" data-tab="overview">1. Tổng quan &amp; 8 KPI Chiến dịch</button>
@@ -221,10 +264,14 @@
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
           <div>
             <h2>Máy tính Thống kê Hiệu quả Truyền thông (Pre-test vs Post-test — Chương 5 Báo cáo)</h2>
-            <p class="sub" style="margin-bottom:0;">Nhập kết quả tổng hợp từ Google Forms đầu vào &amp; đầu ra để tự động kiểm tra ngưỡng KPI (+≥30% kiến thức đúng &amp; +≥1,0 điểm tự tin) và sinh đoạn nhận xét học thuật chuẩn.</p>
+            <p class="sub" style="margin-bottom:0;">Tự động đồng bộ từ trang <code>khao-sat.html</code> trên Cloud (hoặc nhập bổ sung) để kiểm tra ngưỡng KPI (+≥30% kiến thức đúng &amp; +≥1,0 điểm tự tin).</p>
           </div>
-          <button type="button" id="btn-copy-prepost-text" class="btn btn-primary">Chép đoạn nhận xét Chương 5</button>
+          <div class="nav-row">
+            <button type="button" id="btn-export-surveys-csv" class="btn btn-ok">Xuất dữ liệu Khảo sát Pre/Quiz/Post (.CSV Excel)</button>
+            <button type="button" id="btn-copy-prepost-text" class="btn btn-primary">Chép đoạn nhận xét Chương 5</button>
+          </div>
         </div>
+        <div id="cloud-survey-live-bar" style="margin-bottom:10px;padding:8px 12px;border-radius:8px;background:#f0fdfa;border:1px solid #99f6e4;font-size:0.79rem;color:#115e59;" hidden></div>
         <div class="grid-2" style="align-items:center;margin-top:10px;">
           <div>
             <div class="grid-3" style="margin-bottom:8px;">
@@ -407,20 +454,20 @@
     <section id="panel-system" class="tab-panel" hidden>
       <div class="grid-2">
         <div class="card">
-          <h2>1. Kết nối Máy chủ Google Sheets (`community-backend.gs`)</h2>
-          <p class="sub">Đồng bộ hai chiều với bảng tính chung của nhóm để duyệt báo cáo từ điện thoại người dân gửi về.</p>
+          <h2>1. Kết nối Cơ sở Dữ liệu Đám mây (`/api/community` · Vercel Blob)</h2>
+          <p class="sub">Đồng bộ hai chiều thời gian thực để kiểm duyệt báo cáo, phát thanh cảnh báo và thu phiếu khảo sát từ điện thoại cư dân toàn phường.</p>
           <div style="margin-bottom:8px;">
-            <label for="adm-api">URL Google Apps Script Web App</label>
-            <input type="text" id="adm-api" placeholder="https://script.google.com/macros/s/.../exec">
+            <label for="adm-api">Endpoint API Đám mây</label>
+            <input type="text" id="adm-api" value="/api/community" placeholder="/api/community">
           </div>
           <div style="margin-bottom:10px;">
-            <label for="adm-pass">Mật khẩu quản trị (`ADMIN_PASSCODE`)</label>
-            <input type="password" id="adm-pass" placeholder="Mặc định trong script: HUMG2026-DETAI08">
+            <label for="adm-pass">Mật khẩu quản trị (Cấp mới phiên Bearer Token 12h)</label>
+            <input type="password" id="adm-pass" placeholder="Nhập mật khẩu quản trị dự án...">
           </div>
           <div class="nav-row">
-            <button type="button" id="btn-load-cloud" class="btn btn-primary">Đồng bộ &amp; Duyệt trên Cloud</button>
+            <button type="button" id="btn-load-cloud" class="btn btn-primary">Đăng nhập &amp; Đồng bộ Cloud</button>
             <button type="button" id="btn-ping-api" class="btn">Đo độ trễ API (Ping)</button>
-            <button type="button" id="btn-load-local" class="btn">Chuyển về Dữ liệu Cục bộ</button>
+            <button type="button" id="btn-load-local" class="btn">Chuyển về Chế độ Cục bộ</button>
           </div>
           <p id="adm-cloud-status" style="margin:10px 0 0;font-size:0.8rem;font-weight:600;color:var(--primary);"></p>
         </div>

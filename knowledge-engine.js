@@ -10,9 +10,265 @@ import {
   ERA5_CLIMATE_FACTS,
   MONTHLY_2026_CLIMATE,
   EMERGENCY_DIRECTORY,
+  ROUTE_PRESETS,
   SAMPLE_HUMG_POINTS
 } from './humg-data.js';
 import { CATEGORY_LABELS } from './gis-utils.js';
+
+function haversineMetersSimple(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(a)));
+}
+
+const LANDMARK_MATCHERS = [
+  { presetIdx: 0, aliases: ['dh mo', 'dai hoc mo', '18 pho vien', 'khu a', 'cong truong', 'c12'] },
+  { presetIdx: 1, aliases: ['khu b', 'pham van nghi'] },
+  { presetIdx: 2, aliases: ['cuoi pho vien', 'thuong cat', 'cau pho vien', 'pho vien'] },
+  { presetIdx: 3, aliases: ['cau noi', 'song nhue', 'ngo 86 cau noi'] },
+  { presetIdx: 4, aliases: ['resco', 'pham van dong', '138 pham van dong', 'vanh dai 3'] },
+  { presetIdx: 5, aliases: ['ecohome', 'dong thang', 'ke ve', 'tan xuan'] },
+  { presetIdx: 6, aliases: ['cho co nhue', 'co nhue', 'ngo 521', 'ngo 401', 'ngo 103', 'tran cung'] },
+  { presetIdx: 7, aliases: ['ubnd', 'pho van hoi', 'duc thang', 'tan nhue', 'thuy phuong'] }
+];
+
+/**
+ * Bộ máy Tổng hợp Tư vấn Tình huống Ngôn ngữ Tự nhiên (Deterministic Zero-Hallucination Situational Q&A)
+ * Phân tích đồng thời: câu hỏi tự nhiên, điểm đi → điểm đến, mối nguy (ngập/xoáy cống/rò điện/sốc nhiệt/trọ mái tôn/buýt),
+ * thời tiết trực tiếp tại 18 Phố Viên và khoảng cách tới cơ sở y tế/tránh trú có mái che gần nhất.
+ */
+export function synthesizeSituationalAnswer(rawQuery, currentPoints = SAMPLE_HUMG_POINTS, liveWeather = null) {
+  const q = foldVietnamese(rawQuery);
+  if (!q || q.length < 4) return null;
+
+  const isFlood = /(mua|ngap|lut|nuoc dang|chet may|thuy kich|cong|xoay|di loi nao|duong nao|ve tro|khu b|cau noi)/.test(q);
+  const isElec = /(dien|ro dien|giat|aptomat|cau dao|o cam|day dien|1900 1288|1558)/.test(q);
+  const isHeat = /(nang|nong|soc nhiet|say nang|choang|hoa mat|oresol|uv|40|buyt|09a|28|31|pham van dong)/.test(q);
+  const isDorm = /(tro|mai ton|gac xep|tien dien|dieu hoa|quat|45 50)/.test(q);
+  const isAdmin = /(ubnd|phuong|cong an|so dien thoai|khan cap|sap nhap|cuu ho|115|114)/.test(q);
+  const isStats = /(era5|thang 8|624|bao nhieu|thong ke|dem|cao do|long mang|920 ty|kenh thuy phuong)/.test(q);
+
+  // Nhận diện các mốc địa danh xuất hiện theo thứ tự trong câu hỏi để bắt cặp Xuất phát -> Điểm đến
+  const matchedLandmarks = [];
+  for (const lm of LANDMARK_MATCHERS) {
+    let bestPos = Infinity;
+    for (const al of lm.aliases) {
+      const idx = q.indexOf(al);
+      if (idx >= 0 && idx < bestPos) bestPos = idx;
+    }
+    if (bestPos < Infinity) matchedLandmarks.push({ presetIdx: lm.presetIdx, pos: bestPos });
+  }
+  matchedLandmarks.sort((a, b) => a.pos - b.pos);
+
+  let routeAction = null;
+  if (matchedLandmarks.length >= 2 && matchedLandmarks[0].presetIdx !== matchedLandmarks[1].presetIdx) {
+    const oIdx = matchedLandmarks[0].presetIdx;
+    const dIdx = matchedLandmarks[1].presetIdx;
+    routeAction = {
+      originIdx: oIdx,
+      destIdx: dIdx,
+      originLabel: ROUTE_PRESETS[oIdx].label,
+      destLabel: ROUTE_PRESETS[dIdx].label
+    };
+  } else if (isFlood && /(di|ve|duong|loi|tuyen)/.test(q) && matchedLandmarks.length === 1) {
+    const targetIdx = matchedLandmarks[0].presetIdx;
+    const oIdx = targetIdx === 0 ? 3 : 0;
+    const dIdx = targetIdx;
+    if (oIdx !== dIdx) {
+      routeAction = {
+        originIdx: oIdx,
+        destIdx: dIdx,
+        originLabel: ROUTE_PRESETS[oIdx].label,
+        destLabel: ROUTE_PRESETS[dIdx].label
+      };
+    }
+  }
+
+  // Xác định tọa độ neo để tính khoảng cách tới Điểm An toàn có mái che gần nhất
+  const activePts = currentPoints.filter((p) => p.status !== 'hidden');
+  let anchorLat = HUMG_CENTER.lat;
+  let anchorLng = HUMG_CENTER.lng;
+  let anchorLabel = 'Cổng 18 Phố Viên (ĐH Mỏ)';
+
+  if (matchedLandmarks.length > 0) {
+    const pr = ROUTE_PRESETS[matchedLandmarks[0].presetIdx];
+    anchorLat = pr.lat;
+    anchorLng = pr.lng;
+    anchorLabel = pr.label;
+  } else {
+    const directPt = activePts.find((p) => q.includes(foldVietnamese(p.name).slice(0, 12)));
+    if (directPt) {
+      anchorLat = Number(directPt.lat);
+      anchorLng = Number(directPt.lng);
+      anchorLabel = directPt.name;
+    }
+  }
+
+  // Tìm cơ sở y tế / tránh trú có mái che gần nhất (ưu tiên y tế nếu câu hỏi về sốc nhiệt/cấp cứu)
+  const safeCandidates = activePts
+    .filter((p) => p.layerGroup === 'safe' && p.confidenceTier !== 'C' && !p.outdoorOnly)
+    .map((p) => {
+      const dist = haversineMetersSimple(anchorLat, anchorLng, Number(p.lat), Number(p.lng));
+      const medicalBonus = isHeat && p.category === 'medical' ? -120 : 0;
+      return { point: p, distanceMeters: dist, walkingMinutes: Math.max(1, Math.round(dist / 78)), rankScore: dist + medicalBonus };
+    })
+    .sort((a, b) => a.rankScore - b.rankScore);
+
+  const nearestSafe = safeCandidates[0] || null;
+
+  // Tìm các điểm rủi ro liên quan trực tiếp quanh vị trí đang hỏi
+  const nearbyRisks = activePts
+    .filter((p) => p.layerGroup === 'risk')
+    .map((p) => ({
+      ...p,
+      distFromAnchor: haversineMetersSimple(anchorLat, anchorLng, Number(p.lat), Number(p.lng))
+    }))
+    .filter((p) => {
+      if (isHeat && !isFlood) return p.category === 'heat' && p.distFromAnchor <= 1200;
+      if (isFlood && !isHeat) return p.category !== 'heat' && p.distFromAnchor <= 900;
+      return p.distFromAnchor <= 800;
+    })
+    .sort((a, b) => a.distFromAnchor - b.distFromAnchor)
+    .slice(0, 3);
+
+  const bullets = [];
+  const hotlines = [];
+  const citations = new Set();
+  let riskLevel = 'info';
+  let headline = `Tổng hợp dữ liệu thực chứng quanh ${anchorLabel}`;
+
+  if (liveWeather && Number.isFinite(liveWeather.temp)) {
+    bullets.push(
+      `Thời tiết thực tế lúc này tại 18 Phố Viên: ${liveWeather.temp}°C (cảm nhận ${liveWeather.apparentTemp}°C), lượng mưa hiện tại ${liveWeather.rainMm} mm (dự báo ngày ${liveWeather.dailyRainMm} mm, UV tối đa ${liveWeather.uvMax}).`
+    );
+    citations.add('Trạm lưới Open-Meteo Live tại 21.0725°N, 105.7739°E');
+  }
+
+  if (isElec) {
+    riskLevel = 'danger';
+    headline = 'Xử trí khẩn cấp An toàn Điện khi nước tràn nhà trọ / ngập đường';
+    bullets.push(
+      'Đứng trên bậc khô ráo NGẮT NGAY CẦU DAO / APTOMAT TỔNG bằng tay khô trước khi kê dọn đồ; tuyệt đối không lội chân ướt rút ổ cắm kéo dài trên sàn.'
+    );
+    bullets.push(
+      'Nếu phát hiện cột điện, hộp công tơ hoặc trạm biến áp ngập nước có nguy cơ rò điện, lùi xa tối thiểu 5–10 m, cảnh báo người xung quanh và gọi ngay Tổng đài EVNHANOI.'
+    );
+    hotlines.push({ label: 'Báo sự cố rò điện EVNHANOI 24/7', phone: '1900 1288' }, { label: 'Cứu nạn PCCC', phone: '114' });
+    citations.add('Khuyến cáo an toàn điện mùa mưa bão — EVNHANOI (evnhanoi.vn)');
+  }
+
+  if (isFlood) {
+    riskLevel = 'danger';
+    if (!isElec) {
+      headline = routeAction
+        ? `Tư vấn di chuyển an toàn mùa mưa: ${routeAction.originLabel.split('(')[0].trim()} → ${routeAction.destLabel.split('(')[0].trim()}`
+        : `Cảnh báo ngập cục bộ & định hướng tránh trú quanh ${anchorLabel}`;
+    }
+    bullets.push(
+      'Quy tắc “Nửa bánh xe”: Không cố chạy xe máy qua đoạn ngập >20–25 cm hoặc nơi nước đục che khuất mặt đường, đặc biệt tránh dải lòng máng DEM 6–12 m (Cuối Phố Viên, Cầu Phố Viên, Cầu Noi, Tân Nhuệ, Tây Thăng Long) có ổ gà và dòng xoáy miệng cống.'
+    );
+    if (routeAction) {
+      bullets.push(
+        'Bấm nút “Phân tích & Vẽ lộ trình OSRM” bên dưới để xem vệt cảnh báo đỏ và tuyến đường vòng qua dải nền cao Cổ Nhuế (14–17 m DSM).'
+      );
+    }
+    hotlines.push({ label: 'Đường dây nóng Thoát nước HN (HSDC)', phone: '024 3974 6225' });
+    citations.add('Copernicus DEM GLO-30 & Báo Lao Động (18/09/2026 — điểm ngập xoáy cống cuối Phố Viên)');
+  }
+
+  if (isHeat) {
+    if (riskLevel !== 'danger') riskLevel = 'caution';
+    if (!isFlood && !isElec) {
+      headline = 'Xử trí Sốc nhiệt 3 phút đầu & Điểm nghỉ mát / Y tế gần nhất';
+    }
+    bullets.push(
+      'Quy tắc Vàng 3 phút (Bộ Y tế): Đưa ngay vào bóng râm thoáng gió, nới lỏng quần áo, chườm khăn mát vùng CỔ – NÁCH – BẸN; nếu còn tỉnh táo cho uống từng ngụm nhỏ nước mát/Oresol. Không đưa đột ngột vào điều hòa 16°C, không dùng Paracetamol.'
+    );
+    if (/(buyt|09a|28|31|pham van dong)/.test(q)) {
+      bullets.push(
+        'Với sinh viên đi buýt 09A, 28, 31: Trạm BV Phương Đông – Phố Viên cách cổng trường 121 m; tránh đứng chờ lâu không mũ nón khung 11h00–15h00 trên trục Phạm Văn Đồng do bức xạ mặt nhựa UHI chênh +2–4°C.'
+      );
+    }
+    hotlines.push({ label: 'Cấp cứu Y tế', phone: '115' });
+    citations.add('Hướng dẫn sơ cứu say nắng – sốc nhiệt Bộ Y tế & OpenStreetMap');
+  }
+
+  if (isDorm) {
+    if (riskLevel === 'info') riskLevel = 'caution';
+    if (!isFlood && !isElec && !isHeat) {
+      headline = 'Giải pháp hạ nhiệt Phòng trọ mái tôn (45–50°C) tiết kiệm điện cho sinh viên';
+    }
+    bullets.push(
+      'Ban ngày (10h–16h): Che rèm/tấm chắn bức xạ cửa hướng Tây và ưu tiên học tập tại Thư viện / Sảnh C12 Khu A ĐH Mỏ (cao ráo 17 m, mát mẻ miễn phí).'
+    );
+    bullets.push(
+      'Chiều tối (sau 17h30): Mở cửa sổ và đặt quạt THỔI HƯỚNG RA NGOÀI 15 phút để đẩy túi khí nóng dưới mái tôn thoát ra trước khi bật điều hòa 26–27°C kết hợp quạt.'
+    );
+    citations.add('Phóng sự xóm trọ Báo Lao Động, VTV & Khuyến cáo tiết kiệm điện EVNHANOI');
+  }
+
+  if (isAdmin) {
+    if (!isFlood && !isElec && !isHeat) {
+      headline = 'Đầu mối Hành chính & Cứu trợ Phường Đông Ngạc (mới sau 01/07/2025)';
+    }
+    bullets.push(
+      'UBND Phường Đông Ngạc mới đặt tại Phố Văn Hội, TDP số 2 (cách ĐH Mỏ ~747 m, ĐT: 024 2217 5455). Công an Phường đặt tại 125 đường Thụy Phương (ĐT: 024 3223 3119).'
+    );
+    hotlines.push(
+      { label: 'UBND Phường Đông Ngạc', phone: '024 2217 5455' },
+      { label: 'Công an Phường Đông Ngạc', phone: '024 3223 3119' }
+    );
+    citations.add('Cổng TTĐT TP. Hà Nội (hanoi.gov.vn — nghị quyết sắp xếp ĐVHC 01/07/2025)');
+  }
+
+  if (isStats || bullets.length <= (liveWeather ? 1 : 0)) {
+    bullets.push(
+      'Chứng cứ khí tượng & địa hình tại ĐH Mỏ: Năm 2026 (đến 20/11) ghi nhận 76 ngày nhiệt cảm nhận ≥40°C và tổng mưa 2.120,4 mm (đỉnh tháng 08/2026 đạt 624,8 mm); cao độ DEM hạ từ 17 m (Khu A ĐH Mỏ) xuống 6–12 m dọc sông Nhuệ.'
+    );
+    citations.add('ECMWF ERA5 Archive (2024–2026) & Copernicus DEM GLO-30');
+  }
+
+  if (nearestSafe) {
+    bullets.push(
+      `Điểm hỗ trợ có mái che gần ${anchorLabel.split('(')[0].trim()} nhất: ${nearestSafe.point.name} — cách ${nearestSafe.distanceMeters} m (~${nearestSafe.walkingMinutes} phút đi bộ).`
+    );
+  }
+
+  // Khử trùng danh sách số điện thoại
+  const seenPhones = new Set();
+  const uniqueHotlines = hotlines.filter((h) => {
+    if (seenPhones.has(h.phone)) return false;
+    seenPhones.add(h.phone);
+    return true;
+  });
+
+  return {
+    headline,
+    riskLevel,
+    bullets,
+    hotlines: uniqueHotlines,
+    recommendedSafePt: nearestSafe
+      ? {
+          id: nearestSafe.point.id,
+          name: nearestSafe.point.name,
+          distanceMeters: nearestSafe.distanceMeters,
+          walkingMinutes: nearestSafe.walkingMinutes
+        }
+      : null,
+    flaggedRiskPts: nearbyRisks.map((r) => ({
+      id: r.id,
+      name: r.name,
+      distM: r.distFromAnchor
+    })),
+    routeAction,
+    citations: [...citations]
+  };
+}
 
 export function foldVietnamese(str) {
   return String(str ?? '')

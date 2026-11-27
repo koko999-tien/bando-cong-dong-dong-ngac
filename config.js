@@ -10,19 +10,17 @@ export const PROJECT_CONFIG = {
   contactNote: 'Liên hệ chỉnh sửa hoặc yêu cầu xóa dữ liệu: gửi email/Zalo tới nhóm phụ trách Đề tài 08 (cập nhật email nhóm tại config.js).',
 
   /**
-   * 1. URL Web App Google Apps Script sau khi triển khai tệp `community-backend.gs`
-   * Ví dụ: 'https://script.google.com/macros/s/AKfycb.../exec'
-   * Để trống '' nếu đang chạy thử nghiệm cục bộ (dữ liệu lưu trên localStorage trình duyệt).
+   * 1. Endpoint API đám mây mặc định (Vercel Serverless Function + Private Blob Storage tại Singapore)
+   * Tự động đồng bộ thời gian thực mọi lượt bấm +1, điểm mới, cảnh báo và khảo sát của cư dân toàn vùng!
    */
-  communityApiUrl: '',
+  communityApiUrl: '/api/community',
 
   /**
-   * 2. Các đường link Google Forms tạo tự động từ `google-forms-generator.gs`
-   * Để trống '' nếu chưa tạo (Web sẽ giữ nút ở trạng thái gợi ý).
+   * 2. Các biểu mẫu Khảo sát tích hợp trực tiếp ngay trên Web (không bắt người dân chuyển sang tab ngoài)
    */
-  preTestFormUrl: '',
-  drillQuizFormUrl: '',
-  postTestFormUrl: '',
+  preTestFormUrl: './khao-sat.html?tab=pre',
+  drillQuizFormUrl: './index.html?drill=1',
+  postTestFormUrl: './khao-sat.html?tab=post',
 
   /**
    * 3. Link công khai chính thức (Vercel HTTPS hoặc link rút gọn Bitly sau khi nhóm tạo trên bitly.com)

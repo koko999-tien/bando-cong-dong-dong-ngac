@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Khảo sát Cộng đồng Pre-test (15 câu) &amp; Post-test (6 câu) — ĐH Mỏ - Địa chất</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #0f766e;
+      --primary-dark: #115e59;
+      --green: #15803d;
+      --red: #b91c1c;
+      --amber: #92400e;
+      --ink: #0f172a;
+      --muted: #475569;
+      --border: #cbd5e1;
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --panel: #f1f5f9;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: var(--ink); background: var(--bg); line-height: 1.55; font-size: 14.5px; }
+
+    .topbar {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+      padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .topbar h1 { margin: 0; font-size: 1rem; letter-spacing: -0.02em; }
+    .nav-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 8px 13px; border-radius: 7px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--ink); font: inherit; font-size: 0.83rem; font-weight: 600;
+      text-decoration: none; cursor: pointer;
+    }
+    .btn:hover { background: var(--panel); }
+    .btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+
+    .wrap { max-width: 820px; margin: 0 auto; padding: 20px 16px 56px; }
+
+    .mode-switch {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;
+    }
+    .switch-tab {
+      padding: 12px 14px; border-radius: 10px; border: 1.5px solid var(--border);
+      background: var(--surface); color: var(--muted); font: inherit; text-align: left; cursor: pointer;
+    }
+    .switch-tab strong { display: block; font-size: 0.92rem; color: var(--ink); margin-bottom: 2px; }
+    .switch-tab span { font-size: 0.78rem; }
+    .switch-tab.is-active { border-color: var(--primary); background: #f0fdfa; color: #115e59; }
+    .switch-tab.is-active strong { color: var(--primary-dark); }
+
+    .privacy-banner {
+      padding: 11px 14px; border-radius: 9px; background: #f0fdfa; border: 1px solid #99f6e4;
+      font-size: 0.81rem; color: #115e59; margin-bottom: 16px;
+    }
+
+    .progress-sticky {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 9px 14px; border-radius: 9px; background: var(--surface); border: 1px solid var(--border); margin-bottom: 16px;
+      font-size: 0.8rem; font-weight: 600;
+    }
+    .prog-bar { flex: 1; height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+    .prog-fill { height: 100%; background: var(--primary); width: 0%; transition: width 0.2s ease; }
+
+    .sec-header {
+      margin: 22px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    }
+    .sec-header h2 { margin: 0; font-size: 0.95rem; color: var(--primary-dark); }
+    .sec-header p { margin: 2px 0 0; font-size: 0.79rem; color: var(--muted); }
+
+    .q-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      padding: 15px 16px; margin-bottom: 12px;
+    }
+    .q-card.has-err { border-color: var(--red); background: #fffafa; }
+    .q-title { margin: 0 0 8px; font-weight: 700; font-size: 0.9rem; }
+    .q-hint { display: block; margin: -4px 0 9px; font-size: 0.78rem; color: var(--muted); }
+    .req { color: var(--red); }
+
+    .opt-list { display: flex; flex-direction: column; gap: 7px; }
+    .opt-item {
+      display: flex; align-items: flex-start; gap: 9px; padding: 9px 11px;
+      border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer; font-size: 0.85rem;
+    }
+    .opt-item:hover { border-color: #94a3b8; background: #f1f5f9; }
+    .opt-item input { margin-top: 3px; accent-color: var(--primary); transform: scale(1.1); }
+
+    .scale-row {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 6px;
+    }
+    .scale-pill {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      padding: 10px 6px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer; text-align: center;
+    }
+    .scale-pill strong { font-family: var(--mono); font-size: 1rem; }
+    .scale-pill span { font-size: 0.71rem; color: var(--muted); }
+    .scale-pill:has(input:checked) { border-color: var(--primary); background: #f0fdfa; color: var(--primary-dark); }
+
+    input[type="text"], textarea {
+      width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 7px; font: inherit; font-size: 0.86rem;
+    }
+    .err-text { margin-top: 6px; font-size: 0.78rem; font-weight: 600; color: var(--red); }
+
+    .done-card {
+      background: var(--surface); border: 1.5px solid #86efac; border-radius: 12px;
+      padding: 24px 22px; text-align: center;
+    }
+    .done-card h2 { margin: 8px 0; color: var(--green); font-size: 1.15rem; }
+
+    @media (max-width: 640px) {
+      .mode-switch { grid-template-columns: 1fr; }
+      .scale-row { gap: 5px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <h1>Khảo sát Thích ứng Nắng nóng &amp; Ngập cục bộ — ĐH Mỏ - Địa chất (Đề tài 08)</h1>
+    <nav class="nav-row">
+      <a href="./index.html" class="btn btn-primary">← Về Bản đồ Cộng đồng</a>
+      <a href="./index.html?drill=1" class="btn">Diễn tập &amp; Mini-Quiz 5 câu</a>
+      <a href="./cam-nang-1-cham.html" class="btn">Cẩm nang 1 chạm</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <div class="mode-switch" role="tablist" aria-label="Chọn giai đoạn khảo sát">
+      <button type="button" id="tab-btn-pre" class="switch-tab is-active" role="tab" aria-selected="true">
+        <strong>1. Khảo sát Đầu vào — Pre-test (15 câu)</strong>
+        <span>Dành cho người mới tham gia (khoảng 2,5 phút · ẩn danh 100%)</span>
+      </button>
+      <button type="button" id="tab-btn-post" class="switch-tab" role="tab" aria-selected="false">
+        <strong>2. Đánh giá Sau trải nghiệm — Post-test (6 câu)</strong>
+        <span>Dành cho người đã xem Bản đồ số, Cẩm nang hoặc Diễn tập (90 giây)</span>
+      </button>
+    </div>
+
+    <div class="privacy-banner">
+      <strong>Cam kết Bảo vệ Dữ liệu Cá nhân (Luật số 91/2025/QH15):</strong> Phiếu khảo sát hoàn toàn ẩn danh, không thu thập email hay họ tên bắt buộc. Kết quả được tổng hợp tự động lên máy chủ Đám mây phục vụ xây dựng Bản đồ Điểm rủi ro – Điểm an toàn miễn phí quanh Phường Đông Ngạc.
+    </div>
+
+    <div id="progress-box" class="progress-sticky">
+      <span id="prog-label">Tiến độ: 0 / 12 câu bắt buộc</span>
+      <div class="prog-bar"><div id="prog-fill" class="prog-fill"></div></div>
+      <span id="live-count-pill" style="font-family:var(--mono);color:var(--primary);">Cloud Live</span>
+    </div>
+
+    <!-- ================= FORM 1: PRE-TEST 15 CÂU NGUYÊN BẢN ================= -->
+    <form id="form-pre" novalidate>
+      <div class="sec-header">
+        <h2>PHẦN 1: THÔNG TIN CHUNG &amp; NHÓM DỄ CHỊU ẢNH HƯỞNG</h2>
+        <p>Phân loại mức độ phơi nhiễm thực tế khi đi học, đi làm quanh Phố Viên – Đức Thắng – Cổ Nhuế.</p>
+      </div>
+
+      <div class="q-card" data-req="radio" data-name="q1">
+        <p class="q-title">Câu 1. Bạn hiện là đối tượng nào tại khu vực khảo sát? <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="radio" name="q1" value="Sinh viên"><span>Sinh viên</span></label>
+          <label class="opt-item"><input type="radio" name="q1" value="Giảng viên / Cán bộ nhân viên"><span>Giảng viên / Cán bộ nhân viên</span></label>
+          <label class="opt-item"><input type="radio" name="q1" value="Người dân sinh sống quanh khu vực"><span>Người dân sinh sống quanh khu vực</span></label>
+          <label class="opt-item"><input type="radio" name="q1" value="Lao động ngoài trời"><span>Lao động ngoài trời (tài xế công nghệ, bảo vệ, người bán hàng...)</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn 1 đáp án.</div>
+      </div>
+
+      <div class="q-card" data-req="radio" data-name="q2">
+        <p class="q-title">Câu 2. Phương tiện di chuyển chính hằng ngày của bạn là gì? <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="radio" name="q2" value="Đi bộ"><span>Đi bộ</span></label>
+          <label class="opt-item"><input type="radio" name="q2" value="Xe đạp / Xe đạp điện"><span>Xe đạp / Xe đạp điện</span></label>
+          <label class="opt-item"><input type="radio" name="q2" value="Xe buýt (có đi bộ ra trạm)"><span>Xe buýt (có đi bộ ra trạm 09A, 28, 31...)</span></label>
+          <label class="opt-item"><input type="radio" name="q2" value="Xe máy"><span>Xe máy</span></label>
+          <label class="opt-item"><input type="radio" name="q2" value="Ô tô"><span>Ô tô</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn phương tiện chính.</div>
+      </div>
+
+      <div class="q-card" data-req="checkbox" data-name="q3">
+        <p class="q-title">Câu 3. Đặc điểm nơi ở hiện tại của bạn thuộc nhóm nào sau đây? <span class="req">*</span></p>
+        <span class="q-hint">Có thể chọn nhiều đáp án đúng với nơi ở của bạn.</span>
+        <div class="opt-list">
+          <label class="opt-item"><input type="checkbox" name="q3" value="Trọ mái tôn / áp mái"><span>Phòng trọ mái tôn / tầng áp mái / ít cửa sổ thông gió</span></label>
+          <label class="opt-item"><input type="checkbox" name="q3" value="Trọ nền thấp dễ ngập"><span>Phòng trọ khu vực nền thấp, dễ ngập khi mưa lớn</span></label>
+          <label class="opt-item"><input type="checkbox" name="q3" value="Trọ bình thường"><span>Phòng trọ bình thường (có điều hòa hoặc tương đối mát)</span></label>
+          <label class="opt-item"><input type="checkbox" name="q3" value="Ký túc xá Khu A / Khu B"><span>Ký túc xá (Khu A / Khu B)</span></label>
+          <label class="opt-item"><input type="checkbox" name="q3" value="Nhà riêng / Chung cư"><span>Nhà riêng / Chung cư</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng tích ít nhất 1 lựa chọn.</div>
+      </div>
+
+      <div class="q-card" data-req="checkbox" data-name="q4">
+        <p class="q-title">Câu 4. Bạn có thuộc nhóm dễ chịu tác động mạnh khi gặp thời tiết cực đoan không? <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="checkbox" name="q4" value="Di chuyển 11h-15h"><span>Thường xuyên phải di chuyển hoặc hoạt động ngoài trời trong khung giờ nắng gắt (11h00 – 15h00)</span></label>
+          <label class="opt-item"><input type="checkbox" name="q4" value="Dễ say nắng choáng váng"><span>Dễ bị say nắng, đau đầu, choáng váng khi đi nắng hoặc thay đổi nhiệt độ đột ngột</span></label>
+          <label class="opt-item"><input type="checkbox" name="q4" value="Có bệnh nền hô hấp tim mạch"><span>Có bệnh nền liên quan đến hô hấp, tim mạch hoặc huyết áp</span></label>
+          <label class="opt-item"><input type="checkbox" name="q4" value="Đi một mình chiều tối mưa dông"><span>Thường xuyên di chuyển một mình vào chiều tối khi hay có mưa dông</span></label>
+          <label class="opt-item"><input type="checkbox" name="q4" value="Không thuộc các nhóm trên"><span>Không thuộc các nhóm trên</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng tích ít nhất 1 lựa chọn.</div>
+      </div>
+
+      <div class="sec-header">
+        <h2>PHẦN 2: THỰC TRẠNG &amp; KHOANH VÙNG ĐIỂM RỦI RO – ĐIỂM AN TOÀN</h2>
+        <p>Thu thập dữ liệu thực tế từ cộng đồng để đối chiếu thực địa bán kính 2 km quanh ĐH Mỏ - Địa chất.</p>
+      </div>
+
+      <div class="q-card" data-req="checkbox" data-name="q5">
+        <p class="q-title">Câu 5. Trong 1 năm qua, bạn từng gặp những tình huống nào dưới đây tại khu vực trường và xung quanh? <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="checkbox" name="q5" value="Đường nắng gắt thiếu bóng cây"><span>Đi qua đoạn đường nắng gắt, không có bóng cây hoặc điểm nghỉ mát</span></label>
+          <label class="opt-item"><input type="checkbox" name="q5" value="Mưa lớn không có chỗ trú"><span>Mưa lớn bất chợt không tìm được chỗ trú an toàn</span></label>
+          <label class="opt-item"><input type="checkbox" name="q5" value="Đường ngập chết máy ngã xe"><span>Gặp đường ngập cục bộ gây tắt máy, ngã xe hoặc tắc đường kéo dài</span></label>
+          <label class="opt-item"><input type="checkbox" name="q5" value="Kẹt lại trường hoặc nơi trọ"><span>Bị kẹt lại trường/nơi trọ, phải hủy lịch học hoặc làm việc</span></label>
+          <label class="opt-item"><input type="checkbox" name="q5" value="Mệt lả say nắng hoặc cảm lạnh"><span>Có dấu hiệu mệt lả, say nắng hoặc cảm lạnh sau khi dầm mưa</span></label>
+          <label class="opt-item"><input type="checkbox" name="q5" value="Chưa từng gặp"><span>Chưa từng gặp vấn đề đáng kể</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng tích ít nhất 1 lựa chọn.</div>
+      </div>
+
+      <div class="q-card" data-req="radio" data-name="q6">
+        <p class="q-title">Câu 6. Mức độ ảnh hưởng của nắng nóng và mưa ngập cục bộ đến việc học tập, đi lại hằng ngày của bạn? <span class="req">*</span></p>
+        <div class="scale-row">
+          <label class="scale-pill"><input type="radio" name="q6" value="1"><strong>1</strong><span>Không ảnh hưởng</span></label>
+          <label class="scale-pill"><input type="radio" name="q6" value="2"><strong>2</strong><span>Ít</span></label>
+          <label class="scale-pill"><input type="radio" name="q6" value="3"><strong>3</strong><span>Trung bình</span></label>
+          <label class="scale-pill"><input type="radio" name="q6" value="4"><strong>4</strong><span>Khá lớn</span></label>
+          <label class="scale-pill"><input type="radio" name="q6" value="5"><strong>5</strong><span>Rất nghiêm trọng</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn mức từ 1 đến 5.</div>
+      </div>
+
+      <div class="q-card">
+        <p class="q-title">Câu 7. Kể tên 1–3 tuyến đường, cổng trường hoặc điểm quanh khu vực bạn thấy hay bị NGẬP SÂU nhất khi mưa lớn:</p>
+        <span class="q-hint">Gợi ý: Chân Cầu Phố Viên, cuối Phố Viên, Cầu Noi, ngõ Chợ Cổ Nhuế, Tân Nhuệ...</span>
+        <input type="text" name="q7" maxlength="250" placeholder="Nhập tên ngõ / đoạn đường (tùy chọn)...">
+      </div>
+
+      <div class="q-card">
+        <p class="q-title">Câu 8. Kể tên 1–3 đoạn đường hoặc khu vực bạn thấy NẮNG GẮT, THIẾU BÓNG MÁT nhất khi di chuyển ban ngày:</p>
+        <span class="q-hint">Gợi ý: Trục Phạm Văn Đồng, đường nối Khu A sang Khu B, dãy trọ mái tôn...</span>
+        <input type="text" name="q8" maxlength="250" placeholder="Nhập đoạn đường / khu trọ (tùy chọn)...">
+      </div>
+
+      <div class="q-card">
+        <p class="q-title">Câu 9. Khi gặp mưa lớn bất chợt hoặc quá nắng, bạn thường trú tạm / tránh nóng ở đâu quanh đây?</p>
+        <span class="q-hint">Gợi ý: Sảnh Nhà C12, thư viện trường, nhà chờ xe buýt có mái che, cửa hàng tiện lợi...</span>
+        <input type="text" name="q9" maxlength="250" placeholder="Nhập nơi bạn thường trú tạm (tùy chọn)...">
+      </div>
+
+      <div class="sec-header">
+        <h2>PHẦN 3: ĐÁNH GIÁ NHẬN THỨC &amp; KỸ NĂNG ỨNG PHÓ HIỆN TẠI (PRE-TEST)</h2>
+        <p>Tìm hiểu cách xử lý phổ biến hiện nay của sinh viên và người dân trước khi xem tài liệu hướng dẫn.</p>
+      </div>
+
+      <div class="q-card" data-req="radio" data-name="q10">
+        <p class="q-title">Câu 10. Khi phát hiện một người đi nắng về có dấu hiệu sốc nhiệt (da nóng đỏ, hoa mắt, buồn nôn, lơ mơ), xử trí ban đầu ĐÚNG nhất là gì? <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="radio" name="q10" value="0"><span>Đưa ngay vào phòng điều hòa lạnh sâu và cho uống thật nhiều nước đá lạnh</span></label>
+          <label class="opt-item"><input type="radio" name="q10" value="1"><span>Đưa vào chỗ râm mát, nới lỏng quần áo, chườm mát vùng cổ – nách – bẹn, cho uống từng ngụm nước mát/oresol (nếu còn tỉnh) và gọi hỗ trợ y tế nếu không đỡ</span></label>
+          <label class="opt-item"><input type="radio" name="q10" value="2"><span>Để người đó ngồi yên tại chỗ hít thở sâu và bôi dầu gió khắp người</span></label>
+          <label class="opt-item"><input type="radio" name="q10" value="3"><span>Không chắc chắn / Chưa biết cách xử lý</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn 1 phương án xử trí.</div>
+      </div>
+
+      <div class="q-card" data-req="radio" data-name="q11">
+        <p class="q-title">Câu 11. Khi đang đi trên đường và gặp đoạn ngập sâu quá nửa bánh xe, bạn thường chọn cách nào? <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="radio" name="q11" value="0"><span>Cố gắng đi sát mép vỉa hè hoặc giữ đều ga chạy nhanh qua cho kịp giờ</span></label>
+          <label class="opt-item"><input type="radio" name="q11" value="1"><span>Dừng lại tại vị trí cao ráo, theo dõi mực nước hoặc tìm tuyến đường vòng thay thế dù đi xa hơn</span></label>
+          <label class="opt-item"><input type="radio" name="q11" value="2"><span>Chờ xe khác đi qua trước rồi đi bám theo sau</span></label>
+          <label class="opt-item"><input type="radio" name="q11" value="3"><span>Tùy tình huống nhưng thường khá lúng túng, không rõ tuyến đường nào tránh ngập</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn 1 phương án.</div>
+      </div>
+
+      <div class="q-card" data-req="radio" data-name="q12">
+        <p class="q-title">Câu 12. Bạn tự đánh giá mức độ tự tin về kỹ năng ứng phó nắng nóng, mưa dông và ngập cục bộ của bản thân ở mức nào? <span class="req">*</span></p>
+        <div class="scale-row">
+          <label class="scale-pill"><input type="radio" name="q12" value="1"><strong>1</strong><span>Rất thiếu tự tin</span></label>
+          <label class="scale-pill"><input type="radio" name="q12" value="2"><strong>2</strong><span>Chưa tự tin</span></label>
+          <label class="scale-pill"><input type="radio" name="q12" value="3"><strong>3</strong><span>Bình thường</span></label>
+          <label class="scale-pill"><input type="radio" name="q12" value="4"><strong>4</strong><span>Khá tự tin</span></label>
+          <label class="scale-pill"><input type="radio" name="q12" value="5"><strong>5</strong><span>Rất tự tin</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn mức độ tự tin từ 1 đến 5.</div>
+      </div>
+
+      <div class="sec-header">
+        <h2>PHẦN 4: NHU CẦU THÔNG TIN &amp; THAM GIA DIỄN TẬP CẢNH BÁO SỐ</h2>
+        <p>Giúp nhóm tối ưu kênh phát cảnh báo trước giờ tan học khi có mưa dông hoặc nắng gắt.</p>
+      </div>
+
+      <div class="q-card" data-req="checkbox" data-max="2" data-name="q13">
+        <p class="q-title">Câu 13. Bạn thường tiếp nhận thông tin cảnh báo thời tiết hoặc tình hình ngập lụt quanh khu vực nhanh nhất qua kênh nào? (Chọn tối đa 2 đáp án) <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="checkbox" name="q13" value="Group Facebook sinh viên / cộng đồng"><span>Group Facebook sinh viên / cộng đồng khu vực</span></label>
+          <label class="opt-item"><input type="checkbox" name="q13" value="Nhóm Zalo lớp / xóm trọ"><span>Nhóm Zalo lớp / xóm trọ</span></label>
+          <label class="opt-item"><input type="checkbox" name="q13" value="TikTok / Reels ngắn"><span>TikTok / Reels ngắn</span></label>
+          <label class="opt-item"><input type="checkbox" name="q13" value="Ứng dụng thời tiết điện thoại"><span>Ứng dụng thời tiết trên điện thoại</span></label>
+          <label class="opt-item"><input type="checkbox" name="q13" value="Tin nhắn bạn bè người thân"><span>Tin nhắn từ bạn bè, người thân</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn từ 1 đến tối đa 2 kênh chính.</div>
+      </div>
+
+      <div class="q-card" data-req="checkbox" data-name="q14">
+        <p class="q-title">Câu 14. Trên Bản đồ số &amp; Cẩm nang ứng phó nhanh, nội dung nào bạn thấy hữu ích nhất? <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="checkbox" name="q14" value="Điểm ngập & đường thay thế"><span>Vị trí các điểm hay ngập kèm gợi ý tuyến đường thay thế</span></label>
+          <label class="opt-item"><input type="checkbox" name="q14" value="Điểm trú mưa & tránh nóng"><span>Vị trí các điểm trú mưa, điểm tránh nóng có bóng mát và y tế</span></label>
+          <label class="opt-item"><input type="checkbox" name="q14" value="Sơ cứu sốc nhiệt ngắn gọn"><span>Hướng dẫn sơ cứu say nắng/sốc nhiệt ngắn gọn dễ lưu trong điện thoại</span></label>
+          <label class="opt-item"><input type="checkbox" name="q14" value="Mẹo làm mát phòng trọ"><span>Mẹo làm mát phòng trọ tiết kiệm và chuẩn bị đồ phòng mưa nắng</span></label>
+          <label class="opt-item"><input type="checkbox" name="q14" value="Bản tin trước giờ tan học"><span>Bản tin cảnh báo nhanh theo cấp độ trước khung giờ tan học có thời tiết xấu</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn ít nhất 1 nội dung.</div>
+      </div>
+
+      <div class="q-card" data-req="radio" data-name="q15">
+        <p class="q-title">Câu 15. Bạn có sẵn sàng trải nghiệm ngay đợt Diễn tập Cảnh báo số &amp; Bản đồ an toàn (mất 2 phút) của nhóm không? <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="radio" name="q15" value="Sẵn sàng trải nghiệm ngay trên Web"><span>Có, mình sẵn sàng trải nghiệm Bản đồ &amp; Diễn tập ngay sau khi gửi phiếu!</span></label>
+          <label class="opt-item"><input type="radio" name="q15" value="Quan tâm xem sau"><span>Có quan tâm, mình sẽ xem thêm Cẩm nang sau</span></label>
+          <label class="opt-item"><input type="radio" name="q15" value="Không, cảm ơn"><span>Không, cảm ơn</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn 1 đáp án.</div>
+      </div>
+
+      <button type="submit" id="btn-submit-pre" class="btn btn-primary" style="width:100%;padding:12px;font-size:0.95rem;">
+        Gửi Phiếu Khảo sát Đầu vào (15 câu Pre-test)
+      </button>
+    </form>
+
+    <!-- ================= FORM 2: POST-TEST 6 CÂU ĐỐI CHIẾU HIỆU QUẢ ================= -->
+    <form id="form-post" hidden novalidate>
+      <div class="sec-header" style="margin-top:4px;">
+        <h2>ĐÁNH GIÁ SAU TRẢI NGHIỆM BẢN ĐỒ SỐ &amp; DIỄN TẬP (POST-TEST — 6 CÂU)</h2>
+        <p>Đối chiếu trực tiếp sự thay đổi nhận thức và mức độ tự tin sau khi tra cứu Bản đồ 2 lớp, Cẩm nang và Diễn tập.</p>
+      </div>
+
+      <div class="q-card" data-req="checkbox" data-name="p1">
+        <p class="q-title">Câu 1. Bạn đã tiếp cận hoặc sử dụng những sản phẩm nào của chiến dịch trong những ngày qua? <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="checkbox" name="p1" value="Bản đồ số 2 lớp"><span>Bản đồ số 2 lớp Điểm rủi ro – Điểm an toàn quanh ĐH Mỏ - Địa chất</span></label>
+          <label class="opt-item"><input type="checkbox" name="p1" value="Cẩm nang PDF / Infographic"><span>Cẩm nang bỏ túi PDF / Infographic ứng phó nắng nóng &amp; mưa ngập</span></label>
+          <label class="opt-item"><input type="checkbox" name="p1" value="Video ngắn 45 giây"><span>Video ngắn 45 giây hướng dẫn tra cứu bản đồ</span></label>
+          <label class="opt-item"><input type="checkbox" name="p1" value="Bản tin cảnh báo & Mini-quiz"><span>Bản tin cảnh báo nhanh (Vàng / Đỏ) &amp; Mini-quiz diễn tập 5 câu</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn ít nhất 1 sản phẩm đã xem.</div>
+      </div>
+
+      <div class="q-card" data-req="radio" data-name="p2">
+        <p class="q-title">Câu 2 (Đối chiếu kiến thức). Khi phát hiện một người đi nắng về có dấu hiệu sốc nhiệt (da nóng đỏ, hoa mắt, buồn nôn, lơ mơ), xử trí ban đầu ĐÚNG nhất là gì? <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="radio" name="p2" value="0"><span>Đưa ngay vào phòng điều hòa lạnh sâu và cho uống thật nhiều nước đá lạnh</span></label>
+          <label class="opt-item"><input type="radio" name="p2" value="1"><span>Đưa vào chỗ râm mát, nới lỏng quần áo, chườm mát vùng cổ – nách – bẹn, cho uống từng ngụm nước mát/oresol (nếu còn tỉnh) và gọi hỗ trợ y tế nếu không đỡ</span></label>
+          <label class="opt-item"><input type="radio" name="p2" value="2"><span>Để người đó ngồi yên tại chỗ hít thở sâu và bôi dầu gió khắp người</span></label>
+          <label class="opt-item"><input type="radio" name="p2" value="3"><span>Không chắc chắn / Chưa biết cách xử lý</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn 1 phương án.</div>
+      </div>
+
+      <div class="q-card" data-req="radio" data-name="p3">
+        <p class="q-title">Câu 3 (Đối chiếu hành vi). Sau khi xem Bản đồ số quanh ĐH Mỏ - Địa chất, nếu gặp cảnh báo đoạn Cầu Phố Viên / Cầu Noi ngập sâu quá nửa bánh xe, bạn sẽ làm gì? <span class="req">*</span></p>
+        <div class="opt-list">
+          <label class="opt-item"><input type="radio" name="p3" value="0"><span>Cố gắng đi sát mép vỉa hè hoặc giữ đều ga chạy nhanh qua cho kịp giờ</span></label>
+          <label class="opt-item"><input type="radio" name="p3" value="1"><span>Dừng lại tại điểm an toàn (Sảnh C12, Thư viện...) hoặc mở Bản đồ số chọn tuyến đường cao ráo thay thế</span></label>
+          <label class="opt-item"><input type="radio" name="p3" value="2"><span>Chờ xe khác đi qua trước rồi đi bám theo sau</span></label>
+          <label class="opt-item"><input type="radio" name="p3" value="3"><span>Vẫn chưa rõ tuyến đường nào tránh ngập</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn 1 phương án.</div>
+      </div>
+
+      <div class="q-card" data-req="radio" data-name="p4">
+        <p class="q-title">Câu 4 (Đối chiếu độ tự tin). Hiện tại, bạn tự đánh giá mức độ tự tin về kỹ năng ứng phó nắng nóng, mưa dông và ngập cục bộ của bản thân ở mức nào? <span class="req">*</span></p>
+        <div class="scale-row">
+          <label class="scale-pill"><input type="radio" name="p4" value="1"><strong>1</strong><span>Rất thiếu tự tin</span></label>
+          <label class="scale-pill"><input type="radio" name="p4" value="2"><strong>2</strong><span>Chưa tự tin</span></label>
+          <label class="scale-pill"><input type="radio" name="p4" value="3"><strong>3</strong><span>Bình thường</span></label>
+          <label class="scale-pill"><input type="radio" name="p4" value="4"><strong>4</strong><span>Khá tự tin</span></label>
+          <label class="scale-pill"><input type="radio" name="p4" value="5"><strong>5</strong><span>Rất tự tin</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn mức tự tin từ 1 đến 5.</div>
+      </div>
+
+      <div class="q-card" data-req="radio" data-name="p5">
+        <p class="q-title">Câu 5. Bạn đánh giá mức độ dễ tra cứu trên điện thoại và tính hữu ích của Bản đồ số 2 lớp quanh ĐH Mỏ - Địa chất ở mức nào? <span class="req">*</span></p>
+        <div class="scale-row">
+          <label class="scale-pill"><input type="radio" name="p5" value="1"><strong>1</strong><span>Khó xem</span></label>
+          <label class="scale-pill"><input type="radio" name="p5" value="2"><strong>2</strong><span>Tạm được</span></label>
+          <label class="scale-pill"><input type="radio" name="p5" value="3"><strong>3</strong><span>Khá ổn</span></label>
+          <label class="scale-pill"><input type="radio" name="p5" value="4"><strong>4</strong><span>Dễ dùng</span></label>
+          <label class="scale-pill"><input type="radio" name="p5" value="5"><strong>5</strong><span>Rất trực quan &amp; hữu ích</span></label>
+        </div>
+        <div class="err-text" hidden>Vui lòng chọn mức đánh giá từ 1 đến 5.</div>
+      </div>
+
+      <div class="q-card">
+        <p class="q-title">Câu 6. Góp ý thêm của bạn (bổ sung điểm ngập/nắng mới quanh Phố Viên – Cổ Nhuế hoặc cải thiện bản đồ):</p>
+        <textarea name="p6" rows="3" maxlength="500" placeholder="Chia sẻ thêm ý kiến của bạn (tùy chọn)..."></textarea>
+      </div>
+
+      <button type="submit" id="btn-submit-post" class="btn btn-primary" style="width:100%;padding:12px;font-size:0.95rem;">
+        Gửi Phiếu Đánh giá Sau trải nghiệm (6 câu Post-test)
+      </button>
+    </form>
+
+    <!-- Màn hình Hoàn tất & Phản hồi Khoa học -->
+    <section id="done-panel" class="done-card" hidden>
+      <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.2" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M8 12.5l2.8 2.8L16.5 9.5"></path>
+      </svg>
+      <h2 id="done-title">Đã ghi nhận phiếu khảo sát thành công lên Đám mây!</h2>
+      <p id="done-desc" style="color:var(--muted);max-width:600px;margin:0 auto 14px;"></p>
+      <div id="done-moh-tip" style="text-align:left;padding:12px 14px;border-radius:8px;background:#f0fdfa;border:1px solid #99f6e4;font-size:0.83rem;color:#115e59;margin-bottom:16px;" hidden>
+        <strong>Ghi nhớ Quy tắc Vàng 3 phút sơ cứu Sốc nhiệt (Bộ Y tế):</strong> Đưa ngay vào bóng râm thoáng gió, nới lỏng quần áo, chườm khăn mát vùng <strong>CỔ – NÁCH – BẸN</strong> và cho uống từng ngụm nước mát / Oresol (nếu còn tỉnh). Tuyệt đối không đưa đột ngột vào phòng lạnh 16°C, không dùng Paracetamol. Cơ sở y tế gần cổng 18 Phố Viên nhất: <strong>Nhà thuốc Phố Viên (103 m)</strong> &amp; <strong>BV Đa khoa Phương Đông (310 m)</strong>.
+      </div>
+      <div class="nav-row" style="justify-content:center;">
+        <a href="./index.html" class="btn btn-primary">Mở Bản đồ Cộng đồng 2km</a>
+        <a href="./index.html?drill=1" class="btn">Thực hành Diễn tập &amp; Mini-Quiz 5 câu</a>
+        <button type="button" id="btn-switch-other" class="btn">Chuyển sang phiếu còn lại</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { PROJECT_CONFIG } from './config.js';
+
+    const apiUrl = PROJECT_CONFIG.communityApiUrl || '/api/community';
+    const tabPre = document.getElementById('tab-btn-pre');
+    const tabPost = document.getElementById('tab-btn-post');
+    const formPre = document.getElementById('form-pre');
+    const formPost = document.getElementById('form-post');
+    const donePanel = document.getElementById('done-panel');
+    const progBox = document.getElementById('progress-box');
+    const progLabel = document.getElementById('prog-label');
+    const progFill = document.getElementById('prog-fill');
+    const livePill = document.getElementById('live-count-pill');
+
+    let activeTab = new URLSearchParams(window.location.search).get('tab') === 'post' ? 'post' : 'pre';
+
+    function setTab(nextTab) {
+      activeTab = nextTab;
+      const isPre = nextTab === 'pre';
+      tabPre.classList.toggle('is-active', isPre);
+      tabPre.setAttribute('aria-selected', String(isPre));
+      tabPost.classList.toggle('is-active', !isPre);
+      tabPost.setAttribute('aria-selected', String(!isPre));
+      formPre.hidden = !isPre;
+      formPost.hidden = isPre;
+      donePanel.hidden = true;
+      progBox.hidden = false;
+      updateProgress();
+      history.replaceState(null, '', `?tab=${nextTab}`);
+    }
+
+    tabPre.addEventListener('click', () => setTab('pre'));
+    tabPost.addEventListener('click', () => setTab('post'));
+
+    // Giới hạn chọn tối đa 2 kênh ở Câu 13
+    formPre.querySelectorAll('input[name="q13"]').forEach((chk) => {
+      chk.addEventListener('change', () => {
+        const checked = formPre.querySelectorAll('input[name="q13"]:checked');
+        if (checked.length > 2) {
+          chk.checked = false;
+        }
+      });
+    });
+
+    function isCardAnswered(card, formEl) {
+      const type = card.dataset.req;
+      const name = card.dataset.name;
+      if (type === 'radio') return Boolean(formEl.querySelector(`input[name="${name}"]:checked`));
+      if (type === 'checkbox') {
+        const cnt = formEl.querySelectorAll(`input[name="${name}"]:checked`).length;
+        const max = Number(card.dataset.max || 99);
+        return cnt >= 1 && cnt <= max;
+      }
+      return true;
+    }
+
+    function updateProgress() {
+      const formEl = activeTab === 'pre' ? formPre : formPost;
+      const reqCards = [...formEl.querySelectorAll('.q-card[data-req]')];
+      const done = reqCards.filter((c) => isCardAnswered(c, formEl)).length;
+      const pct = reqCards.length ? Math.round((done / reqCards.length) * 100) : 0;
+      progLabel.textContent = `Tiến độ: ${done} / ${reqCards.length} câu bắt buộc (${pct}%)`;
+      progFill.style.width = `${pct}%`;
+    }
+
+    document.addEventListener('change', (e) => {
+      const card = e.target.closest('.q-card[data-req]');
+      if (card) {
+        const formEl = activeTab === 'pre' ? formPre : formPost;
+        if (isCardAnswered(card, formEl)) {
+          card.classList.remove('has-err');
+          const err = card.querySelector('.err-text');
+          if (err) err.hidden = true;
+        }
+      }
+      updateProgress();
+    });
+
+    function collectAnswers(formEl) {
+      const reqCards = [...formEl.querySelectorAll('.q-card[data-req]')];
+      let firstInvalid = null;
+      for (const c of reqCards) {
+        const ok = isCardAnswered(c, formEl);
+        c.classList.toggle('has-err', !ok);
+        const err = c.querySelector('.err-text');
+        if (err) err.hidden = ok;
+        if (!ok && !firstInvalid) firstInvalid = c;
+      }
+      if (firstInvalid) {
+        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return null;
+      }
+
+      const fd = new FormData(formEl);
+      const out = {};
+      for (const [k, v] of fd.entries()) {
+        if (out[k] === undefined) out[k] = v;
+        else if (Array.isArray(out[k])) out[k].push(v);
+        else out[k] = [out[k], v];
+      }
+      return out;
+    }
+
+    async function refreshLiveStats() {
+      try {
+        const res = await fetch(apiUrl, { cache: 'no-store' });
+        const data = await res.json();
+        if (data?.ok && data.kpiLive) {
+          livePill.textContent = `Đã thu: ${data.kpiLive.preCount} Pre · ${data.kpiLive.postCount} Post`;
+        }
+      } catch { /* ignore */ }
+    }
+
+    async function handleSurveySubmit(e, sType) {
+      e.preventDefault();
+      const formEl = sType === 'pre' ? formPre : formPost;
+      const answers = collectAnswers(formEl);
+      if (!answers) return;
+
+      const btn = document.getElementById(sType === 'pre' ? 'btn-submit-pre' : 'btn-submit-post');
+      btn.disabled = true;
+      btn.textContent = 'Đang đồng bộ ẩn danh lên Đám mây...';
+
+      const heatFirstAidCorrect = sType === 'pre' ? Number(answers.q10) === 1 : Number(answers.p2) === 1;
+      const confidenceScore = sType === 'pre' ? Number(answers.q12) : Number(answers.p4);
+
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'submit_survey',
+            surveyType: sType,
+            heatFirstAidCorrect,
+            confidenceScore,
+            answers
+          })
+        });
+        const data = await res.json();
+        if (!data?.ok) throw new Error(data?.error || 'Không gửi được dữ liệu');
+
+        formEl.hidden = true;
+        progBox.hidden = true;
+        donePanel.hidden = false;
+        document.getElementById('done-moh-tip').hidden = sType === 'pre';
+        document.getElementById('done-title').textContent =
+          sType === 'pre'
+            ? 'Cảm ơn bạn đã hoàn thành Khảo sát Đầu vào (Pre-test)!'
+            : 'Cảm ơn bạn đã hoàn thành Đánh giá Sau trải nghiệm (Post-test)!';
+        document.getElementById('done-desc').textContent =
+          sType === 'pre'
+            ? 'Phiếu của bạn đã được mã hóa ẩn danh và cộng trực tiếp vào cơ sở dữ liệu Đề tài 08. Hãy mở Bản đồ Cộng đồng 2km và thử bài Diễn tập 5 câu trước khi làm Post-test nhé!'
+            : 'Dữ liệu đối chiếu Trước – Sau của bạn đã được cập nhật trực tiếp vào hệ thống thống kê hiệu quả truyền thông của dự án.';
+        document.getElementById('btn-switch-other').textContent =
+          sType === 'pre' ? 'Chuyển sang xem Post-test (6 câu)' : 'Quay lại xem Pre-test (15 câu)';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        refreshLiveStats();
+      } catch (err) {
+        alert('Chưa kết nối được máy chủ: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent =
+          sType === 'pre'
+            ? 'Gửi Phiếu Khảo sát Đầu vào (15 câu Pre-test)'
+            : 'Gửi Phiếu Đánh giá Sau trải nghiệm (6 câu Post-test)';
+      }
+    }
+
+    formPre.addEventListener('submit', (e) => handleSurveySubmit(e, 'pre'));
+    formPost.addEventListener('submit', (e) => handleSurveySubmit(e, 'post'));
+    document.getElementById('btn-switch-other').addEventListener('click', () => {
+      setTab(activeTab === 'pre' ? 'post' : 'pre');
+    });
+
+    setTab(activeTab);
+    refreshLiveStats();
+  </script>
+</body>
+</html>

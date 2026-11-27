@@ -1,4 +1,4 @@
-const CACHE_NAME = 'humg-community-gis-v4';
+const CACHE_NAME = 'humg-community-gis-v5';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const CORE_ASSETS = [
   './knowledge-engine.js',
   './app.js',
   './admin.js',
+  './khao-sat.html',
   './cam-nang-1-cham.html',
   './infographics-va-ban-tin.html',
   './thuyet-trinh.html',
@@ -41,8 +42,13 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // Không cache API động Google Apps Script hoặc tìm kiếm Nominatim
-  if (url.hostname.includes('script.google.com') || url.hostname.includes('nominatim.openstreetmap.org')) {
+  // Không bao giờ lưu bộ nhớ đệm với API động (/api/community, Google Apps Script, Nominatim, Open-Meteo)
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.hostname.includes('script.google.com') ||
+    url.hostname.includes('nominatim.openstreetmap.org') ||
+    url.hostname.includes('api.open-meteo.com')
+  ) {
     return;
   }
 

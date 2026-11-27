@@ -34,6 +34,7 @@ import {
 
 import {
   searchKnowledgeNotebook,
+  synthesizeSituationalAnswer,
   buildNotebookLmSourceMarkdown
 } from './knowledge-engine.js';
 
@@ -52,8 +53,95 @@ function debounce(fn, waitMs = 140) {
 }
 
 /**
+ * Kiểm định chất lượng ảnh hiện trường ngay trên trình duyệt bằng phân tích thống kê điểm ảnh <canvas>
+ * (Chống ảnh trắng/đen spam, nhận diện ảnh chụp màn hình chat/UI so với khung cảnh đường phố thực tế;
+ * tuyệt đối không tự chế số đo độ sâu cm hay nhiệt độ).
+ */
+function analyzeFieldPhotoHeuristics(canvas, ctx) {
+  const { width, height } = canvas;
+  const imgData = ctx.getImageData(0, 0, width, height).data;
+  const step = 4;
+  let count = 0;
+  let sumLum = 0;
+  let sumLumSq = 0;
+  let flatExtreme = 0;
+  let lowerCount = 0;
+  let lowerReflective = 0;
+  let brightPixels = 0;
+
+  for (let y = 0; y < height; y += step) {
+    const isLowerHalf = y >= height * 0.48;
+    for (let x = 0; x < width; x += step) {
+      const i = (y * width + x) * 4;
+      const r = imgData[i];
+      const g = imgData[i + 1];
+      const b = imgData[i + 2];
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      const maxC = Math.max(r, g, b);
+      const minC = Math.min(r, g, b);
+      const sat = maxC === 0 ? 0 : (maxC - minC) / maxC;
+
+      count++;
+      sumLum += lum;
+      sumLumSq += lum * lum;
+      if (lum > 244 || lum < 11) flatExtreme++;
+      if (lum > 205) brightPixels++;
+
+      if (isLowerHalf) {
+        lowerCount++;
+        if (sat < 0.24 && lum >= 55 && lum <= 205 && b >= r * 0.88) {
+          lowerReflective++;
+        }
+      }
+    }
+  }
+
+  const meanLum = count ? sumLum / count : 128;
+  const variance = count ? Math.max(0, sumLumSq / count - meanLum * meanLum) : 0;
+  const stdDev = Math.sqrt(variance);
+  const flatRatio = count ? flatExtreme / count : 0;
+  const aspect = height / Math.max(1, width);
+  const lowerReflectRatio = lowerCount ? lowerReflective / lowerCount : 0;
+  const brightRatio = count ? brightPixels / count : 0;
+
+  if (stdDev < 9) {
+    return {
+      qualityFlag: 'suspect_spam',
+      isWarning: true,
+      message: 'Cảnh báo kiểm định ảnh: Ảnh quá tối hoặc đơn sắc bất thường — báo cáo sẽ chuyển sang hàng đợi Quản trị viên kiểm tra.'
+    };
+  }
+  if ((aspect > 2.08 || aspect < 0.42) && flatRatio > 0.58) {
+    return {
+      qualityFlag: 'suspect_spam',
+      isWarning: true,
+      message: 'Cảnh báo kiểm định ảnh: Tỷ lệ giống ảnh chụp màn hình ứng dụng (không phải ảnh hiện trường) — báo cáo sẽ chờ duyệt thủ công.'
+    };
+  }
+  if (lowerReflectRatio > 0.36 && stdDev >= 16) {
+    return {
+      qualityFlag: 'verified_scene',
+      isWarning: false,
+      message: 'Kiểm định ảnh đạt: Nhận diện khung cảnh đường phố có vùng mặt nền ẩm/phản chiếu — đã xóa sạch EXIF/GPS.'
+    };
+  }
+  if (meanLum > 172 && brightRatio > 0.28) {
+    return {
+      qualityFlag: 'verified_scene',
+      isWarning: false,
+      message: 'Kiểm định ảnh đạt: Nhận diện khung cảnh ngoài trời cường độ bức xạ sáng cao — đã xóa sạch EXIF/GPS.'
+    };
+  }
+  return {
+    qualityFlag: 'ok',
+    isWarning: false,
+    message: 'Kiểm định ảnh đạt: Ảnh hiện trường hợp lệ — đã xóa sạch tọa độ EXIF/GPS & nén an toàn.'
+  };
+}
+
+/**
  * Xóa toàn bộ siêu dữ liệu EXIF (tọa độ GPS gốc, tên máy, giờ chụp) bằng cách vẽ lại ảnh qua <canvas>
- * ngay trên thiết bị người dùng và nén xuống định dạng JPEG nhẹ (< 45 KB) trước khi đính kèm.
+ * ngay trên thiết bị người dùng, kiểm định điểm ảnh chống spam và nén xuống định dạng JPEG nhẹ (< 45 KB).
  */
 async function stripExifAndCompressImage(file, maxDimension = 720, quality = 0.7) {
   return new Promise((resolve, reject) => {
@@ -79,15 +167,17 @@ async function stripExifAndCompressImage(file, maxDimension = 720, quality = 0.7
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Giảm dần chất lượng nếu vượt quá ngưỡng 36KB để lưu gọn an toàn vào Google Sheets
+        const inspection = analyzeFieldPhotoHeuristics(canvas, ctx);
+
+        // Giảm dần chất lượng nếu vượt quá ngưỡng 42KB để đồng bộ nhanh lên Cloud Blob & thiết bị 4G yếu
         let q = quality;
         let dataUrl = canvas.toDataURL('image/jpeg', q);
-        while (dataUrl.length > 36000 && q > 0.35) {
+        while (dataUrl.length > 44000 && q > 0.35) {
           q -= 0.1;
           dataUrl = canvas.toDataURL('image/jpeg', q);
         }
         const approxKb = Math.max(1, Math.round((dataUrl.length * 3) / 4 / 1024));
-        resolve({ dataUrl, width, height, approxKb });
+        resolve({ dataUrl, width, height, approxKb, ...inspection });
       };
       img.src = reader.result;
     };
@@ -360,8 +450,11 @@ function initApp() {
     points: Array.isArray(saved?.points) && saved.points.length > 0 ? saved.points : structuredClone(SAMPLE_HUMG_POINTS),
     filters: { layer: 'all', scope: 'all', search: '' },
     analysis: null,
-    apiUrl: storedApiUrl || PROJECT_CONFIG.communityApiUrl || '',
-    pendingPhotoDataUrl: ''
+    apiUrl: storedApiUrl || PROJECT_CONFIG.communityApiUrl || '/api/community',
+    pendingPhotoDataUrl: '',
+    pendingPhotoQualityFlag: 'ok',
+    liveWeatherSnapshot: null,
+    lastCloudSyncMs: 0
   };
 
   function persistState() {
@@ -643,18 +736,21 @@ function initApp() {
     els.drillDialog.showModal();
   });
 
-  // Xử lý chọn ảnh & xóa EXIF ngay trên trình duyệt
+  // Xử lý chọn ảnh, kiểm định điểm ảnh chống spam & xóa EXIF ngay trên trình duyệt
   els.ptPhoto.addEventListener('change', async () => {
     const file = els.ptPhoto.files?.[0];
     if (!file) return;
     try {
       const cleaned = await stripExifAndCompressImage(file);
       state.pendingPhotoDataUrl = cleaned.dataUrl;
+      state.pendingPhotoQualityFlag = cleaned.qualityFlag || 'ok';
       els.ptPhotoPreview.src = cleaned.dataUrl;
-      els.ptPhotoMeta.textContent = `Đã xóa sạch EXIF/GPS & nén an toàn (${cleaned.width}×${cleaned.height}px · ~${cleaned.approxKb} KB)`;
+      els.ptPhotoMeta.style.color = cleaned.isWarning ? '#b45309' : '#15803d';
+      els.ptPhotoMeta.textContent = `${cleaned.message} (${cleaned.width}×${cleaned.height}px · ~${cleaned.approxKb} KB)`;
       els.ptPhotoPreviewWrap.hidden = false;
     } catch (err) {
       state.pendingPhotoDataUrl = '';
+      state.pendingPhotoQualityFlag = 'ok';
       els.ptPhotoPreviewWrap.hidden = true;
       showToast(err.message);
     }
@@ -662,6 +758,7 @@ function initApp() {
 
   els.btnClearPhoto.addEventListener('click', () => {
     state.pendingPhotoDataUrl = '';
+    state.pendingPhotoQualityFlag = 'ok';
     els.ptPhoto.value = '';
     els.ptPhotoPreviewWrap.hidden = true;
   });
@@ -682,47 +779,72 @@ function initApp() {
 
   async function syncFromCloudApi() {
     if (!state.apiUrl) {
-      els.syncStatusMsg.textContent = 'Chế độ thử nghiệm cục bộ. Dán URL Apps Script (hoặc ghi vào config.js) để gom phiếu toàn phường Đông Ngạc.';
+      els.syncStatusMsg.textContent = 'Chế độ thử nghiệm cục bộ. Chưa cấu hình Endpoint đồng bộ đám mây.';
       return;
     }
-    els.syncStatusMsg.textContent = 'Đang đồng bộ dữ liệu cộng đồng từ Google Sheets...';
+    els.syncStatusMsg.textContent = 'Đang đồng bộ dữ liệu cộng đồng thời gian thực từ Đám mây...';
     try {
-      const res = await fetch(state.apiUrl);
+      const res = await fetch(state.apiUrl, { cache: 'no-store' });
       const data = await res.json();
       if (!data?.ok) throw new Error(data?.error || 'Phản hồi API không hợp lệ');
 
       const counts = data.confirmCounts || {};
-      for (const pt of state.points) {
-        if (counts[pt.id]) {
-          const baseCnt = SAMPLE_HUMG_POINTS.find((s) => s.id === pt.id)?.confirmCount || 1;
-          pt.confirmCount = Math.max(Number(pt.confirmCount) || 1, baseCnt + counts[pt.id]);
-        }
+      const modMap = data.moderationMap || {};
+
+      // 1. Áp dụng kiểm duyệt, chỉnh sửa và cộng lượt +1 toàn cầu cho 32 điểm gốc
+      const byId = new Map();
+      for (const basePt of SAMPLE_HUMG_POINTS) {
+        const mod = modMap[basePt.id] || {};
+        const merged = { ...structuredClone(basePt), ...mod };
+        const extraVotes = counts[basePt.id] || 0;
+        merged.confirmCount = Math.max(Number(merged.confirmCount) || 1, (basePt.confirmCount || 1) + extraVotes);
+        byId.set(basePt.id, merged);
       }
 
-      const existingIds = new Set(state.points.map((p) => p.id));
+      // 2. Giữ lại các điểm người dùng vừa tạo cục bộ (nếu có) và cập nhật toàn bộ báo cáo từ Cloud
+      for (const localPt of state.points) {
+        if (!byId.has(localPt.id)) byId.set(localPt.id, localPt);
+      }
       for (const rep of data.reports || []) {
-        if (!existingIds.has(rep.id)) {
-          state.points.push(rep);
-        }
+        byId.set(rep.id, rep);
+      }
+
+      state.points = [...byId.values()];
+      state.lastCloudSyncMs = Date.now();
+
+      // 3. Đồng bộ Thanh Cảnh báo Trực tiếp từ Quản trị viên Cloud xuống mọi thiết bị người dân
+      if (data.broadcast && typeof data.broadcast === 'object') {
+        try {
+          if (data.broadcast.active && data.broadcast.message) {
+            localStorage.setItem(BROADCAST_KEY, JSON.stringify(data.broadcast));
+          } else {
+            localStorage.removeItem(BROADCAST_KEY);
+          }
+        } catch { /* ignore */ }
+        renderAdminBroadcast();
       }
 
       recomputeAndRender(false);
       persistState();
-      els.syncStatusMsg.textContent = `Đã đồng bộ thành công với Google Sheets lúc ${new Date().toLocaleTimeString('vi-VN')}.`;
+      els.syncStatusMsg.textContent = `Đã đồng bộ Cloud toàn vùng lúc ${new Date().toLocaleTimeString('vi-VN')} (${state.points.filter((p) => p.status !== 'hidden').length} điểm hiển thị).`;
     } catch (err) {
-      els.syncStatusMsg.textContent = `Không kết nối được API (${err.message}). Dữ liệu vẫn lưu cục bộ an toàn.`;
+      els.syncStatusMsg.textContent = `Đang dùng bộ nhớ đệm Offline (${err.message}).`;
     }
   }
 
   async function postToCloudApi(payload) {
-    if (!state.apiUrl) return;
+    if (!state.apiUrl) return null;
     try {
-      await fetch(state.apiUrl, {
+      const isSameOrigin = state.apiUrl.startsWith('/');
+      const res = await fetch(state.apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        headers: { 'Content-Type': isSameOrigin ? 'application/json' : 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       });
-    } catch { /* fallback silently */ }
+      return await res.json();
+    } catch {
+      return null;
+    }
   }
 
   centerMarker.on('drag', (ev) => {
@@ -1434,22 +1556,33 @@ function initApp() {
     recomputeAndRender(false);
     persistState();
 
-    await postToCloudApi({
+    const cloudRes = await postToCloudApi({
       action: 'submit_report',
+      id: newRecord.id,
       reporterRole: role,
       layerGroup,
       category: cat,
       name: newRecord.name,
       lat: finalLat,
       lng: finalLng,
+      elevationM: newRecord.elevationM,
       waterScale: newRecord.waterScale,
       frequency: newRecord.frequency,
       hazardFlags: checkedHazards,
       photoDataUrl: newRecord.photoDataUrl,
+      photoQualityFlag: state.pendingPhotoQualityFlag || 'ok',
       notes: newRecord.notes,
       roundPrivacy: round20m,
       consentAccepted: true
     });
+
+    if (cloudRes && cloudRes.ok === false) {
+      state.points = state.points.filter((p) => p.id !== newRecord.id);
+      recomputeAndRender(false);
+      persistState();
+      showToast(`Từ chối tự động: ${cloudRes.error}`);
+      return;
+    }
 
     els.thankyouSummary.textContent = isFieldTeam
       ? `Đã ghi nhận điểm thực địa Hạng A "${newRecord.name}" lên Bản đồ.`
@@ -1567,13 +1700,15 @@ function initApp() {
     ).join('');
   }
 
-  els.quizForm.addEventListener('submit', (e) => {
+  els.quizForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     let correct = 0;
+    const quizAnswers = {};
     DRILL_QUIZ_QUESTIONS.forEach((q, qIdx) => {
       const card = els.quizContainer.querySelector(`.quiz-card[data-qidx="${qIdx}"]`);
       const chosen = card.querySelector(`input[name="quiz_${q.id}"]:checked`);
       const chosenVal = chosen ? Number(chosen.value) : -1;
+      quizAnswers[`q${qIdx + 1}`] = chosenVal;
       if (chosenVal === q.correctIndex) correct++;
       card.querySelectorAll('.quiz-opt').forEach((lbl) => {
         lbl.classList.remove('is-correct', 'is-wrong');
@@ -1583,8 +1718,20 @@ function initApp() {
       });
       card.querySelector('.quiz-explain').hidden = false;
     });
+    const score100 = correct * 20;
     els.quizScoreBanner.hidden = false;
-    els.quizScoreBanner.textContent = `Điểm của bạn: ${correct}/${DRILL_QUIZ_QUESTIONS.length} (${correct * 20}/100 điểm).`;
+    els.quizScoreBanner.textContent = `Điểm của bạn: ${correct}/${DRILL_QUIZ_QUESTIONS.length} (${score100}/100 điểm) — Đã đồng bộ vào thống kê Diễn tập!`;
+
+    const QUIZ_SYNC_KEY = 'humg_drill_quiz_synced_v1';
+    if (!sessionStorage.getItem(QUIZ_SYNC_KEY)) {
+      sessionStorage.setItem(QUIZ_SYNC_KEY, '1');
+      await postToCloudApi({
+        action: 'submit_survey',
+        surveyType: 'quiz',
+        quizScore: score100,
+        answers: quizAnswers
+      });
+    }
   });
 
   els.quizForm.addEventListener('reset', () => {
@@ -1664,6 +1811,14 @@ function initApp() {
     const dRain = daily?.precipitation_sum?.[0] ?? 0;
     const dProb = daily?.precipitation_probability_max?.[0] ?? 0;
     const uv = daily?.uv_index_max?.[0] ?? 0;
+
+    state.liveWeatherSnapshot = {
+      temp,
+      apparentTemp: app,
+      rainMm: rain,
+      dailyRainMm: dRain,
+      uvMax: uv
+    };
 
     if (rain >= 10 || dRain >= 40) {
       els.liveWeatherPill.className = 'live-pill live-pill-danger';
@@ -1752,7 +1907,62 @@ function initApp() {
   ).join('');
 
   function renderNotebookSearch(queryStr = '') {
-    const res = searchKnowledgeNotebook(queryStr, state.points);
+    const trimmed = queryStr.trim();
+    const res = searchKnowledgeNotebook(trimmed, state.points);
+    const situational = trimmed.length >= 4 ? synthesizeSituationalAnswer(trimmed, state.points, state.liveWeatherSnapshot) : null;
+
+    let advisoryHtml = '';
+    if (situational) {
+      const borderCol =
+        situational.riskLevel === 'danger' ? '#fca5a5' : situational.riskLevel === 'caution' ? '#fcd34d' : '#99f6e4';
+      const bgCol =
+        situational.riskLevel === 'danger' ? '#fef2f2' : situational.riskLevel === 'caution' ? '#fffbeb' : '#f0fdfa';
+      const badgeLabel =
+        situational.riskLevel === 'danger'
+          ? 'CẢNH BÁO AN TOÀN TRỰC TIẾP'
+          : situational.riskLevel === 'caution'
+            ? 'KHUYẾN NGHỊ TÌNH HUỐNG'
+            : 'TỔNG HỢP THỰC CHỨNG';
+
+      const hotlinesHtml =
+        situational.hotlines.length > 0
+          ? `<div style="margin-top:8px;font-size:0.78rem;"><strong>Đầu mối gọi nhanh:</strong> ${situational.hotlines
+              .map((h) => `<span class="mono-num" style="margin-right:10px;">${escapeHtml(h.label)}: <strong>${escapeHtml(h.phone)}</strong></span>`)
+              .join('')}</div>`
+          : '';
+
+      const actionBtns = [];
+      if (situational.routeAction) {
+        actionBtns.push(
+          `<button type="button" class="btn btn-primary btn-compact js-nb-route" data-orig="${situational.routeAction.originIdx}" data-dest="${situational.routeAction.destIdx}">Phân tích &amp; Vẽ lộ trình OSRM</button>`
+        );
+      }
+      if (situational.recommendedSafePt) {
+        actionBtns.push(
+          `<button type="button" class="btn btn-secondary btn-compact js-nb-fly" data-id="${escapeHtml(situational.recommendedSafePt.id)}">Bay tới điểm an toàn: ${escapeHtml(situational.recommendedSafePt.name)} (${situational.recommendedSafePt.distanceMeters}m)</button>`
+        );
+      }
+      for (const rk of situational.flaggedRiskPts.slice(0, 2)) {
+        actionBtns.push(
+          `<button type="button" class="btn btn-secondary btn-compact js-nb-fly" data-id="${escapeHtml(rk.id)}">Xem điểm rủi ro [${escapeHtml(rk.id)}]</button>`
+        );
+      }
+
+      advisoryHtml = `<section style="padding:12px 14px;border-radius:10px;border:1px solid ${borderCol};background:${bgCol};margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">
+          <strong style="font-size:0.74rem;letter-spacing:0.02em;color:#0f766e;">${badgeLabel}</strong>
+          <span style="font-size:0.72rem;color:#475569;">Tổng hợp đa tín hiệu GIS · 0% tự chế số liệu</span>
+        </div>
+        <h3 style="margin:0 0 6px;font-size:0.92rem;">${escapeHtml(situational.headline)}</h3>
+        <ul style="margin:0;padding-left:18px;font-size:0.81rem;line-height:1.5;">
+          ${situational.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join('')}
+        </ul>
+        ${hotlinesHtml}
+        <div style="margin-top:6px;font-size:0.73rem;color:#475569;"><strong>Căn cứ:</strong> ${situational.citations.map(escapeHtml).join(' · ')}</div>
+        ${actionBtns.length ? `<div class="popup-actions" style="margin-top:8px;">${actionBtns.join('')}</div>` : ''}
+      </section>`;
+    }
+
     const cardsHtml = res.matchedCards
       .map(
         (c) => `<article class="nb-card">
@@ -1795,9 +2005,9 @@ function initApp() {
         : '';
 
     els.nbResultsContainer.innerHTML =
-      cardsHtml || ptsHtml
-        ? cardsHtml + ptsHtml
-        : `<div class="empty-state"><p class="empty-title">Không tìm thấy mục khớp từ khóa "${escapeHtml(queryStr)}"</p><p class="empty-desc">Thử từ khóa như: Phố Viên, Kênh 920 tỷ, Ecohome, xe buýt 09A, trọ mái tôn, Oresol, UBND phường.</p></div>`;
+      advisoryHtml || cardsHtml || ptsHtml
+        ? advisoryHtml + cardsHtml + ptsHtml
+        : `<div class="empty-state"><p class="empty-title">Không tìm thấy mục khớp từ khóa "${escapeHtml(queryStr)}"</p><p class="empty-desc">Thử đặt câu hỏi tự nhiên như: "Mưa lớn từ ĐH Mỏ về Cầu Noi đi đường nào?" hoặc "Phòng trọ mái tôn Cổ Nhuế nóng quá làm sao?".</p></div>`;
   }
 
   els.nbQueryInput.addEventListener(
@@ -1814,7 +2024,17 @@ function initApp() {
       renderNotebookSearch(chip.dataset.q);
     });
   });
-  els.nbResultsContainer.addEventListener('click', (e) => {
+  els.nbResultsContainer.addEventListener('click', async (e) => {
+    const routeBtn = e.target.closest('.js-nb-route');
+    if (routeBtn) {
+      els.routeOriginSelect.value = routeBtn.dataset.orig || '0';
+      els.routeDestSelect.value = routeBtn.dataset.dest || '3';
+      els.notebookDialog.close();
+      await evaluateSelectedRoute(true);
+      if (lastRouteBounds) map.fitBounds(lastRouteBounds, { padding: [70, 70], maxZoom: 16 });
+      els.routeDialog.showModal();
+      return;
+    }
     const flyBtn = e.target.closest('.js-nb-fly');
     if (!flyBtn) return;
     const pid = flyBtn.dataset.id;
@@ -2193,6 +2413,18 @@ function initApp() {
   recomputeAndRender(true);
   updateCenterElevation();
   syncFromCloudApi();
+
+  // Tự động đồng bộ lại nhẹ nhàng khi người dùng quay lại tab sau >25 giây để nhận bản tin cảnh báo & lượt +1 mới nhất
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - state.lastCloudSyncMs > 25000) {
+      syncFromCloudApi();
+    }
+  });
+
+  // Hỗ trợ mở thẳng Hộp thoại Diễn tập & Mini-Quiz qua ?drill=1
+  if (urlParams.get('drill') === '1') {
+    setTimeout(() => els.drillDialog.showModal(), 200);
+  }
 
   // Deep-link chia sẻ trực tiếp tới 1 điểm (?point=R-01)
   const targetPointId = urlParams.get('point');

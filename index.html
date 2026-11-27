@@ -57,6 +57,9 @@
       <button type="button" id="btn-open-drill" class="btn btn-alert" command="show-modal" commandfor="drill-dialog">
         <span>Diễn tập &amp; Quiz</span>
       </button>
+      <a href="./khao-sat.html" class="btn btn-secondary" title="Làm Phiếu Khảo sát Đầu vào (15 câu Pre-test) &amp; Đầu ra (6 câu Post-test) trực tiếp trên Web">
+        <span>Khảo sát Pre/Post</span>
+      </a>
       <a href="./cam-nang-1-cham.html" class="btn btn-secondary">
         <span>Cẩm nang PDF</span>
       </a>
@@ -567,7 +570,7 @@
         Nếu bạn chưa làm phiếu khảo sát nhu cầu ứng phó nắng nóng – mưa ngập (15 câu trắc nghiệm nhanh, hoàn toàn ẩn danh), hãy bấm nút bên dưới để tham gia cùng nhóm sinh viên ĐH Mỏ - Địa chất nhé!
       </div>
       <div class="popup-actions">
-        <a id="link-pretest-form" href="#" target="_blank" rel="noopener" class="btn btn-primary">Mở Phiếu Khảo sát 15 câu (Pre-test)</a>
+        <a id="link-pretest-form" href="./khao-sat.html?tab=pre" class="btn btn-primary">Mở Phiếu Khảo sát 15 câu (Pre-test trên Web)</a>
         <button type="button" id="btn-thankyou-quiz" class="btn btn-secondary">Thử Mini-Quiz 5 câu ngay</button>
       </div>
     </div>
@@ -670,18 +673,18 @@
     </div>
   </dialog>
 
-  <!-- Hộp thoại 4: Kết nối Google Sheet Cộng đồng & Tạo Mã QR chia sẻ cho Người dân -->
+  <!-- Hộp thoại 4: Đồng bộ Đám mây Thời gian thực & Tạo Mã QR chia sẻ cho Người dân -->
   <dialog id="sync-dialog" aria-labelledby="sync-dialog-title" closedby="any">
     <div class="dialog-header">
-      <h1 id="sync-dialog-title">Kết nối Máy chủ Google Sheet Cộng đồng &amp; Mã QR Khảo sát</h1>
+      <h1 id="sync-dialog-title">Đồng bộ Đám mây Thời gian thực &amp; Mã QR Khảo sát</h1>
       <button type="button" class="icon-close-btn" command="close" commandfor="sync-dialog" id="btn-close-sync" aria-label="Đóng">×</button>
     </div>
     <div class="import-body">
       <div class="field">
-        <label for="api-url-input">1. URL Google Apps Script Web App (`community-backend.gs`)</label>
-        <span class="hint">Dán link `https://script.google.com/macros/s/.../exec` (hoặc lưu cố định vào tệp `config.js`) để mọi lượt người dân bấm +1 và chấm điểm mới đổ thẳng về Google Sheet chung:</span>
+        <label for="api-url-input">1. Máy chủ Đồng bộ Đám mây Cộng đồng (Mặc định: `/api/community` — Vercel Cloud Singapore)</label>
+        <span class="hint">Mọi lượt bấm +1, điểm mới, cảnh báo và khảo sát của cư dân đã tự động đồng bộ toàn vùng qua `/api/community` (hoặc tùy chọn dán URL Google Apps Script riêng):</span>
         <div class="search-box">
-          <input type="text" id="api-url-input" placeholder="https://script.google.com/macros/s/.../exec">
+          <input type="text" id="api-url-input" placeholder="/api/community">
           <button type="button" id="btn-save-api" class="btn btn-primary btn-compact">Lưu &amp; Đồng bộ</button>
         </div>
         <div id="sync-status-msg" class="hint" style="color:#0f766e;font-weight:600;"></div>

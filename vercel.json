@@ -1,9 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "echo 'Static WebGIS: vendor libraries bundled locally'",
-  "buildCommand": "",
-  "outputDirectory": ".",
+  "regions": ["sin1"],
   "cleanUrls": false,
   "trailingSlash": false,
   "headers": [

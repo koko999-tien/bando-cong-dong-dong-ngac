@@ -18,6 +18,7 @@ const API_URL_KEY = 'humg_dongngac_api_url_v3';
 const BROADCAST_KEY = 'humg_dongngac_broadcast_v1';
 const KPI_KEY = 'humg_dongngac_kpi_tracker_v1';
 const AUDIT_LOG_KEY = 'humg_dongngac_admin_audit_v1';
+const ADMIN_TOKEN_KEY = 'humg_dongngac_admin_bearer_v1';
 
 const turf = window.turf;
 const syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('humg_gis_sync') : null;
@@ -34,9 +35,24 @@ const DEFAULT_KPIS = [
 ];
 
 let currentSource = 'local'; // 'local' | 'cloud'
+let adminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY) || '';
 let rows = [];
+let cloudAuditLog = [];
+let cloudSurveyRecords = [];
+let cloudKpiLive = null;
 let selectedIds = new Set();
 let editingExistingId = null;
+
+const authGate = document.getElementById('admin-auth-gate');
+const gateForm = document.getElementById('admin-gate-form');
+const gatePassInput = document.getElementById('gate-pass-input');
+const gateErrorMsg = document.getElementById('gate-error-msg');
+const btnLogout = document.getElementById('btn-admin-logout');
+const apiInput = document.getElementById('adm-api');
+const passInput = document.getElementById('adm-pass');
+const cloudStatus = document.getElementById('adm-cloud-status');
+
+apiInput.value = localStorage.getItem(API_URL_KEY) || PROJECT_CONFIG.communityApiUrl || '/api/community';
 
 function esc(s) {
   return String(s ?? '')
@@ -53,19 +69,198 @@ function showToast(msg) {
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => {
     el.hidden = true;
-  }, 3200);
+  }, 3400);
 }
+
+function getApiUrl() {
+  return (apiInput.value || '').trim() || PROJECT_CONFIG.communityApiUrl || '/api/community';
+}
+
+async function cloudAdminPost(payload) {
+  const res = await fetch(getApiUrl(), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {})
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (res.status === 401) {
+    sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+    adminToken = '';
+    authGate.hidden = false;
+  }
+  return data;
+}
+
+function mergeBaselineAndCloud(data) {
+  const counts = data.confirmCounts || {};
+  const modMap = data.moderationMap || {};
+  const byId = new Map();
+
+  for (const basePt of SAMPLE_HUMG_POINTS) {
+    const mod = modMap[basePt.id] || {};
+    const merged = { ...structuredClone(basePt), ...mod };
+    merged.confirmCount = Math.max(Number(merged.confirmCount) || 1, (basePt.confirmCount || 1) + (counts[basePt.id] || 0));
+    byId.set(basePt.id, merged);
+  }
+  for (const rep of data.reports || []) {
+    byId.set(rep.id, rep);
+  }
+  return [...byId.values()];
+}
+
+async function loadCloudWorkspace(silentFail = false) {
+  if (!adminToken) {
+    if (!silentFail) authGate.hidden = false;
+    return false;
+  }
+  try {
+    const t0 = performance.now();
+    const sep = getApiUrl().includes('?') ? '&' : '?';
+    const res = await fetch(`${getApiUrl()}${sep}action=admin_full&surveys=1`, {
+      headers: { Authorization: `Bearer ${adminToken}` },
+      cache: 'no-store'
+    });
+    const data = await res.json();
+    const ms = Math.round(performance.now() - t0);
+
+    if (!res.ok || !data?.ok || !data.isAdmin) {
+      sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+      adminToken = '';
+      if (!silentFail) {
+        gateErrorMsg.textContent = data?.error || 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.';
+        gateErrorMsg.hidden = false;
+        authGate.hidden = false;
+      }
+      return false;
+    }
+
+    currentSource = 'cloud';
+    rows = mergeBaselineAndCloud(data);
+    cloudAuditLog = Array.isArray(data.auditLog) ? data.auditLog : [];
+    cloudSurveyRecords = Array.isArray(data.surveyRecords) ? data.surveyRecords : [];
+    cloudKpiLive = data.kpiLive || null;
+
+    if (data.broadcast) {
+      if (data.broadcast.active && data.broadcast.message) {
+        document.getElementById('bc-level').value = data.broadcast.level || 'yellow';
+        document.getElementById('bc-message').value = data.broadcast.message;
+      }
+    }
+
+    authGate.hidden = true;
+    btnLogout.hidden = false;
+    const pill = document.getElementById('adm-source-pill');
+    pill.textContent = `Đã xác thực Cloud (${rows.length} điểm · ${ms}ms)`;
+    pill.classList.add('is-cloud');
+    cloudStatus.textContent = `Đồng bộ Cloud thành công (${rows.length} điểm, ${cloudSurveyRecords.length} phiếu khảo sát) trong ${ms} ms.`;
+
+    syncCloudKpisIntoTracker();
+    refreshAllViews();
+    return true;
+  } catch (err) {
+    if (!silentFail) {
+      cloudStatus.textContent = `Lỗi kết nối máy chủ Cloud: ${err.message}`;
+    }
+    return false;
+  }
+}
+
+function syncCloudKpisIntoTracker() {
+  if (!cloudKpiLive) return;
+  const liveBar = document.getElementById('cloud-survey-live-bar');
+  if (liveBar) {
+    liveBar.hidden = false;
+    liveBar.innerHTML = `<strong>Số liệu Khảo sát Trực tiếp trên Cloud:</strong> Pre-test: <strong class="mono">${cloudKpiLive.preCount}</strong> phiếu${cloudKpiLive.preCorrectPct !== null ? ` (${cloudKpiLive.preCorrectPct}% đúng sốc nhiệt · TB tự tin ${cloudKpiLive.preConfAvg}/5)` : ''} · Mini-Quiz Diễn tập: <strong class="mono">${cloudKpiLive.quizCount}</strong> lượt${cloudKpiLive.quizAvgScore !== null ? ` (TB ${cloudKpiLive.quizAvgScore}/100đ)` : ''} · Post-test: <strong class="mono">${cloudKpiLive.postCount}</strong> phiếu${cloudKpiLive.postCorrectPct !== null ? ` (${cloudKpiLive.postCorrectPct}% đúng · TB tự tin ${cloudKpiLive.postConfAvg}/5)` : ''}.`;
+  }
+
+  const kpis = loadSavedKpis();
+  const kPre = kpis.find((k) => k.id === 'pretest');
+  const kQuiz = kpis.find((k) => k.id === 'quiz');
+  if (kPre && cloudKpiLive.preCount > kPre.current) kPre.current = cloudKpiLive.preCount;
+  if (kQuiz && cloudKpiLive.quizCount > kQuiz.current) kQuiz.current = cloudKpiLive.quizCount;
+
+  if (cloudKpiLive.preCount > 0) {
+    document.getElementById('pp-n1').value = cloudKpiLive.preCount;
+    if (cloudKpiLive.preCorrectPct !== null) document.getElementById('pp-c1').value = cloudKpiLive.preCorrectPct;
+    if (cloudKpiLive.preConfAvg !== null) document.getElementById('pp-f1').value = cloudKpiLive.preConfAvg;
+  }
+  if (cloudKpiLive.postCount > 0) {
+    document.getElementById('pp-n2').value = cloudKpiLive.postCount;
+    if (cloudKpiLive.postCorrectPct !== null) document.getElementById('pp-c2').value = cloudKpiLive.postCorrectPct;
+    if (cloudKpiLive.postConfAvg !== null) document.getElementById('pp-f2').value = cloudKpiLive.postConfAvg;
+  }
+  localStorage.setItem(KPI_KEY, JSON.stringify(kpis));
+}
+
+async function loginWithPasscode(passcode) {
+  const res = await fetch(getApiUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'admin_login', pass: passcode })
+  });
+  const data = await res.json();
+  if (!res.ok || !data?.ok || !data.token) {
+    throw new Error(data?.error || 'Mật khẩu quản trị không chính xác.');
+  }
+  adminToken = data.token;
+  sessionStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
+  await loadCloudWorkspace(false);
+}
+
+gateForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pass = gatePassInput.value.trim();
+  if (!pass) return;
+  gateErrorMsg.hidden = true;
+  const submitBtn = document.getElementById('btn-gate-submit');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Đang xác thực chữ ký HMAC-SHA256...';
+  try {
+    await loginWithPasscode(pass);
+    gatePassInput.value = '';
+    showToast('Đã đăng nhập Quản trị viên Cloud thành công!');
+  } catch (err) {
+    gateErrorMsg.textContent = err.message;
+    gateErrorMsg.hidden = false;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Đăng nhập Quản trị Cloud';
+  }
+});
+
+document.getElementById('btn-gate-local-demo').addEventListener('click', () => {
+  authGate.hidden = true;
+  btnLogout.hidden = true;
+  loadLocalRows();
+  showToast('Đang mở ở Chế độ Thử nghiệm Cục bộ (không tác động dữ liệu Cloud chung).');
+});
+
+btnLogout.addEventListener('click', () => {
+  sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+  adminToken = '';
+  btnLogout.hidden = true;
+  authGate.hidden = false;
+  showToast('Đã đăng xuất phiên Quản trị viên.');
+});
 
 function appendAuditLog(action, detail) {
   try {
-    const list = JSON.parse(localStorage.getItem(AUDIT_LOG_KEY) || '[]');
-    list.unshift({
+    const entry = {
       ts: new Date().toLocaleString('vi-VN'),
       mode: currentSource,
       action,
       detail
-    });
-    localStorage.setItem(AUDIT_LOG_KEY, JSON.stringify(list.slice(0, 120)));
+    };
+    if (currentSource === 'cloud') {
+      cloudAuditLog.unshift(entry);
+    } else {
+      const list = JSON.parse(localStorage.getItem(AUDIT_LOG_KEY) || '[]');
+      list.unshift(entry);
+      localStorage.setItem(AUDIT_LOG_KEY, JSON.stringify(list.slice(0, 120)));
+    }
     renderAuditLog();
   } catch { /* ignore */ }
 }
@@ -155,7 +350,6 @@ function renderOverviewAndKpi() {
   document.getElementById('ov-confirms').textContent = analysis.stats.totalConfirmations;
   document.getElementById('ov-hidden-count').textContent = `Đã ẩn spam/trùng: ${hiddenCnt}`;
 
-  // Bảng 8 KPI
   const kpis = loadSavedKpis();
   const gpsItem = kpis.find((k) => k.autoGps);
   if (gpsItem) gpsItem.current = analysis.stats.inside;
@@ -180,7 +374,6 @@ function renderOverviewAndKpi() {
     })
     .join('');
 
-  // Thanh cơ cấu loại điểm
   const cats = ['flood', 'heat', 'traffic', 'medical', 'shelter'];
   const colors = { flood: '#b91c1c', heat: '#ea580c', traffic: '#b45309', medical: '#15803d', shelter: '#0f766e' };
   document.getElementById('category-breakdown-bars').innerHTML = cats
@@ -219,6 +412,36 @@ document.getElementById('btn-copy-kpi-md').addEventListener('click', async () =>
   ].join('\n');
   await navigator.clipboard?.writeText(md);
   showToast('Đã sao chép bảng KPI Markdown để dán thẳng vào Chương 5 báo cáo!');
+});
+
+document.getElementById('btn-export-surveys-csv')?.addEventListener('click', async () => {
+  if (currentSource === 'cloud') {
+    await loadCloudWorkspace(true);
+  }
+  if (!cloudSurveyRecords || cloudSurveyRecords.length === 0) {
+    showToast('Hiện chưa có phiếu khảo sát nào trên Cloud (hãy thử gửi 1 phiếu tại khao-sat.html).');
+    return;
+  }
+  const csvEsc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const header = ['Mã phiếu', 'Loại phiếu (Pre/Quiz/Post)', 'Thời gian nộp (ISO)', 'Đúng sơ cứu sốc nhiệt (1/0)', 'Điểm tự tin (/5)', 'Điểm Mini-Quiz (/100)', 'Chi tiết câu trả lời (JSON)'];
+  const lines = [
+    header.map(csvEsc).join(','),
+    ...cloudSurveyRecords.map((rec) =>
+      [
+        rec.id || '',
+        rec.surveyType || '',
+        rec.submittedAt || '',
+        rec.surveyType === 'quiz' ? '' : rec.heatFirstAidCorrect ? 1 : 0,
+        rec.confidenceScore ?? '',
+        rec.quizScore ?? '',
+        JSON.stringify(rec.answers || {})
+      ]
+        .map(csvEsc)
+        .join(',')
+    )
+  ];
+  downloadBlob('\uFEFF' + lines.join('\r\n'), `HUMG_DuLieu_KhaoSat_Pre_Quiz_Post_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8');
+  showToast(`Đã xuất ${cloudSurveyRecords.length} phiếu khảo sát ra tệp Excel CSV!`);
 });
 
 // ================= TAB 2: MODERATION, CRUD & DUPLICATE MERGER =================
@@ -262,16 +485,33 @@ function renderDuplicateScanner() {
     .join('');
 }
 
-document.getElementById('dup-pairs-list').addEventListener('click', (e) => {
+document.getElementById('dup-pairs-list').addEventListener('click', async (e) => {
   const btn = e.target.closest('.js-merge-pair');
   if (!btn) return;
   const keep = rows.find((r) => r.id === btn.dataset.keep);
   const drop = rows.find((r) => r.id === btn.dataset.drop);
   if (!keep || !drop) return;
-  keep.confirmCount = (Number(keep.confirmCount) || 1) + (Number(drop.confirmCount) || 1);
-  if (keep.confidenceTier === 'C' && keep.confirmCount >= 3) keep.confidenceTier = 'B';
+  const mergedCount = (Number(keep.confirmCount) || 1) + (Number(drop.confirmCount) || 1);
+  const nextTier = keep.confidenceTier === 'C' && mergedCount >= 3 ? 'B' : keep.confidenceTier || 'A';
+
+  if (currentSource === 'cloud') {
+    const data = await cloudAdminPost({
+      action: 'admin_merge_pair',
+      keepId: keep.id,
+      dropId: drop.id,
+      mergedCount,
+      nextTier
+    });
+    if (!data?.ok) {
+      showToast(`Lỗi Cloud: ${data?.error || 'Không gộp được'}`);
+      return;
+    }
+  }
+
+  keep.confirmCount = mergedCount;
+  keep.confidenceTier = nextTier;
   drop.status = 'hidden';
-  if (currentSource === 'local') saveLocalRows();
+  saveLocalRows();
   appendAuditLog('Gộp điểm trùng 50m', `Gộp ${drop.id} vào ${keep.id} (tổng ${keep.confirmCount} phiếu)`);
   refreshAllViews();
   showToast(`Đã gộp ${drop.id} vào ${keep.id}!`);
@@ -292,9 +532,15 @@ function renderModerationTable() {
       const st = r.status || (r.confidenceTier === 'C' ? 'pending' : 'approved');
       const stLabel = st === 'approved' ? 'Công khai' : st === 'hidden' ? 'Đã ẩn' : 'Chờ duyệt';
       const checked = selectedIds.has(r.id) ? 'checked' : '';
+      const photoBadge =
+        r.photoQualityFlag === 'suspect_spam'
+          ? '<br><span class="badge st-hidden" style="margin-top:2px;">Ảnh nghi chụp màn hình</span>'
+          : r.photoQualityFlag === 'verified_scene'
+            ? '<br><span class="badge st-approved" style="margin-top:2px;">Ảnh hiện trường đạt</span>'
+            : '';
       const imgHtml =
         r.photoDataUrl && r.photoDataUrl.startsWith('data:image/')
-          ? `<img class="thumb" src="${r.photoDataUrl}" alt="Ảnh ${esc(r.id)}">`
+          ? `<img class="thumb" src="${r.photoDataUrl}" alt="Ảnh ${esc(r.id)}">${photoBadge}`
           : '<span style="color:#94a3b8;font-size:0.73rem;">—</span>';
       return `<tr>
         <td><input type="checkbox" class="js-row-chk" data-id="${esc(r.id)}" ${checked}></td>
@@ -344,14 +590,12 @@ async function moderateSingle(id, nextStatus, nextTier) {
   if (!target) return;
 
   if (currentSource === 'cloud') {
-    const api = document.getElementById('adm-api').value.trim();
-    const pass = document.getElementById('adm-pass').value.trim();
-    const res = await fetch(api, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'admin_moderate', pass, id, status: nextStatus, confidenceTier: nextTier })
+    const data = await cloudAdminPost({
+      action: 'admin_moderate',
+      id,
+      status: nextStatus,
+      confidenceTier: nextTier
     });
-    const data = await res.json();
     if (!data?.ok) {
       showToast(`Lỗi Cloud: ${data?.error || 'Không xác định'}`);
       return;
@@ -360,7 +604,7 @@ async function moderateSingle(id, nextStatus, nextTier) {
 
   target.status = nextStatus;
   target.confidenceTier = nextTier;
-  if (currentSource === 'local') saveLocalRows();
+  saveLocalRows();
   appendAuditLog('Kiểm duyệt điểm', `${id} → ${nextStatus} (Hạng ${nextTier})`);
   refreshAllViews();
   showToast(`Đã cập nhật ${id} → Hạng ${nextTier} (${nextStatus})`);
@@ -379,13 +623,22 @@ document.getElementById('adm-tbody').addEventListener('click', (e) => {
 });
 
 document.querySelectorAll('.js-bulk-act').forEach((btn) => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
     if (selectedIds.size === 0) {
       showToast('Vui lòng tích chọn ít nhất 1 điểm để thao tác hàng loạt.');
       return;
     }
     const act = btn.dataset.act;
     const ids = [...selectedIds];
+
+    if (currentSource === 'cloud') {
+      const data = await cloudAdminPost({ action: 'admin_bulk_moderate', ids, act });
+      if (!data?.ok) {
+        showToast(`Lỗi Cloud: ${data?.error || 'Không xử lý được'}`);
+        return;
+      }
+    }
+
     if (act === 'delete') {
       rows = rows.filter((r) => !selectedIds.has(r.id));
       appendAuditLog('Xóa hàng loạt', `Đã xóa ${ids.length} điểm (${ids.join(', ')})`);
@@ -406,7 +659,7 @@ document.querySelectorAll('.js-bulk-act').forEach((btn) => {
     }
     selectedIds.clear();
     document.getElementById('mod-check-all').checked = false;
-    if (currentSource === 'local') saveLocalRows();
+    saveLocalRows();
     refreshAllViews();
     showToast(`Đã xử lý hàng loạt ${ids.length} điểm.`);
   });
@@ -495,7 +748,7 @@ document.getElementById('btn-fetch-ed-dem').addEventListener('click', async () =
   }
 });
 
-document.getElementById('adm-edit-form').addEventListener('submit', (e) => {
+document.getElementById('adm-edit-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const id = document.getElementById('ed-id').value.trim();
   const cat = document.getElementById('ed-cat').value;
@@ -522,6 +775,14 @@ document.getElementById('adm-edit-form').addEventListener('submit', (e) => {
     notes: document.getElementById('ed-notes').value.trim()
   });
 
+  if (currentSource === 'cloud') {
+    const data = await cloudAdminPost({ action: 'admin_upsert_point', point: payload });
+    if (!data?.ok) {
+      showToast(`Lỗi lưu Cloud: ${data?.error || 'Không xác định'}`);
+      return;
+    }
+  }
+
   if (editingExistingId) {
     const idx = rows.findIndex((r) => r.id === editingExistingId);
     if (idx >= 0) rows[idx] = payload;
@@ -531,7 +792,7 @@ document.getElementById('adm-edit-form').addEventListener('submit', (e) => {
     appendAuditLog('Thêm điểm mới', `Tạo mới điểm ${id} (${payload.name})`);
   }
 
-  if (currentSource === 'local') saveLocalRows();
+  saveLocalRows();
   editDlg.close();
   refreshAllViews();
   showToast(`Đã lưu điểm [${id}] lên bản đồ!`);
@@ -553,17 +814,29 @@ bcPreset.addEventListener('change', () => {
   } else if (v === 'survey') {
     bcLevel.value = 'info';
     bcMsg.value =
-      'Mời cư dân & sinh viên P. Đông Ngạc bấm "+1 Tôi cũng gặp ở đây" hoặc chấm điểm ngập/nắng tại ngõ bạn (chỉ mất 15 giây, hoàn toàn ẩn danh)!';
+      'Mời cư dân & sinh viên P. Đông Ngạc bấm "+1 Tôi cũng gặp ở đây" và làm Khảo sát Pre/Post ngay trên Web (chỉ mất 2 phút, hoàn toàn ẩn danh)!';
   } else {
     bcMsg.value = '';
   }
 });
 
-document.getElementById('btn-publish-bc').addEventListener('click', () => {
+document.getElementById('btn-publish-bc').addEventListener('click', async () => {
   const message = bcMsg.value.trim();
   if (!message) {
     showToast('Vui lòng chọn mẫu hoặc nhập nội dung thông báo.');
     return;
+  }
+  if (currentSource === 'cloud') {
+    const data = await cloudAdminPost({
+      action: 'admin_broadcast',
+      active: true,
+      level: bcLevel.value,
+      message
+    });
+    if (!data?.ok) {
+      showToast(`Lỗi phát thanh Cloud: ${data?.error || 'Chưa đăng nhập'}`);
+      return;
+    }
   }
   localStorage.setItem(
     BROADCAST_KEY,
@@ -571,10 +844,13 @@ document.getElementById('btn-publish-bc').addEventListener('click', () => {
   );
   notifyMapTabs();
   appendAuditLog('Phát thanh thông báo', `[${bcLevel.value.toUpperCase()}] ${message}`);
-  showToast('Đã phát thanh thông báo trực tiếp lên Trang chủ Bản đồ!');
+  showToast('Đã phát thanh thông báo trực tiếp lên Trang chủ Bản đồ toàn vùng!');
 });
 
-document.getElementById('btn-stop-bc').addEventListener('click', () => {
+document.getElementById('btn-stop-bc').addEventListener('click', async () => {
+  if (currentSource === 'cloud') {
+    await cloudAdminPost({ action: 'admin_broadcast', active: false });
+  }
   localStorage.removeItem(BROADCAST_KEY);
   bcPreset.value = 'off';
   bcMsg.value = '';
@@ -587,15 +863,18 @@ function renderUtmQrCards() {
   const rawBase = document.getElementById('utm-base-url').value.trim() || window.location.origin;
   const sep = rawBase.includes('?') ? '&' : '?';
   const channels = [
-    { code: 'zalo_todanpho', title: '1. Nhóm Zalo Tổ dân phố', desc: 'Gửi cư dân Phố Viên – Đông Ngạc' },
-    { code: 'fb_humg', title: '2. Facebook Sinh viên ĐH Mỏ', desc: 'Đăng fanpage / group CLB, lớp' },
-    { code: 'poster_congtruong', title: '3. Poster Cổng 18 Phố Viên', desc: 'In dán bảng tin & trạm buýt' },
-    { code: 'xomtro_conhue', title: '4. Phiếu Xóm trọ Cổ Nhuế', desc: 'Phát trực tiếp ngày thực địa 28/11' }
+    { code: 'zalo_todanpho', title: '1. Nhóm Zalo Tổ dân phố', desc: 'Gửi cư dân Phố Viên – Đông Ngạc', path: '' },
+    { code: 'fb_humg', title: '2. Facebook Sinh viên ĐH Mỏ', desc: 'Đăng fanpage / group CLB, lớp', path: '' },
+    { code: 'khao_sat_pretest', title: '3. QR Phiếu Pre-test (15 câu)', desc: 'Dẫn thẳng vào khao-sat.html?tab=pre', path: '/khao-sat.html?tab=pre' },
+    { code: 'khao_sat_posttest', title: '4. QR Phiếu Post-test (6 câu)', desc: 'Đo hiệu quả sau trải nghiệm bản đồ', path: '/khao-sat.html?tab=post' }
   ];
 
+  const cleanOrigin = rawBase.replace(/\/+$/, '');
   document.getElementById('utm-qr-grid').innerHTML = channels
     .map((ch) => {
-      const fullUrl = `${rawBase}${sep}utm_source=${ch.code}&utm_campaign=detai08_humg`;
+      const targetBase = ch.path ? `${cleanOrigin}${ch.path}` : rawBase;
+      const joiner = targetBase.includes('?') ? '&' : sep;
+      const fullUrl = `${targetBase}${joiner}utm_source=${ch.code}&utm_campaign=detai08_humg`;
       const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=6&data=${encodeURIComponent(fullUrl)}`;
       return `<div class="qr-card">
         <strong style="font-size:0.81rem;display:block;">${esc(ch.title)}</strong>
@@ -654,9 +933,13 @@ document.getElementById('qa-issues-list').addEventListener('click', (e) => {
 function renderAuditLog() {
   const box = document.getElementById('audit-log-box');
   let list = [];
-  try {
-    list = JSON.parse(localStorage.getItem(AUDIT_LOG_KEY) || '[]');
-  } catch { /* ignore */ }
+  if (currentSource === 'cloud' && cloudAuditLog.length > 0) {
+    list = cloudAuditLog;
+  } else {
+    try {
+      list = JSON.parse(localStorage.getItem(AUDIT_LOG_KEY) || '[]');
+    } catch { /* ignore */ }
+  }
   if (list.length === 0) {
     box.innerHTML = '<div style="color:#64748b;text-align:center;padding:18px;">Chưa có thao tác quản trị nào được ghi nhận.</div>';
     return;
@@ -675,59 +958,43 @@ function renderAuditLog() {
 document.getElementById('btn-clear-log').addEventListener('click', () => {
   localStorage.removeItem(AUDIT_LOG_KEY);
   renderAuditLog();
-  showToast('Đã làm sạch nhật ký kiểm duyệt.');
+  showToast('Đã làm sạch nhật ký cục bộ.');
 });
 
 // ================= TAB 5: CLOUD, BACKUP, NOTEBOOKLM & PERF =================
-const apiInput = document.getElementById('adm-api');
-const passInput = document.getElementById('adm-pass');
-const cloudStatus = document.getElementById('adm-cloud-status');
-apiInput.value = localStorage.getItem(API_URL_KEY) || PROJECT_CONFIG.communityApiUrl || '';
-
 document.getElementById('btn-load-cloud').addEventListener('click', async () => {
-  const api = apiInput.value.trim();
+  const api = getApiUrl();
   const pass = passInput.value.trim();
-  if (!api || !pass) {
-    cloudStatus.textContent = 'Vui lòng nhập đầy đủ URL Google Apps Script và Mật khẩu quản trị.';
+  localStorage.setItem(API_URL_KEY, api);
+
+  if (pass) {
+    cloudStatus.textContent = 'Đang xác thực mật khẩu với máy chủ Cloud...';
+    try {
+      await loginWithPasscode(pass);
+      passInput.value = '';
+      showToast('Đã đăng nhập & đồng bộ Cloud!');
+    } catch (err) {
+      cloudStatus.textContent = `Từ chối xác thực: ${err.message}`;
+    }
     return;
   }
-  localStorage.setItem(API_URL_KEY, api);
-  cloudStatus.textContent = 'Đang kết nối Google Sheets...';
-  try {
-    const t0 = performance.now();
-    const res = await fetch(`${api}?action=admin_list&pass=${encodeURIComponent(pass)}`);
-    const data = await res.json();
-    const ms = Math.round(performance.now() - t0);
-    if (!data?.ok || !data.isAdmin) {
-      cloudStatus.textContent = 'Sai mật khẩu quản trị hoặc Web App chưa cấp quyền Anyone.';
-      return;
-    }
-    currentSource = 'cloud';
-    rows = data.reports || [];
-    const pill = document.getElementById('adm-source-pill');
-    pill.textContent = `Chế độ: Google Sheets Cloud (${rows.length} báo cáo)`;
-    pill.classList.add('is-cloud');
-    cloudStatus.textContent = `Đã đồng bộ ${rows.length} dòng từ Google Sheets trong ${ms} ms.`;
-    appendAuditLog('Đồng bộ Cloud', `Tải ${rows.length} báo cáo từ Google Sheets (${ms} ms)`);
-    refreshAllViews();
-  } catch (err) {
-    cloudStatus.textContent = `Lỗi kết nối Cloud: ${err.message}`;
+
+  if (adminToken) {
+    await loadCloudWorkspace(false);
+  } else {
+    authGate.hidden = false;
   }
 });
 
 document.getElementById('btn-ping-api').addEventListener('click', async () => {
-  const api = apiInput.value.trim();
-  if (!api) {
-    cloudStatus.textContent = 'Chưa có URL Apps Script để kiểm tra độ trễ.';
-    return;
-  }
-  cloudStatus.textContent = 'Đang đo độ trễ phản hồi API...';
+  cloudStatus.textContent = 'Đang đo độ trễ phản hồi API Đám mây...';
   try {
     const t0 = performance.now();
-    const res = await fetch(api);
-    await res.json();
+    const res = await fetch(getApiUrl(), { cache: 'no-store' });
+    const data = await res.json();
     const ms = Math.round(performance.now() - t0);
-    cloudStatus.textContent = `Kết nối API ổn định — Độ trễ phản hồi: ${ms} ms.`;
+    if (!data?.ok) throw new Error(data?.error || 'Lỗi phản hồi');
+    cloudStatus.textContent = `Máy chủ Cloud hoạt động ổn định — Độ trễ: ${ms} ms.`;
   } catch (err) {
     cloudStatus.textContent = `API không phản hồi: ${err.message}`;
   }
@@ -753,8 +1020,10 @@ document.getElementById('btn-backup-json').addEventListener('click', () => {
     project: 'HUMG_DongNgac_Community_WebGIS',
     points: rows,
     kpis: loadSavedKpis(),
+    kpiLive: cloudKpiLive,
+    surveyCount: cloudSurveyRecords.length,
     broadcast: JSON.parse(localStorage.getItem(BROADCAST_KEY) || 'null'),
-    auditLog: JSON.parse(localStorage.getItem(AUDIT_LOG_KEY) || '[]')
+    auditLog: currentSource === 'cloud' ? cloudAuditLog : JSON.parse(localStorage.getItem(AUDIT_LOG_KEY) || '[]')
   };
   downloadBlob(JSON.stringify(snapshot, null, 2), `HUMG_Backup_${new Date().toISOString().slice(0, 10)}.json`, 'application/json;charset=utf-8');
   appendAuditLog('Sao lưu hệ thống', `Xuất bản sao lưu JSON (${rows.length} điểm)`);
@@ -816,16 +1085,16 @@ async function renderPerfDiagnostics() {
   let swStatus = 'Chưa đăng ký';
   if ('serviceWorker' in navigator) {
     const reg = await navigator.serviceWorker.getRegistration();
-    swStatus = reg?.active ? 'Đang hoạt động (Sẵn sàng Offline)' : 'Chưa kích hoạt trên phiên này';
+    swStatus = reg?.active ? 'Đang hoạt động (Sẵn sàng Offline · Không cache /api/)' : 'Chưa kích hoạt trên phiên này';
   }
   const navEntry = performance.getEntriesByType('navigation')[0];
   const loadMs = navEntry ? Math.round(navEntry.domContentLoadedEventEnd) : 0;
 
   document.getElementById('perf-diag-box').innerHTML = [
+    `• Chế độ dữ liệu hiện hành: ${currentSource === 'cloud' ? 'Cloud Vercel Blob (Singapore sin1)' : 'Cục bộ LocalStorage'}`,
     `• Dung lượng LocalStorage đang dùng: ${kb} KB / ~5.120 KB`,
     `• Trạng thái PWA Service Worker: ${swStatus}`,
-    `• Thời gian khởi tạo DOM Quản trị: ${loadMs} ms`,
-    `• Đồng bộ đa tab thời gian thực (BroadcastChannel): ${syncChannel ? 'Đang bật' : 'Fallback Storage Event'}`
+    `• Thời gian khởi tạo DOM Quản trị: ${loadMs} ms`
   ].join('<br>');
 }
 
@@ -898,3 +1167,8 @@ document.getElementById('btn-copy-prepost-text')?.addEventListener('click', asyn
 
 renderUtmQrCards();
 loadLocalRows();
+if (adminToken) {
+  loadCloudWorkspace(false);
+} else {
+  authGate.hidden = false;
+}
