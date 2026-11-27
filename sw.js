@@ -1,4 +1,4 @@
-const CACHE_NAME = 'humg-community-gis-v22';
+const CACHE_NAME = 'vn-resilience-gis-v23';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const CORE_ASSETS = [
   './citizen-logic.js',
   './national-app.js',
   './platform/regions/vietnam-directory.js',
+  './platform/data/vietnam-verified-hotspots.js',
   './chuyen-gia.html',
   './styles.css',
   './config.js',
@@ -48,19 +49,22 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // Không bao giờ lưu bộ nhớ đệm với API động (/api/community, Google Apps Script, Nominatim, Open-Meteo)
+  // Không lưu bộ nhớ đệm cho API động hoặc bản đồ vệ tinh/radar bên ngoài
   if (
     url.pathname.startsWith('/api/') ||
     url.hostname.includes('script.google.com') ||
     url.hostname.includes('nominatim.openstreetmap.org') ||
+    url.hostname.includes('overpass-api.de') ||
     url.hostname.includes('api.open-meteo.com') ||
     url.hostname.includes('air-quality-api.open-meteo.com') ||
-    url.hostname.includes('rainviewer.com')
+    url.hostname.includes('rainviewer.com') ||
+    url.hostname.includes('arcgisonline.com') ||
+    url.hostname.includes('opentopomap.org') ||
+    url.hostname.includes('workers.dev')
   ) {
     return;
   }
 
-  // Với tệp lõi ứng dụng: Network-first, rơi về Cache nếu mất mạng / mưa bão yếu 4G
   if (url.origin === self.location.origin) {
     event.respondWith(
       fetch(req)
