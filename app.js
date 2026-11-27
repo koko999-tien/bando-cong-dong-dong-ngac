@@ -2859,18 +2859,19 @@ function initApp() {
     };
 
     const roundedTemp = Math.round(Number(temp));
+    const isWeatherOpen = state.activeSbTab === 'weather' ? ' is-panel-open' : '';
     if (rain >= 10 || dRain >= 40) {
-      els.liveWeatherPill.className = 'live-pill live-pill-danger js-open-sheet';
-      els.liveWeatherPill.textContent = `${roundedTemp}°C · Mưa lớn`;
+      els.liveWeatherPill.className = `live-pill live-pill-danger js-open-sheet${isWeatherOpen}`;
+      els.liveWeatherPill.innerHTML = `<span class="mono-num">${roundedTemp}°C</span><span class="live-status-word"> · Mưa lớn</span>`;
     } else if (rain > 0.2) {
-      els.liveWeatherPill.className = 'live-pill live-pill-warn js-open-sheet';
-      els.liveWeatherPill.textContent = `${roundedTemp}°C · Mưa ${rain}mm`;
+      els.liveWeatherPill.className = `live-pill live-pill-warn js-open-sheet${isWeatherOpen}`;
+      els.liveWeatherPill.innerHTML = `<span class="mono-num">${roundedTemp}°C</span><span class="live-status-word"> · Mưa ${escapeHtml(rain)}mm</span>`;
     } else if (app >= 38 || dMax >= 39) {
-      els.liveWeatherPill.className = 'live-pill live-pill-warn js-open-sheet';
-      els.liveWeatherPill.textContent = `${roundedTemp}°C · Nắng gắt`;
+      els.liveWeatherPill.className = `live-pill live-pill-warn js-open-sheet${isWeatherOpen}`;
+      els.liveWeatherPill.innerHTML = `<span class="mono-num">${roundedTemp}°C</span><span class="live-status-word"> · Nắng gắt</span>`;
     } else {
-      els.liveWeatherPill.className = 'live-pill live-pill-ok js-open-sheet';
-      els.liveWeatherPill.textContent = `${roundedTemp}°C · Tạnh ráo`;
+      els.liveWeatherPill.className = `live-pill live-pill-ok js-open-sheet${isWeatherOpen}`;
+      els.liveWeatherPill.innerHTML = `<span class="mono-num">${roundedTemp}°C</span><span class="live-status-word"> · Tạnh ráo</span>`;
     }
 
     if (els.weatherNowCard) {

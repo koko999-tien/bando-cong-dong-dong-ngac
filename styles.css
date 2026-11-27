@@ -815,6 +815,7 @@ body:not(.is-expert-mode) .leaflet-control-scale {
 }
 
 .map-control-rail {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -854,17 +855,17 @@ body:not(.is-expert-mode) .leaflet-control-scale {
 }
 
 .map-legend-rail {
-  position: relative;
+  position: static;
 }
 .map-legend-rail[open] > summary.rail-btn {
   background: var(--color-primary-soft);
   color: var(--color-primary);
 }
-/* Opens strictly to the LEFT of the rail so it NEVER pushes or overlaps Zoom +/- or Bottom FABs */
+/* Opens strictly to the LEFT of the rail aligned to rail top so it stays 100% inside Stage Row 2 */
 .legend-popover-card {
   position: absolute;
   inset-inline-end: calc(100% + 10px);
-  inset-block-end: 0;
+  inset-block-start: 0;
   inline-size: 244px;
   padding: 12px 14px;
   background: var(--color-surface);
@@ -1664,25 +1665,26 @@ dialog::backdrop { background: rgba(15, 23, 42, 0.52); backdrop-filter: blur(3px
   .menu-trigger-text { display: none; }
   .menu-trigger-pill { padding: 0 11px; min-block-size: 42px; }
   .live-pill { padding: 0 10px; min-block-size: 42px; font-size: 0.77rem; }
+  .live-status-word { display: none; }
 
-  /* All 4 category pills fit cleanly on one row on 360px–430px phones */
+  /* All 4 category pills fit 100% unclipped on one row on 360px–430px phones */
   .floating-chips-bar {
+    display: flex;
     flex-wrap: nowrap;
     overflow-x: auto;
-    scroll-snap-type: x proximity;
     scrollbar-width: none;
     max-inline-size: 100%;
-    gap: 5px;
+    gap: 4px;
   }
   .floating-chips-bar::-webkit-scrollbar { display: none; }
   .map-chip {
-    min-block-size: 33px;
-    padding: 0 9px;
-    font-size: 0.78rem;
+    min-block-size: 32px;
+    padding: 0 7.5px;
+    font-size: 0.74rem;
     gap: 4px;
-    scroll-snap-align: start;
   }
-  .chip-count { padding: 0 5px; font-size: 0.69rem; }
+  .chip-dot { inline-size: 7px; block-size: 7px; }
+  .chip-count { padding: 0 4.5px; font-size: 0.67rem; }
   .map-statusbar { display: none !important; }
 
   /* Right control rail stays compact and clear of sheets */
@@ -1761,6 +1763,7 @@ dialog::backdrop { background: rgba(15, 23, 42, 0.52); backdrop-filter: blur(3px
   }
   .report-label-full { display: none; }
   .report-label-short { display: inline; }
+  .dock-count-wrap { display: none; }
 
   /* Bottom Sheets sit cleanly ABOVE the 5-Tab Navigation Bar so tabs remain 1-tap reachable */
   .hud-stage-left {
