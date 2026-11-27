@@ -1245,8 +1245,8 @@ a { color: var(--primary); }
 
   .quick-actions-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
-  /* Trên máy tính, tab Bản đồ luôn hiện song song Bản đồ + Danh sách */
-  .segmented-switch { display: none; }
+  /* Trên máy tính, tab Bản đồ luôn hiện song song Bản đồ + Danh sách (chỉ ẩn nút chuyển Bản đồ/Danh sách, KHÔNG ẩn nút Đăng nhập/Đăng ký!) */
+  .map-toolbar-card .segmented-switch { display: none; }
   .map-split-layout {
     grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
     align-items: start;
@@ -1267,4 +1267,308 @@ html.is-large-text .quick-actions-grid { grid-template-columns: 1fr; }
 
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+
+/* ==========================================================================
+   PHẦN MỞ RỘNG NỀN TẢNG TOÀN QUỐC 3 PHẦN (CỘNG ĐỒNG · NGHIÊN CỨU · BẢN TIN)
+   ========================================================================== */
+.vn-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip;
+  padding-bottom: calc(var(--nav-bottom-h) + env(safe-area-inset-bottom, 0px) + 12px);
+}
+
+.vn-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 450;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.vn-topbar-row {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 10px;
+  flex-wrap: wrap;
+}
+
+.vn-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  color: var(--ink);
+  min-width: 0;
+  flex: 1 1 auto;
+}
+html.is-large-text .vn-brand {
+  flex: 1 1 220px;
+}
+.brand-sub-inline {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--ink-muted);
+}
+
+.pillar-nav-desktop {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+}
+.pillar-btn {
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-secondary);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pillar-btn:hover { color: var(--ink); }
+.pillar-btn.is-active {
+  background: var(--primary);
+  color: #fff;
+}
+
+.tool-pill-danger {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger-ink);
+}
+
+.vn-workspace {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 14px 12px 24px;
+}
+
+.pillar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.zone-bar-card {
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.zone-bar-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.zone-heading { font-size: 1.24rem; font-weight: 800; }
+.zone-lead { font-size: 0.9rem; color: var(--ink-secondary); margin-top: 3px; max-width: 72ch; }
+
+.zone-search-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: stretch;
+}
+.zone-search-box {
+  position: relative;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.zone-radius-wrap { flex: 0 1 146px; }
+.zone-suggestions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius-md);
+  box-shadow: 0 14px 32px rgba(15, 31, 28, 0.16);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 650;
+}
+.zone-suggestions li button {
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.zone-suggestions li button:hover { background: var(--primary-soft); }
+.zone-suggestions li strong { font-size: 0.92rem; }
+.zone-suggestions li span { font-size: 0.8rem; color: var(--ink-muted); }
+
+.zone-quick-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.prompt-chip.is-active-zone {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.subtab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.subtab-btn {
+  min-height: 42px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--ink-secondary);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.subtab-btn.is-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.subtab-report { color: var(--danger-ink); border-color: var(--danger-border); }
+.subtab-report.is-active { background: var(--danger-ink); border-color: var(--danger-ink); color: #fff; }
+
+.pubpane, .stack-panel, .stack-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.dot-teal { background: #0c665e; }
+
+/* Phần 2: Cổng Nhà Nghiên cứu */
+.auth-gate-grid, .research-two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+.auth-mode-switch { align-self: flex-start; }
+
+.researcher-profile-bar {
+  background: var(--primary-soft);
+  border: 1px solid #9ad3cc;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.researcher-profile-bar strong { display: block; font-size: 1rem; color: var(--primary); }
+
+/* Phần 3: Bản tin & Bài Nghiên cứu Mở */
+.news-header-banner {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.news-header-banner h1 { font-size: 1.32rem; font-weight: 800; }
+.news-header-banner p { color: var(--ink-secondary); margin-top: 4px; max-width: 66ch; }
+
+.news-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.news-stat-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.news-stat-box strong { font-size: 1.35rem; font-weight: 800; color: var(--primary); }
+.news-stat-box span { font-size: 0.82rem; color: var(--ink-muted); }
+
+.news-feed-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.pub-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.pub-card.is-research { border-left: 5px solid var(--primary); }
+.pub-card.is-news-high { border-left: 5px solid var(--danger-ink); }
+.pub-card.is-news-attention { border-left: 5px solid var(--warn-ink); }
+.pub-card-title { font-size: 1.08rem; font-weight: 800; line-height: 1.35; }
+.pub-card-body { white-space: pre-line; font-size: 0.92rem; color: var(--ink-secondary); padding-top: 8px; border-top: 1px solid var(--border); }
+
+.mobile-pillar-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 500;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-strong);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (min-width: 860px) {
+  .vn-shell { padding-bottom: 24px; }
+  .pillar-nav-desktop { display: inline-flex; }
+  .mobile-pillar-nav { display: none; }
+  .auth-gate-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr); align-items: start; }
+  .research-two-col { grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.95fr); align-items: start; }
+  .news-feed-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

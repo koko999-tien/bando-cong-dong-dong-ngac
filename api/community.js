@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { put, get, list, del } from '@vercel/blob';
-import { DEFAULT_REGION_ID, validateCoordinateInRegion } from '../platform/regions/region-registry.js';
+import { DEFAULT_REGION_ID } from '../platform/regions/region-registry.js';
+import { isInsideVietnam, filterFeaturesInZone, findNearestVietnamZone } from '../platform/regions/vietnam-directory.js';
 import { DATA_CLASSES } from '../platform/data/provenance-catalog.js';
 import { ROLES, resolveInitialReportTrust } from '../platform/security/rbac.js';
 import {
@@ -284,8 +285,15 @@ export async function GET(request) {
       });
     }
 
-    // Chế độ công khai cho cư dân
-    const publicReports = mergedReports.filter((r) => r.status !== 'hidden');
+    // Chế độ công khai cho cư dân (hỗ trợ lọc khoanh vùng lat/lng/radiusKm chống lag toàn quốc!)
+    const qLat = Number(url.searchParams.get('lat'));
+    const qLng = Number(url.searchParams.get('lng'));
+    const qRadiusKm = Number(url.searchParams.get('radiusKm'));
+    const visibleReports = mergedReports.filter((r) => r.status !== 'hidden');
+    const publicReports =
+      Number.isFinite(qLat) && Number.isFinite(qLng) && Number.isFinite(qRadiusKm) && qRadiusKm > 0
+        ? filterFeaturesInZone(visibleReports, qLat, qLng, qRadiusKm, 250)
+        : visibleReports;
     return Response.json(
       {
         ok: true,
@@ -415,10 +423,13 @@ export async function POST(request) {
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || name.length < 3) {
         return Response.json({ ok: false, error: 'Tên vị trí hoặc tọa độ không hợp lệ.' }, { status: 400 });
       }
-      const geoCheck = validateCoordinateInRegion(lat, lng, regionId);
-      if (!geoCheck.valid) {
-        return Response.json({ ok: false, error: geoCheck.reason }, { status: 400 });
+      if (!isInsideVietnam(lat, lng)) {
+        return Response.json(
+          { ok: false, error: 'Tọa độ phản ánh phải nằm trong phạm vi lãnh thổ Việt Nam.' },
+          { status: 400 }
+        );
       }
+      const nearestProvince = findNearestVietnamZone(lat, lng)?.province || 'Việt Nam';
       if (hasSpamContent(name) || hasSpamContent(notes)) {
         return Response.json({ ok: false, error: 'Nội dung chứa liên kết quảng cáo hoặc từ khóa bị chặn.' }, { status: 400 });
       }
@@ -436,7 +447,9 @@ export async function POST(request) {
       }
 
       const id = cleanText(body.id, 32) || `CD-${Date.now().toString(36).slice(-5).toUpperCase()}`;
-      const cat = ['flood', 'heat', 'traffic', 'shelter', 'medical'].includes(body.category) ? body.category : 'flood';
+      const cat = ['flood', 'landslide', 'heat', 'traffic', 'air_quality', 'salinity', 'shelter', 'medical'].includes(body.category)
+        ? body.category
+        : 'flood';
       const layerGroup = ['shelter', 'medical'].includes(cat) ? 'safe' : 'risk';
       const photoFlag = cleanText(body.photoQualityFlag || 'ok', 40);
       const roleStr = cleanText(body.reporterRole || 'Cư dân đóng góp trên Web', 80);
@@ -450,6 +463,7 @@ export async function POST(request) {
       const record = {
         id,
         regionId,
+        province: cleanText(body.province || nearestProvince, 80),
         dataClass: trust.dataClass || DATA_CLASSES.COMMUNITY_REPORTS,
         layerGroup,
         category: cat,

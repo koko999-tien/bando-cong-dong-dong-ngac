@@ -291,6 +291,20 @@ function resolveSafePath(urlPath) {
 
 const server = http.createServer(async (req, res) => {
   try {
+    if ((req.url || '').startsWith('/api/research-portal')) {
+      const mod = await import('./api/research-portal.js');
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      const webReq = new Request(`http://localhost:${PORT}${req.url}`, {
+        method: req.method,
+        headers: req.headers,
+        body: ['GET', 'HEAD'].includes(req.method) ? undefined : Buffer.concat(chunks)
+      });
+      const webRes = req.method === 'POST' ? await mod.POST(webReq) : await mod.GET(webReq);
+      res.writeHead(webRes.status, Object.fromEntries(webRes.headers.entries()));
+      res.end(await webRes.text());
+      return;
+    }
     if ((req.url || '').startsWith('/api/ai-copilot')) {
       const mod = await import('./api/ai-copilot.js');
       const chunks = [];

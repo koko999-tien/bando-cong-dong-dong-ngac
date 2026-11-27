@@ -75,6 +75,9 @@ jobs:
       - name: Run Citizen-First UX & 7 User Scenario Tests
         run: npm run test:citizen
 
+      - name: Run Vietnam National 3-Pillar & Researcher Workflow Tests
+        run: npm run test:national
+
       - name: Audit high/critical npm vulnerabilities (advisory)
         continue-on-error: true
         run: npm audit --audit-level=high

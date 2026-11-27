@@ -26,8 +26,7 @@ const citizenCss = await fs.readFile(path.join(rootDir, 'citizen.css'), 'utf8');
 // =========================================================================
 // KỊCH BẢN 1: NGƯỜI DÂN MỚI TRUY CẬP — 5 GIÂY HIỂU NGAY, 0 THUẬT NGỮ GIS
 // =========================================================================
-// Trang chủ mặc định phải mở ở màn hình Hôm nay (không ẩn) và KHÔNG chứa thuật ngữ GIS thô trong UI người dân
-assert.ok(indexHtml.includes('id="view-today" class="view-panel"'), 'Trang chủ phải mở mặc định màn hình Hôm nay');
+assert.ok(indexHtml.includes('id="pillar-public"'), 'Trang chủ phải mở mặc định Phần 1: Cổng Cộng đồng');
 assert.ok(!indexHtml.includes('DEM (m)'), 'Form người dân KHÔNG được bắt nhập DEM (m)');
 assert.ok(!indexHtml.includes('UTM 48N'), 'Trang người dân KHÔNG được hiện thuật ngữ UTM 48N');
 assert.ok(!indexHtml.includes('ERA5'), 'Trang người dân KHÔNG được hiện thuật ngữ ERA5');
@@ -126,7 +125,7 @@ assert.ok(qItem.queueId.startsWith('OFF-'), 'Hàng đợi báo cáo ngoại tuy�
 // =========================================================================
 // KỊCH BẢN 7: NGƯỜI DÂN BÁO ĐIỂM NGẬP — NGẮN GỌN, MINH BẠCH XÁC MINH, KHÔNG BẮT NHẬP TỌA ĐỘ
 // =========================================================================
-assert.ok(indexHtml.includes('id="citizen-report-form"'), 'Phải có biểu mẫu báo sự cố cộng đồng');
+assert.ok(indexHtml.includes('id="national-report-form"'), 'Phải có biểu mẫu báo sự cố cộng đồng toàn quốc');
 assert.ok(!indexHtml.includes('id="pt-lat"'), 'Trang người dân không bắt nhập vĩ độ thô');
 assert.ok(!indexHtml.includes('id="pt-lng"'), 'Trang người dân không bắt nhập kinh độ thô');
 const verC = describePointVerificationPlain({ confidenceTier: 'C' });
@@ -135,9 +134,9 @@ assert.ok(verC.label.includes('chờ kiểm chứng'), 'Điểm mới báo phả
 assert.equal(describeAqiPlain(165).tone, 'danger');
 
 // Kiểm tra bộ lọc ngôn ngữ Trợ lý AI không để lọt thuật ngữ DEM/OSRM/ERA5/DSM trên câu hỏi thực tế
-const citizenAppSrc = await fs.readFile(path.join(rootDir, 'citizen-app.js'), 'utf8');
-assert.ok(citizenAppSrc.includes('vùng trũng thấp'), 'Trợ lý người dân phải chuyển ngữ cụm DEM sang vùng trũng thấp');
-assert.ok(!citizenAppSrc.includes('basemaps.cartocdn.com'), 'Bản đồ người dân không dùng tile CARTO cần API key');
+const nationalAppSrc = await fs.readFile(path.join(rootDir, 'national-app.js'), 'utf8');
+assert.ok(nationalAppSrc.includes('vùng trũng thấp'), 'Trợ lý người dân phải chuyển ngữ cụm DEM sang vùng trũng thấp');
+assert.ok(!nationalAppSrc.includes('basemaps.cartocdn.com'), 'Bản đồ không dùng tile CARTO cần API key');
 
 const rawLocalAns = synthesizeSituationalAnswer(
   'Tôi muốn từ ĐH Mỏ về Cầu Noi nhưng đoạn Phố Viên đang ngập thì nên đi thế nào?',
