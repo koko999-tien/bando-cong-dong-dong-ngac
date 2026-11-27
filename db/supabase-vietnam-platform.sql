@@ -7,6 +7,14 @@
 create extension if not exists postgis;
 create extension if not exists pgcrypto;
 
+-- 0. BẢNG ĐỒNG BỘ NHANH CHO SERVERLESS API (Hoạt động tức thì qua PostgREST ngay khi gắn SUPABASE_URL)
+create table if not exists public.platform_collections (
+  collection_key text primary key,
+  payload jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.platform_collections enable row level security;
+
 -- 1. HỒ SƠ NHÀ NGHIÊN CỨU (Liên kết 1-1 với auth.users của Supabase Auth)
 create table if not exists public.researcher_profiles (
   id uuid primary key references auth.users(id) on delete cascade,

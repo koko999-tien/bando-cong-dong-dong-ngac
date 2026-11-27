@@ -118,13 +118,65 @@ export const SEED_NATIONAL_PUBLICATIONS = Object.freeze([
 ]);
 
 export function detectStorageBackend() {
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  const supaUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supaKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (supaUrl && supaKey) {
     return 'supabase_postgis';
   }
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     return 'vercel_private_blob';
   }
   return 'local_file_dev';
+}
+
+function getSupabaseRestConfig() {
+  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/+$/, '');
+  const key = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  return { url, key };
+}
+
+async function readSupabaseCollection(collectionKey, fallback) {
+  const { url, key } = getSupabaseRestConfig();
+  try {
+    const res = await fetch(
+      `${url}/rest/v1/platform_collections?collection_key=eq.${encodeURIComponent(collectionKey)}&select=payload`,
+      {
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          Accept: 'application/json'
+        }
+      }
+    );
+    if (!res.ok) return fallback;
+    const rows = await res.json();
+    return Array.isArray(rows) && rows[0]?.payload !== undefined ? rows[0].payload : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function writeSupabaseCollection(collectionKey, payload) {
+  const { url, key } = getSupabaseRestConfig();
+  const res = await fetch(`${url}/rest/v1/platform_collections?on_conflict=collection_key`, {
+    method: 'POST',
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify([
+      {
+        collection_key: collectionKey,
+        payload,
+        updated_at: new Date().toISOString()
+      }
+    ])
+  });
+  if (!res.ok) {
+    throw new Error(`Supabase write error (${res.status}) for ${collectionKey}`);
+  }
 }
 
 function getAuthSecret() {
@@ -249,6 +301,19 @@ async function writeBlobJson(pathname, obj) {
 
 export async function loadNationalCollections() {
   const backend = detectStorageBackend();
+  if (backend === 'supabase_postgis') {
+    const [researchers, submissions, customPubs] = await Promise.all([
+      readSupabaseCollection('researchers', []),
+      readSupabaseCollection('submissions', []),
+      readSupabaseCollection('publications', [])
+    ]);
+    return {
+      backend,
+      researchers: Array.isArray(researchers) ? researchers : [],
+      submissions: Array.isArray(submissions) ? submissions : [],
+      publications: [...(Array.isArray(customPubs) ? customPubs : []), ...SEED_NATIONAL_PUBLICATIONS]
+    };
+  }
   if (backend === 'vercel_private_blob') {
     const [researchers, submissions, customPubs] = await Promise.all([
       readBlobJson(RESEARCHERS_BLOB, []),
@@ -273,6 +338,10 @@ export async function loadNationalCollections() {
 
 export async function saveResearchers(list) {
   const backend = detectStorageBackend();
+  if (backend === 'supabase_postgis') {
+    await writeSupabaseCollection('researchers', list);
+    return;
+  }
   if (backend === 'vercel_private_blob') {
     await writeBlobJson(RESEARCHERS_BLOB, list);
     return;
@@ -284,6 +353,10 @@ export async function saveResearchers(list) {
 
 export async function saveSubmissions(list) {
   const backend = detectStorageBackend();
+  if (backend === 'supabase_postgis') {
+    await writeSupabaseCollection('submissions', list);
+    return;
+  }
   if (backend === 'vercel_private_blob') {
     await writeBlobJson(SUBMISSIONS_BLOB, list);
     return;
@@ -297,6 +370,10 @@ export async function saveCustomPublications(list) {
   const backend = detectStorageBackend();
   const seedIds = new Set(SEED_NATIONAL_PUBLICATIONS.map((x) => x.id));
   const onlyCustom = (Array.isArray(list) ? list : []).filter((p) => p && !seedIds.has(p.id));
+  if (backend === 'supabase_postgis') {
+    await writeSupabaseCollection('publications', onlyCustom);
+    return;
+  }
   if (backend === 'vercel_private_blob') {
     await writeBlobJson(PUBLICATIONS_BLOB, onlyCustom);
     return;
