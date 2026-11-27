@@ -1,10 +1,11 @@
-const CACHE_NAME = 'humg-community-gis-v7';
+const CACHE_NAME = 'humg-community-gis-v8';
 const CORE_ASSETS = [
   './',
   './index.html',
   './styles.css',
   './config.js',
   './humg-data.js',
+  './dem-grid-2km.js',
   './gis-utils.js',
   './knowledge-engine.js',
   './app.js',

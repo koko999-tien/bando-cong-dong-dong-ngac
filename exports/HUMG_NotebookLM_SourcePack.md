@@ -1,8 +1,8 @@
 # HỒ SƠ TRI THỨC THỰC CHỨNG — BẢN ĐỒ CỘNG ĐỒNG MỞ PHƯỜNG ĐÔNG NGẠC & ĐH MỎ - ĐỊA CHẤT (BÁN KÍNH 2 KM)
 - **Tâm khảo sát:** Trường ĐH Mỏ - Địa chất (18 Phố Viên, P. Đông Ngạc) (21.072514°N, 105.77387°E · UTM Zone 48N: 580390.3 E, 2330368.2 N)
-- **Thời điểm kết xuất gói nguồn NotebookLM:** 10:16:33 27/11/2026
-- **Tổng số điểm không gian hiện có:** 44 điểm (29 Điểm Rủi ro Ngập/Nắng · 15 Điểm An toàn/Y tế/Hành chính)
-- **Tổng lượt cư dân & sinh viên xác nhận (+1):** 168 lượt
+- **Thời điểm kết xuất gói nguồn NotebookLM:** 10:36:31 27/11/2026
+- **Tổng số điểm không gian hiện có:** 60 điểm (45 Điểm Rủi ro Ngập/Nắng · 15 Điểm An toàn/Y tế/Hành chính)
+- **Tổng lượt cư dân & sinh viên xác nhận (+1):** 235 lượt
 - **Giấy phép & Tuân thủ:** CC BY 4.0, OpenStreetMap ODbL 1.0, tuân thủ Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 (không chứa dữ liệu định danh cá nhân).
 ---
 ## PHẦN 1. DỮ LIỆU KHÍ TƯỢNG THỰC TẾ ECMWF ERA5 (2024 – 2026)
@@ -260,6 +260,102 @@
 - **Tọa độ WGS84:** 21.060668, 105.773123 · **Cao độ DEM:** 6 m
 - **Nguồn xác thực:** Báo Mới & Tiền Phong (ngập úng cục bộ khu tập thể Phú Minh – Cổ Nhuế 2); osm:node/8934749257; DEM GLO-30 = 6 m
 - **Chi tiết thực tế:** Cách ĐH Mỏ ~1.319 m về phía Nam Cầu Noi. Cùng với đường Tân Nhuệ, đây là rốn địa hình thấp nhất bán kính 2 km (chỉ 6 m DSM sát bờ sông Nhuệ), hệ thống thoát nước khu tập thể cũ rất dễ quá tải.
+
+### [R-30] Phố Văn Hội – Cụm ngõ nhà trọ sinh viên Văn Hội / Đức Thắng
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng A (4 xác nhận)
+- **Tọa độ WGS84:** 21.07858, 105.774559 · **Cao độ DEM:** 12 m
+- **Nguồn xác thực:** Sức khỏe & Đời sống, Lao Động & VietNamNet (cảnh báo ngập phòng trọ tầng 1 khu vực Văn Hội – Đức Thắng); osm:node/10219271549
+- **Chi tiết thực tế:** Cách ĐH Mỏ ~678 m về phía Bắc. Khu vực tập trung rất đông sinh viên ĐH Mỏ và HV Tài chính thuê trọ; nhiều ngách thấp hơn mặt phố khiến nước mưa dềnh tràn sàn phòng trọ tầng 1.
+
+### [R-31] Ngõ 523 Đường Cổ Nhuế – Cụm nhà trọ Cổ Nhuế Viên (Sát Khu A ĐH Mỏ)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng B (4 xác nhận)
+- **Tọa độ WGS84:** 21.07021, 105.776934 · **Cao độ DEM:** 11.7 m
+- **Nguồn xác thực:** osm:way/1194248730 (Ngõ 523 Đường Cổ Nhuế, cách ĐH Mỏ 408 m); Lao Động & VietNamNet (ngập ngõ trọ Cổ Nhuế); DEM = 11,7 m
+- **Chi tiết thực tế:** Cách cổng 18 Phố Viên chỉ ~408 m. Nằm ngay chân dốc phía Đông Nam gò 17 m của ĐH Mỏ kết nối sang ngõ 521 Cổ Nhuế, cống nhỏ dễ ứ nước khi mưa to.
+
+### [R-32] Khu vực Chợ Thôn Trù – Ngõ 282 Đường Cổ Nhuế (Phễu thoát nước cống cũ)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng B (3 xác nhận)
+- **Tọa độ WGS84:** 21.065699, 105.779847 · **Cao độ DEM:** 15 m
+- **Nguồn xác thực:** osm:way/699218395 (Chợ Thôn Trù – Ngõ 282 Cổ Nhuế, cách ĐH Mỏ 979 m); Dân Việt (quá tải thoát nước ngõ dân sinh Cổ Nhuế)
+- **Chi tiết thực tế:** Điểm điển hình của ngập cục bộ do tiết diện cống ngõ dân cư cũ nhỏ hẹp và rác chợ bít miệng thu nước khi mưa dồn dập.
+
+### [R-33] Cụm Ngõ 104 & Ngõ 119 Đường Cổ Nhuế (Khu dân cư Cổ Nhuế Đống)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng B (3 xác nhận)
+- **Tọa độ WGS84:** 21.06053, 105.779753 · **Cao độ DEM:** 13.5 m
+- **Nguồn xác thực:** osm:way/329067095 (Ngõ 119 Cổ Nhuế) & osm:way/328886063 (Ngõ 104 Cổ Nhuế, cách ĐH Mỏ 1.466 m); Báo Dân Việt & Lao Động
+- **Chi tiết thực tế:** Mạng ngõ xương cá dày đặc nhà trọ quanh Chợ Cổ Nhuế; mặt ngõ bê tông hóa kín nên nước thoát rất chậm khi trục chính Cổ Nhuế dềnh nước.
+
+### [R-34] Ngõ 43 Đường Cổ Nhuế & Ngách 86 (Xóm trọ lớn phía sau Bộ Công An)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng A (5 xác nhận)
+- **Tọa độ WGS84:** 21.058954, 105.780221 · **Cao độ DEM:** 14 m
+- **Nguồn xác thực:** osm:way/37770236 (Ngõ 43 Cổ Nhuế) & osm:way/897043225 (Ngách 86 Ngõ 43, cách ĐH Mỏ 1.646 m); Lao Động & VietNamNet (ngập sâu ngõ trọ Cổ Nhuế)
+- **Chi tiết thực tế:** Một trong những ngõ sinh viên thuê trọ đông nhất Cổ Nhuế; có nhiều đoạn ngách trũng dạng lòng chảo khiến nước ngập tới đầu gối và tràn tầng 1 khi mưa lớn.
+
+### [R-35] Đường Phạm Văn Đồng – Đoạn trước cổng Bộ Công An (Số 47 Phạm Văn Đồng)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng A (6 xác nhận)
+- **Tọa độ WGS84:** 21.059571, 105.783389 · **Cao độ DEM:** 14 m
+- **Nguồn xác thực:** Báo Nhân Dân & Công an TP. Hà Nội thống kê điểm ngập nặng (đoạn trước Bộ Công an 47 Phạm Văn Đồng); osm:way/1411060168
+- **Chi tiết thực tế:** Cách ĐH Mỏ ~1.746 m. Nằm trong danh sách điểm đen ngập úng và ùn tắc giao thông trọng điểm trên trục Phạm Văn Đồng mỗi khi Hà Nội mưa diện rộng.
+
+### [R-36] Ngõ 442 Phạm Văn Đồng – Giáp Phố Tăng Thiết Giáp & Cổ Nhuế Đống
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng B (3 xác nhận)
+- **Tọa độ WGS84:** 21.056477, 105.781416 · **Cao độ DEM:** 12.9 m
+- **Nguồn xác thực:** osm:way/897065071 (Ngõ 442 Đường Phạm Văn Đồng, cách ĐH Mỏ 1.948 m); Tuổi Trẻ & Dân Trí (ngập dải gom Phạm Văn Đồng)
+- **Chi tiết thực tế:** Nằm sát rìa Nam vòng 2 km (gần cụm Mega Market / Bộ Công An), nước từ mặt đường lớn Vành đai 3 dễ tràn ngược vào ngõ thấp.
+
+### [R-37] KĐT Ngoại Giao Đoàn – Đầu phố Nguyễn Xuân Khoát / Xuân Tảo (Rốn ngập mới)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng A (6 xác nhận)
+- **Tọa độ WGS84:** 21.065654, 105.791273 · **Cao độ DEM:** 11.4 m
+- **Nguồn xác thực:** VietNamNet, Lao Động & VietnamFinance (KĐT Ngoại Giao Đoàn – Nguyễn Xuân Khoát ngập 20–50 cm, chặn bao cát hầm xe); osm:node/12206582483
+- **Chi tiết thực tế:** Cách ĐH Mỏ ~1.960 m ở rìa Đông vùng 2 km (DEM 11,4 m). Do khớp nối hạ tầng thoát nước chưa đồng bộ, mưa lớn biến lòng đường thành sông, cư dân phải đắp bao cát chắn hầm chung cư.
+
+### [R-38] Ngõ 397 Phạm Văn Đồng – Khu vực Chợ Xuân Đỉnh 2 (Tổ dân phố Xuân Lộc)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng B (3 xác nhận)
+- **Tọa độ WGS84:** 21.069065, 105.787602 · **Cao độ DEM:** 15 m
+- **Nguồn xác thực:** osm:way/1202447567 (Chợ Xuân Đỉnh 2 – Ngõ 397 Phạm Văn Đồng, cách ĐH Mỏ 1.476 m); Báo Lao Động (ngập cục bộ Xuân Đỉnh)
+- **Chi tiết thực tế:** Khu dân cư đông đúc nối giữa trục Phạm Văn Đồng, Công viên Hòa Bình và phường Xuân Đỉnh; đọng nước cục bộ khu vực họp chợ khi mưa to.
+
+### [R-39] Đường Xuân Đỉnh – Đoạn Cáo Đỉnh / Xuân Lộc (Hạ tầng thoát nước dân cư cũ)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng B (3 xác nhận)
+- **Tọa độ WGS84:** 21.073648, 105.788933 · **Cao độ DEM:** 15 m
+- **Nguồn xác thực:** osm:way/597155943 (Đường Xuân Đỉnh – Cáo Đỉnh, cách ĐH Mỏ 1.568 m); Lao Động & VietNamNet (quá tải thoát nước Xuân Đỉnh)
+- **Chi tiết thực tế:** Trục đường dân sinh truyền thống mặt cắt hẹp tiếp giáp KĐT Resco; cống tiêu cũ dễ quá tải gây đọng nước kéo dài tại các điểm trũng.
+
+### [R-40] Đường Đông Thắng & Ngõ 20 Đồng Thắng (Giữa Kẻ Vẽ – Cụm Ecohome)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng A (4 xác nhận)
+- **Tọa độ WGS84:** 21.085417, 105.780637 · **Cao độ DEM:** 13.6 m
+- **Nguồn xác thực:** osm:way/37765862 (Đường Đông Thắng) & osm:way/596728782 (Ngõ 20 Đồng Thắng, cách ĐH Mỏ 1.597 m); Dân Trí & VietNamNet (ngập Đông Thắng – Ecohome)
+- **Chi tiết thực tế:** Tuyến đường nối trực tiếp khu dân cư Kẻ Vẽ sang cụm chung cư Ecohome 1–3; từng ngập sâu diện rộng năm 2025 và vẫn đọng nước ngõ thấp khi mưa cực đoan.
+
+### [R-41] Phố Kẻ Vẽ – Đoạn Bắc Đông Ngạc gần chân đê Sông Hồng
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng A (4 xác nhận)
+- **Tọa độ WGS84:** 21.08885, 105.78095 · **Cao độ DEM:** 13 m
+- **Nguồn xác thực:** Tiền Phong & Báo Mới (điểm ngập cục bộ phố Kẻ Vẽ – Đông Ngạc); osm:way/146725513 (cách ĐH Mỏ 1.959 m)
+- **Chi tiết thực tế:** Nằm ở rìa Bắc vòng 2 km; nước mưa từ sườn đê dồn xuống khu dân cư cổ Kẻ Vẽ làm quá tải hệ thống rãnh thoát nước cũ.
+
+### [R-42] Hành lang trũng Bờ Đông Sông Nhuệ – Đoạn Bắc Phố Viên / Đức Thắng (DEM 9,9 m)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng A (4 xác nhận)
+- **Tọa độ WGS84:** 21.077018, 105.772199 · **Cao độ DEM:** 9.9 m
+- **Nguồn xác thực:** osm:way/339268894 (Sông Nhuệ đoạn Đức Thắng, cách ĐH Mỏ 530 m); DEM GLO-30 = 9,9 m; Thông báo sơ tán ven sông Nhuệ HV Tài chính
+- **Chi tiết thực tế:** Cách trường chỉ ~530 m về phía Tây Bắc. Dải đất trũng <10 m sát bờ sông Nhuệ sau lưng khu Đức Thắng – Lê Văn Hiến rất dễ dềnh nước khi sông Nhuệ đầy.
+
+### [R-43] Đường Phú Diễn – Cụm công nghiệp & Trại Gà Phú Minh (DEM 10,7 m)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng A (5 xác nhận)
+- **Tọa độ WGS84:** 21.0592, 105.764712 · **Cao độ DEM:** 10.7 m
+- **Nguồn xác thực:** Báo Lao Động, Dân Việt & Báo Mới (ngập úng cục bộ khu Phú Minh – Trại Gà làm tràn nước đỏ ngõ dân cư); osm:way/338115253 (cách ĐH Mỏ 1.759 m)
+- **Chi tiết thực tế:** Nằm ở phía Tây Nam vùng 2 km (DEM 10,7 m). Báo chí phản ánh hệ thống thoát nước chậm tại khu Phú Minh – Trại Gà khiến mưa lớn gây ngập ngõ ngách và ô nhiễm môi trường.
+
+### [R-44] Dải trũng ven Sông Nhuệ – Giữa Cầu Phố Viên & Hồ Thụy Phương 2 (DEM 9,1 m)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng A (4 xác nhận)
+- **Tọa độ WGS84:** 21.065963, 105.77202 · **Cao độ DEM:** 9.1 m
+- **Nguồn xác thực:** osm:way/331066106 (Hành lang Sông Nhuệ, cách ĐH Mỏ 753 m); Copernicus DEM GLO-30 = 9,1 m; VietNamNet 18/09/2026
+- **Chi tiết thực tế:** Vùng rốn thu nước tự nhiên cao độ chỉ ~9 m nằm giữa trục Phố Viên và Hồ điều hòa Thụy Phương 2, nơi các cống ngang xả trực tiếp ra sông Nhuệ.
+
+### [R-45] Cụm ngõ 199 – 235 Phố Viên (Dãy nhà trọ nền thấp sát sông Nhuệ — DEM 8,7 m)
+- **Phân lớp:** Lớp 1 - Điểm Rủi ro (Ngập úng mưa lớn) · **Độ tin cậy:** Hạng A (6 xác nhận)
+- **Tọa độ WGS84:** 21.06809, 105.77261 · **Cao độ DEM:** 8.7 m
+- **Nguồn xác thực:** Sức khỏe & Đời sống, Lao Động & VietNamNet 17–18/09/2026 (ngập tràn phòng trọ tầng 1 & xoáy cống cuối Phố Viên); osm:way/1255456395; DEM = 8,7 m
+- **Chi tiết thực tế:** Cách cổng 18 Phố Viên chỉ ~509 m nhưng cao độ tụt sâu xuống 8,7 m DSM (thấp hơn cổng trường hơn 8 mét!). Nước mưa tràn thẳng vào tầng 1 các dãy trọ sinh viên, bắt buộc ngắt cầu dao điện sớm và không đi xe qua lúc mưa to.
 
 ### [S-01] Bệnh viện Đa khoa Phương Đông (Số 9 Phố Viên)
 - **Phân lớp:** Lớp 2 - Điểm An toàn/Hỗ trợ (Bệnh viện / Trạm Y tế) · **Độ tin cậy:** Hạng A (5 xác nhận)

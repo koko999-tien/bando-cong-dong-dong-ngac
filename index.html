@@ -130,6 +130,14 @@
         <div class="scenario-box">
           <label for="scenario-select" style="display:block;font-size:0.76rem;font-weight:700;margin-bottom:4px;">Mô phỏng kịch bản mưa lớn / đảo nhiệt (theo DEM &amp; ERA5):</label>
           <select id="scenario-select" aria-label="Chọn kịch bản thời tiết cực đoan để lọc phân tầng rủi ro"></select>
+          <div style="margin-top:8px;padding-top:7px;border-top:1px dashed #cbd5e1;">
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:0.75rem;margin-bottom:3px;">
+              <label for="rain-sim-range" style="font-weight:700;color:#0369a1;">Mức mưa mô phỏng ngập thực địa:</label>
+              <strong id="rain-sim-val" class="mono-num" style="color:#0369a1;">70 mm (Mưa to)</strong>
+            </div>
+            <input type="range" id="rain-sim-range" min="0" max="140" step="5" value="70" style="width:100%;accent-color:#0284c7;" aria-label="Kéo để xem vùng ngập mở rộng theo lượng mưa từ 0 đến 140 mm">
+            <span style="display:block;font-size:0.71rem;color:#475569;">Dựa trên <strong>625 điểm vệ tinh DEM 30m</strong> (78,5% vùng ≤12m) + phễu cống ngõ hẹp</span>
+          </div>
           <div id="scenario-summary-note" class="scenario-note" hidden></div>
         </div>
         <div class="layer-cards">
@@ -204,7 +212,7 @@
           </label>
           <label class="checkbox-inline" style="margin-top:4px;">
             <input type="checkbox" id="toggle-flood-corridors" checked>
-            <span>Hiện <strong>10 tuyến phố ngập &amp; vùng trũng DEM 6–11m</strong> (75% diện tích)</span>
+            <span>Hiện <strong>Mô hình ngập vệ tinh DEM 625 điểm &amp; 18 tuyến ngõ ngập</strong></span>
           </label>
           <label class="checkbox-inline" style="margin-top:4px;">
             <input type="checkbox" id="toggle-heatmap">

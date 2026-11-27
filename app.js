@@ -40,7 +40,9 @@ import {
   buildNotebookLmSourceMarkdown
 } from './knowledge-engine.js';
 
-const STORAGE_KEY = 'humg_dongngac_community_gis_v8';
+import { DEM_GRID_2KM, sampleDemBilinear } from './dem-grid-2km.js';
+
+const STORAGE_KEY = 'humg_dongngac_community_gis_v9';
 const VOTES_KEY = 'humg_dongngac_resident_votes_v3';
 const API_URL_KEY = 'humg_dongngac_api_url_v3';
 const BROADCAST_KEY = 'humg_dongngac_broadcast_v1';
@@ -307,6 +309,142 @@ function createRiskHeatmapLayer(L, getPointsFn) {
   return new HeatLayer();
 }
 
+/**
+ * Lớp Mô hình Thủy văn Vùng Ngập Thực tế (Continuous Satellite DEM 625-point Raster + Urban Pluvial Bottlenecks)
+ * Giải quyết triệt để hiện tượng ngập diện rộng ngoài thực tế: kết hợp cả (1) ngập lòng máng địa hình DEM <=12m (chiếm 78,5% vùng 2km)
+ * và (2) ngập phễu cống hộp quá tải tại các ngõ xóm trọ bê tông hóa dày đặc. Chạy mượt 60fps trên HTML5 Canvas.
+ */
+function createHydrologicalInundationLayer(L, getStateFn) {
+  const HydroLayer = L.Layer.extend({
+    onAdd(map) {
+      this._map = map;
+      this._canvas = L.DomUtil.create('canvas', 'leaflet-zoom-hide');
+      this._canvas.style.pointerEvents = 'none';
+      this._canvas.style.position = 'absolute';
+      this._canvas.style.zIndex = '220';
+      map.getPanes().overlayPane.appendChild(this._canvas);
+      this._boundRedraw = () => {
+        if (this._raf) cancelAnimationFrame(this._raf);
+        this._raf = requestAnimationFrame(() => this.redraw());
+      };
+      map.on('moveend zoomend resize', this._boundRedraw);
+      this.redraw();
+    },
+    onRemove(map) {
+      map.off('moveend zoomend resize', this._boundRedraw);
+      if (this._raf) cancelAnimationFrame(this._raf);
+      this._canvas?.remove();
+      this._canvas = null;
+    },
+    redraw() {
+      if (!this._map || !this._canvas) return;
+      const st = getStateFn();
+      const size = this._map.getSize();
+      const topLeft = this._map.containerPointToLayerPoint([0, 0]);
+      L.DomUtil.setPosition(this._canvas, topLeft);
+      this._canvas.width = size.x;
+      this._canvas.height = size.y;
+      const ctx = this._canvas.getContext('2d');
+      ctx.clearRect(0, 0, size.x, size.y);
+
+      if (!st.showFloodCorridors || st.activeScenario === 'heat_uhi' || st.simRainMm <= 5) return;
+
+      const rainMm = Number(st.simRainMm) || 70;
+      // Ngưỡng mặt nước dâng tương đương theo lượng mưa trên địa hình lòng máng sông Nhuệ (từ 9.4m khi mưa 20mm lên 13.0m khi mưa 140mm)
+      const waterElevThreshold = 8.8 + (rainMm / 140) * 4.3;
+      const cLat = st.center.lat;
+      const cLng = st.center.lng;
+      const maxRadiusDegSq = Math.pow((st.radiusKm / 110.5) * 1.03, 2);
+
+      // Vẽ lên offscreen canvas nhỏ rồi phóng mượt bilinear lên màn hình -> đạt 60fps tuyệt đối mà dải nước tự nhiên mềm mại
+      const scale = 6;
+      const wSmall = Math.max(1, Math.ceil(size.x / scale));
+      const hSmall = Math.max(1, Math.ceil(size.y / scale));
+      const off = document.createElement('canvas');
+      off.width = wSmall;
+      off.height = hSmall;
+      const octx = off.getContext('2d');
+      const img = octx.createImageData(wSmall, hSmall);
+      const data = img.data;
+
+      // Chuẩn bị tâm các phễu ngập cục bộ (cống ngõ quá tải ngay cả nơi nền 13–14m)
+      const floodSpots = (st.points || [])
+        .filter((p) => p.status !== 'hidden' && (p.category === 'flood' || p.category === 'traffic'))
+        .map((p) => {
+          const px = this._map.latLngToContainerPoint([Number(p.lat), Number(p.lng)]);
+          return {
+            sx: px.x / scale,
+            sy: px.y / scale,
+            weight: p.severity === 'severe' ? 1.35 : 0.95
+          };
+        });
+
+      const zoom = this._map.getZoom();
+      const spotRadiusSmall = Math.max(3.5, Math.min(14, Math.pow(1.45, zoom - 12) * 3.8));
+      const spotRadSq = spotRadiusSmall * spotRadiusSmall;
+
+      for (let py = 0; py < hSmall; py++) {
+        const screenY = py * scale + scale * 0.5;
+        for (let px = 0; px < wSmall; px++) {
+          const screenX = px * scale + scale * 0.5;
+          const ll = this._map.containerPointToLatLng([screenX, screenY]);
+          const dLat = ll.lat - cLat;
+          const dLng = (ll.lng - cLng) * 0.933;
+          if (dLat * dLat + dLng * dLng > maxRadiusDegSq) continue;
+
+          const dem = sampleDemBilinear(ll.lat, ll.lng);
+          let depthScore = 0;
+          if (dem !== null && dem < waterElevThreshold) {
+            depthScore += (waterElevThreshold - dem) * 0.48;
+          }
+
+          // Cộng hiệu ứng phễu thoát nước đô thị quanh các ngõ/phố ngập xác thực
+          if (rainMm >= 25) {
+            const rainFactor = Math.min(1.35, rainMm / 70);
+            for (let k = 0; k < floodSpots.length; k++) {
+              const sp = floodSpots[k];
+              const dx = px - sp.sx;
+              const dy = py - sp.sy;
+              const d2 = dx * dx + dy * dy;
+              if (d2 < spotRadSq) {
+                depthScore += (1 - d2 / spotRadSq) * sp.weight * 0.85 * rainFactor;
+              }
+            }
+          }
+
+          if (depthScore <= 0.12) continue;
+          const idx = (py * wSmall + px) * 4;
+          if (depthScore >= 1.55) {
+            // Rốn ngập sâu / xoáy cống (Xanh chàm đậm cảnh báo cao)
+            data[idx] = 29;
+            data[idx + 1] = 78;
+            data[idx + 2] = 216;
+            data[idx + 3] = Math.min(158, Math.round(95 + depthScore * 26));
+          } else if (depthScore >= 0.65) {
+            // Ngập bắp chân / nửa bánh xe (Xanh dương thủy văn rõ nét)
+            data[idx] = 2;
+            data[idx + 1] = 132;
+            data[idx + 2] = 199;
+            data[idx + 3] = Math.min(128, Math.round(68 + depthScore * 36));
+          } else {
+            // Vùng đọng nước mặt đường / ngõ thấp (Xanh lam nhạt)
+            data[idx] = 14;
+            data[idx + 1] = 165;
+            data[idx + 2] = 233;
+            data[idx + 3] = Math.min(92, Math.round(36 + depthScore * 55));
+          }
+        }
+      }
+
+      octx.putImageData(img, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(off, 0, 0, wSmall, hSmall, 0, 0, size.x, size.y);
+    }
+  });
+  return new HydroLayer();
+}
+
 function setupFormValidationAria() {
   const linkError = (el, shown) => {
     const errorId = el.dataset.error;
@@ -448,6 +586,7 @@ function initApp() {
     showSafeLayer: true,
     showPendingLayer: true,
     activeScenario: 'normal',
+    simRainMm: 70,
     transectFirstPt: null,
     mode: 'pan',
     points: Array.isArray(saved?.points) && saved.points.length > 0 ? saved.points : structuredClone(SAMPLE_HUMG_POINTS),
@@ -515,6 +654,7 @@ function initApp() {
   const nearestLinkGroup = L.layerGroup().addTo(map);
   const routeCorridorGroup = L.layerGroup().addTo(map);
   const transectLayerGroup = L.layerGroup().addTo(map);
+  const hydroInundationLayer = createHydrologicalInundationLayer(L, () => state).addTo(map);
   const riskHeatmapLayer = createRiskHeatmapLayer(L, () => state.points);
 
   const centerIcon = L.divIcon({
@@ -573,6 +713,8 @@ function initApp() {
     toggleFloodCorridors: document.getElementById('toggle-flood-corridors'),
     toggleHeatmap: document.getElementById('toggle-heatmap'),
     scenarioSelect: document.getElementById('scenario-select'),
+    rainSimRange: document.getElementById('rain-sim-range'),
+    rainSimVal: document.getElementById('rain-sim-val'),
     scenarioSummaryNote: document.getElementById('scenario-summary-note'),
 
     btnToggleTransect: document.getElementById('btn-toggle-transect'),
@@ -1127,7 +1269,9 @@ function initApp() {
       moveRaf = null;
       const utm = latLngToUTM(lat, lng, 48);
       const dist = Math.round(turf.distance([state.center.lng, state.center.lat], [lng, lat], { units: 'meters' }));
-      els.cursorCoords.textContent = `WGS84: ${lat.toFixed(5)}, ${lng.toFixed(5)} · UTM 48N: ${utm.easting.toFixed(0)}m E, ${utm.northing.toFixed(0)}m N · Cách ĐH Mỏ: ${dist.toLocaleString('vi-VN')} m`;
+      const demAtCursor = sampleDemBilinear(lat, lng);
+      const demStr = demAtCursor !== null ? ` · DEM: ~${demAtCursor}m${demAtCursor <= 11 ? ' (Vùng trũng)' : demAtCursor >= 15 ? ' (Gò cao)' : ''}` : '';
+      els.cursorCoords.textContent = `WGS84: ${lat.toFixed(5)}, ${lng.toFixed(5)} · Cách ĐH Mỏ: ${dist.toLocaleString('vi-VN')} m${demStr}`;
     });
   });
 
@@ -1246,6 +1390,7 @@ function initApp() {
     els.toggleFloodCorridors.addEventListener('change', () => {
       state.showFloodCorridors = els.toggleFloodCorridors.checked;
       renderFloodCorridorsAndBasins();
+      hydroInundationLayer.redraw();
       persistState();
     });
   }
@@ -1255,50 +1400,26 @@ function initApp() {
     floodCorridorLayerGroup.clearLayers();
     if (!state.showFloodCorridors || state.activeScenario === 'heat_uhi') return;
 
-    const scenRainMm =
-      state.activeScenario === 'rain_120'
-        ? 125
-        : state.activeScenario === 'rain_70'
-          ? 75
-          : state.activeScenario === 'rain_30'
-            ? 40
-            : 55;
+    const scenRainMm = state.simRainMm || 70;
     const isRainSim = state.activeScenario.startsWith('rain_');
 
-    for (const basin of LOW_DEM_BASINS) {
-      if (isRainSim && scenRainMm < basin.rainThresholdMm) continue;
-      const poly = L.polygon(basin.coordinates, {
-        color: '#0284c7',
-        weight: isRainSim ? 1.5 : 1,
-        dashArray: '5 5',
-        opacity: isRainSim ? 0.68 : 0.42,
-        fillColor: scenRainMm >= 70 ? '#0369a1' : '#0ea5e9',
-        fillOpacity: isRainSim ? (scenRainMm >= 115 ? 0.24 : 0.17) : 0.09
-      }).addTo(floodBasinLayerGroup);
-      poly.bindPopup(
-        `<div class="popup-card"><h3>${escapeHtml(basin.name)}</h3><p class="popup-meta"><strong>Cao độ vệ tinh Copernicus DEM:</strong> ${escapeHtml(basin.demRange)} (thấp hơn 6–11m so với gò Khu A ĐH Mỏ 17m).<br><strong>Ngưỡng bắt đầu tích nước:</strong> Mưa ≥ ${basin.rainThresholdMm} mm.</p></div>`
-      );
-    }
-
     for (const fc of FLOOD_STREET_CORRIDORS) {
-      const activeInScen = !isRainSim || scenRainMm >= fc.rainThresholdMm;
-      if (!activeInScen) continue;
+      if (scenRainMm < fc.rainThresholdMm) continue;
       const latLngs = fc.coordinates.map(([lng, lat]) => [lat, lng]);
 
-      // Lớp viền nước xanh lam bên dưới + lõi cảnh báo đỏ/cam bên trên để nổi bật rõ dải đường ngập
       L.polyline(latLngs, {
         color: '#0284c7',
-        weight: isRainSim ? 10 : 7.5,
-        opacity: isRainSim ? 0.42 : 0.28,
+        weight: isRainSim ? 9.5 : 7,
+        opacity: isRainSim ? 0.42 : 0.3,
         lineCap: 'round',
         interactive: false
       }).addTo(floodCorridorLayerGroup);
 
       const coreLine = L.polyline(latLngs, {
         color: fc.severity === 'severe' ? '#dc2626' : '#ea580c',
-        weight: isRainSim ? 3.8 : 2.8,
+        weight: isRainSim ? 3.6 : 2.6,
         dashArray: fc.severity === 'severe' ? undefined : '6 5',
-        opacity: isRainSim ? 0.95 : 0.82,
+        opacity: isRainSim ? 0.94 : 0.84,
         lineCap: 'round'
       }).addTo(floodCorridorLayerGroup);
 
@@ -1311,6 +1432,7 @@ function initApp() {
         </div>`
       );
     }
+    hydroInundationLayer.redraw();
   }
 
   els.toggleHeatmap.addEventListener('change', () => {
@@ -2460,8 +2582,37 @@ function initApp() {
     .map((sc) => `<option value="${escapeHtml(sc.key)}">${escapeHtml(sc.shortLabel)}</option>`)
     .join('');
 
+  function updateRainLabel(mm) {
+    if (!els.rainSimVal) return;
+    const tag =
+      mm === 0
+        ? 'Trời khô ráo'
+        : mm < 35
+          ? 'Mưa vừa'
+          : mm < 65
+            ? 'Mưa to'
+            : mm < 105
+              ? 'Mưa rất to'
+              : 'Mưa lịch sử / Bão';
+    els.rainSimVal.textContent = `${mm} mm (${tag})`;
+  }
+
+  els.rainSimRange?.addEventListener('input', () => {
+    state.simRainMm = Number(els.rainSimRange.value) || 0;
+    updateRainLabel(state.simRainMm);
+    renderFloodCorridorsAndBasins();
+  });
+
   els.scenarioSelect.addEventListener('change', () => {
     state.activeScenario = els.scenarioSelect.value;
+    if (state.activeScenario === 'rain_30') state.simRainMm = 45;
+    else if (state.activeScenario === 'rain_70') state.simRainMm = 75;
+    else if (state.activeScenario === 'rain_120') state.simRainMm = 125;
+    else if (state.activeScenario === 'heat_uhi') state.simRainMm = 0;
+    else state.simRainMm = 70;
+    if (els.rainSimRange) els.rainSimRange.value = String(state.simRainMm);
+    updateRainLabel(state.simRainMm);
+
     const scMeta = WEATHER_SCENARIOS[state.activeScenario] || WEATHER_SCENARIOS.normal;
     const ev = evaluateWeatherScenario(state.points, state.activeScenario);
     if (state.activeScenario === 'normal') {

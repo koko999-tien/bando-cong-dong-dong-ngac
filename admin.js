@@ -13,7 +13,7 @@ import {
 } from './gis-utils.js';
 import { buildNotebookLmSourceMarkdown } from './knowledge-engine.js';
 
-const STORAGE_KEY = 'humg_dongngac_community_gis_v8';
+const STORAGE_KEY = 'humg_dongngac_community_gis_v9';
 const API_URL_KEY = 'humg_dongngac_api_url_v3';
 const BROADCAST_KEY = 'humg_dongngac_broadcast_v1';
 const KPI_KEY = 'humg_dongngac_kpi_tracker_v1';

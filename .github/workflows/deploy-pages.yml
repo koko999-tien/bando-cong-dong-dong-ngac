@@ -28,7 +28,7 @@ jobs:
       - name: Prepare static bundle (exclude node_modules & dev scripts)
         run: |
           mkdir -p _site
-          cp -r index.html styles.css config.js humg-data.js gis-utils.js knowledge-engine.js app.js admin.js \
+          cp -r index.html styles.css config.js humg-data.js dem-grid-2km.js gis-utils.js knowledge-engine.js app.js admin.js \
             khao-sat.html cam-nang-1-cham.html infographics-va-ban-tin.html thuyet-trinh.html du-lieu-mo.html phieu-thuc-dia.html admin.html \
             manifest.webmanifest sw.js icon.svg vendor exports _site/
       - name: Upload artifact
