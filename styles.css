@@ -740,13 +740,21 @@ input[type='range'] { accent-color: var(--color-primary); cursor: pointer; }
 }
 .mode-banner .btn-link { color: #99f6e4; }
 
+/* Bộ lọc bản đồ nền Cartographic Sáng / Tối khử nhiễu màu trên nền dữ liệu ngõ ngách OSM thực tế (0% cần API Key) */
+.leaflet-layer.tiles-clean-light {
+  filter: saturate(0.2) contrast(1.04) brightness(1.04);
+}
+.leaflet-layer.tiles-clean-dark {
+  filter: invert(0.92) hue-rotate(180deg) saturate(0.32) contrast(1.08);
+}
+
 /* Thẻ Chẩn đoán Thủy văn Tức thì khi chạm bất kỳ vị trí nào trên Bản đồ */
 .spot-inspector-card {
   position: absolute;
-  top: 52px;
-  left: 54px;
+  top: 92px;
+  left: 14px;
   z-index: 515;
-  width: min(370px, calc(100% - 68px));
+  width: min(368px, calc(100% - 28px));
   padding: 13px 15px;
   background: rgba(255, 255, 255, 0.97);
   backdrop-filter: blur(10px);

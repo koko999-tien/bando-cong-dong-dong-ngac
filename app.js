@@ -620,17 +620,19 @@ function initApp() {
   }
 
   const baseLayers = {
-    carto: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 20,
-      attribution: '&copy; OpenStreetMap &copy; CARTO'
+    clean: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      className: 'tiles-clean-light',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)'
     }),
     osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)'
     }),
-    dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 20,
-      attribution: '&copy; OpenStreetMap &copy; CARTO'
+    dark: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      className: 'tiles-clean-dark',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)'
     }),
     topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
       maxZoom: 17,
@@ -645,7 +647,7 @@ function initApp() {
   const map = L.map('map', {
     center: [state.center.lat, state.center.lng],
     zoom: 14,
-    layers: [baseLayers.carto],
+    layers: [baseLayers.clean],
     zoomControl: true
   });
 
@@ -1347,7 +1349,7 @@ function initApp() {
     );
   });
 
-  let currentBaseKey = 'carto';
+  let currentBaseKey = 'clean';
   els.basemapSelect.addEventListener('change', () => {
     const nextKey = els.basemapSelect.value;
     if (baseLayers[nextKey] && nextKey !== currentBaseKey) {
@@ -2546,6 +2548,7 @@ function initApp() {
 
       const formattedLines = escapeHtml(data.answer)
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/^\s*[-*]\s+/gm, '• ')
         .split('\n')
         .filter((ln) => ln.trim().length > 0)
         .map((ln) => `<p style="margin:0 0 6px;">${ln}</p>`)
@@ -2736,6 +2739,7 @@ function initApp() {
 
       const formattedLines = escapeHtml(data.answer)
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/^\s*[-*]\s+/gm, '• ')
         .split('\n')
         .filter((ln) => ln.trim().length > 0)
         .map((ln) => `<p style="margin:0 0 6px;">${ln}</p>`)
