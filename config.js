@@ -25,9 +25,9 @@ export const PROJECT_CONFIG = {
   postTestFormUrl: '',
 
   /**
-   * 3. Link rút gọn Bitly chính thức của nhóm để tạo mã QR nhất quán trên toàn Web & Cẩm nang PDF
+   * 3. Link công khai chính thức (Vercel HTTPS hoặc link rút gọn Bitly sau khi nhóm tạo trên bitly.com)
    */
-  bitlyMapUrl: 'https://bit.ly/bando-dongngac-humg',
+  bitlyMapUrl: 'https://bando-cong-dong-dong-ngac.vercel.app',
 
   /**
    * 4. Cấu hình vùng khảo sát & ngưỡng tin cậy cộng đồng
