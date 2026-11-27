@@ -1042,18 +1042,26 @@ dialog::backdrop { background: rgba(15, 23, 42, 0.52); backdrop-filter: blur(3px
     padding-right: 16px;
   }
 
-  /* Bottom Weather + Primary Actions cleanly stacked at thumb level */
+  /* Bottom Weather + Primary Actions cleanly stacked at thumb level (zero scrollbar, 4 equal rain buttons) */
   .floating-weather-dock {
-    bottom: calc(74px + env(safe-area-inset-bottom));
+    bottom: calc(68px + env(safe-area-inset-bottom));
     left: 12px;
     right: 12px;
     transform: none;
-    justify-content: space-between;
-    padding: 5px 8px;
-    overflow-x: auto;
+    padding: 4px;
+    overflow: hidden;
   }
-  .live-pill { font-size: 0.76rem; padding: 4px 8px; }
-  .rain-pill { min-height: 34px; padding: 0 10px; font-size: 0.8rem; }
+  .floating-weather-dock .live-pill,
+  .floating-weather-dock .dock-divider {
+    display: none;
+  }
+  .rain-preset-pills {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    width: 100%;
+  }
+  .rain-pill { min-height: 36px; padding: 0 4px; font-size: 0.8rem; text-align: center; }
 
   .floating-dock-bottomright {
     bottom: max(12px, env(safe-area-inset-bottom));

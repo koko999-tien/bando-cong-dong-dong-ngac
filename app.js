@@ -1760,6 +1760,14 @@ function initApp() {
   els.locationQuery.addEventListener('input', () => {
     renderInstantSuggestions(els.locationQuery.value);
   });
+  els.locationQuery.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      els.searchResults.hidden = true;
+      els.locationQuery.blur();
+    }
+  });
 
   els.searchForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -3048,9 +3056,10 @@ function initApp() {
   });
 
   // ================= TÍNH NĂNG MỚI 3: ĐỊNH TUYẾN ĐƯỜNG BỘ THỰC TẾ OSRM & NÉ VÙNG NGẬP =================
-  const presetOptionsHtml = ROUTE_PRESETS.map(
-    (r, idx) => `<option value="${idx}">${escapeHtml(r.label)}</option>`
-  ).join('');
+  const presetOptionsHtml = ROUTE_PRESETS.map((r, idx) => {
+    const cleanLabel = String(r.label || '').replace(/\s*[—–-]\s*DEM\s*[\d.,]+m/gi, '');
+    return `<option value="${idx}">${escapeHtml(cleanLabel)}</option>`;
+  }).join('');
   els.routeOriginSelect.innerHTML = presetOptionsHtml;
   els.routeDestSelect.innerHTML = presetOptionsHtml;
   els.routeOriginSelect.value = '0'; // Khu A ĐH Mỏ
@@ -3105,34 +3114,34 @@ function initApp() {
           };
         })();
 
-    const modeNote = streetCoords ? 'Định tuyến theo mặt đường phố thực tế (OSRM)' : 'Hành lang trắc địa trực tiếp';
+    const modeNote = streetCoords ? 'theo mặt đường thực tế' : 'khoảng cách trực tiếp';
     const statusMeta =
       res.status === 'danger'
         ? {
             cls: 'route-status-danger',
-            title: 'CẢNH BÁO ĐỎ: Lộ trình đi sát điểm ngập sâu / miệng cống xoáy nguy hiểm!',
+            title: 'Cảnh báo: Đường đi này cắt qua đoạn hay ngập sâu!',
             advice:
-              'Khi mưa lớn >50mm, TUYỆT ĐỐI KHÔNG đi theo vạch đỏ. Hãy ở lại nền cao (Khu A ĐH Mỏ 17m) hoặc đi theo đường bộ vòng qua dải nền cao Cổ Nhuế (vạch xanh lá nét đứt).'
+              'Khi mưa lớn, không nên đi theo vạch màu đỏ. Hãy đi theo đường vòng nền đất cao (vạch xanh lá nét đứt trên bản đồ) hoặc tạm chờ mưa ngớt.'
           }
         : res.status === 'caution'
           ? {
               cls: 'route-status-caution',
-              title: 'LƯU Ý VÀNG: Có điểm đọng nước / bức xạ nắng gắt nằm gần lộ trình',
-              advice: 'Quan sát kỹ mặt đường khi mưa rào hoặc trang bị mũ, nước uống nếu di chuyển khung 11h30–15h00.'
+              title: 'Lưu ý: Có đoạn dễ đọng nước hoặc nắng gắt gần đường đi',
+              advice: 'Đi chậm quan sát mặt đường khi mưa rào hoặc mang mũ, nước uống nếu đi buổi trưa.'
             }
           : {
               cls: 'route-status-clear',
-              title: 'LỘ TRÌNH TƯƠNG ĐỐI AN TOÀN: Không cắt qua điểm đen ngập sâu trong 125m',
-              advice: 'Vẫn luôn chú ý quan sát thực tế mặt đường khi có mưa dông bất thường.'
+              title: 'Đường đi tương đối khô ráo, an toàn',
+              advice: 'Không cắt qua điểm ngập sâu nào đã ghi nhận trong phạm vi gần.'
             };
 
     const riskListHtml =
       res.nearbyRisks.length > 0
-        ? `<ul style="margin:6px 0 0;padding-left:18px;font-size:0.79rem;">
+        ? `<ul style="margin:8px 0 0;padding-left:18px;font-size:0.82rem;">
             ${res.nearbyRisks
               .map(
                 (r) =>
-                  `<li><strong>[${escapeHtml(r.id)}] ${escapeHtml(r.name)}</strong> — cách đường đi <span class="mono-num">${r.distToCorridorM} m</span> (${escapeHtml(r.waterScaleLabel)})</li>`
+                  `<li><strong><span class="expert-only">[${escapeHtml(r.id)}] </span>${escapeHtml(r.name)}</strong> — cách đường đi <span class="mono-num">${r.distToCorridorM} m</span> (${escapeHtml(r.waterScaleLabel)})</li>`
               )
               .join('')}
           </ul>`
