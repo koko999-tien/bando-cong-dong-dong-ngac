@@ -207,7 +207,7 @@ function escapeHtml(str) {
 
 const ICON_SVG_CACHE = new Map();
 
-function createMarkerSvg(pt, sizePx = 26) {
+function createMarkerSvg(pt, sizePx = 28) {
   const cacheKey = `${pt.confidenceTier}|${pt.layerGroup}|${pt.category}|${pt.severity}|${sizePx}`;
   const cached = ICON_SVG_CACHE.get(cacheKey);
   if (cached) return cached;
@@ -215,32 +215,31 @@ function createMarkerSvg(pt, sizePx = 26) {
   let svg = '';
   if (pt.confidenceTier === 'C') {
     svg = `<svg width="${sizePx}" height="${sizePx}" viewBox="0 0 28 28" aria-hidden="true">
-      <circle cx="14" cy="14" r="10" fill="#F59E0B" fill-opacity="0.88" stroke="#78350F" stroke-width="2.2" stroke-dasharray="3 2"/>
-      <text x="14" y="18" text-anchor="middle" fill="#FFFFFF" font-size="11" font-weight="700" font-family="sans-serif">?</text>
+      <circle cx="14" cy="14" r="11" fill="#F59E0B" stroke="#FFFFFF" stroke-width="2.5" stroke-dasharray="3 2"/>
+      <text x="14" y="18" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="700" font-family="sans-serif">?</text>
     </svg>`;
   } else if (pt.layerGroup === 'safe') {
     if (pt.category === 'medical') {
       svg = `<svg width="${sizePx}" height="${sizePx}" viewBox="0 0 28 28" aria-hidden="true">
-        <circle cx="14" cy="14" r="11" fill="#15803D" stroke="#FFFFFF" stroke-width="2.4"/>
-        <path d="M14 8.5v11M8.5 14h11" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/>
+        <circle cx="14" cy="14" r="11.5" fill="#15803D" stroke="#FFFFFF" stroke-width="2.5"/>
+        <path d="M14 9v10M9 14h10" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/>
       </svg>`;
     } else {
       svg = `<svg width="${sizePx}" height="${sizePx}" viewBox="0 0 28 28" aria-hidden="true">
-        <rect x="4" y="4" width="20" height="20" rx="5" fill="#0F766E" stroke="#FFFFFF" stroke-width="2.4"/>
-        <path d="M9 14.5l3.2 3.2L19 11" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="14" cy="14" r="11.5" fill="#0F766E" stroke="#FFFFFF" stroke-width="2.5"/>
+        <path d="M9.5 14.5l3 3 6-6.5" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>`;
     }
   } else if (pt.category === 'heat') {
     svg = `<svg width="${sizePx}" height="${sizePx}" viewBox="0 0 28 28" aria-hidden="true">
-      <polygon points="14,2 26,14 14,26 2,14" fill="#C2410C" stroke="#FFFFFF" stroke-width="2.3" stroke-linejoin="round"/>
-      <circle cx="14" cy="14" r="4" fill="#FEF08A"/>
+      <circle cx="14" cy="14" r="11.5" fill="#EA580C" stroke="#FFFFFF" stroke-width="2.5"/>
+      <circle cx="14" cy="14" r="4" fill="#FFFFFF"/>
     </svg>`;
   } else {
-    const fill = pt.severity === 'severe' ? '#B91C1C' : '#C2410C';
+    const fill = pt.severity === 'severe' ? '#DC2626' : '#EA580C';
     svg = `<svg width="${sizePx}" height="${sizePx}" viewBox="0 0 28 28" aria-hidden="true">
-      <polygon points="14,3 25,23 3,23" fill="${fill}" stroke="#FFFFFF" stroke-width="2.4" stroke-linejoin="round"/>
-      <line x1="14" y1="10" x2="14" y2="16" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
-      <circle cx="14" cy="19.5" r="1.3" fill="#FFFFFF"/>
+      <circle cx="14" cy="14" r="11.5" fill="${fill}" stroke="#FFFFFF" stroke-width="2.5"/>
+      <path d="M8.5 15.5c1.5-1.5 3-1.5 4.5 0s3 1.5 4.5 0M14 8.5v4" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
     </svg>`;
   }
   ICON_SVG_CACHE.set(cacheKey, svg);
@@ -647,11 +646,12 @@ function initApp() {
 
   const map = L.map('map', {
     center: [state.center.lat, state.center.lng],
-    zoom: 14,
+    zoom: 15,
     layers: [baseLayers.clean],
-    zoomControl: true
+    zoomControl: false
   });
 
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
   L.control.scale({ metric: true, imperial: false, position: 'bottomleft' }).addTo(map);
 
   const bufferLayerGroup = L.layerGroup().addTo(map);
@@ -702,6 +702,11 @@ function initApp() {
     btnToggleSidebar: document.getElementById('btn-toggle-sidebar'),
     sidebarFabLabel: document.getElementById('sidebar-fab-label'),
     sbTabBtns: document.querySelectorAll('.sb-tab-btn'),
+    openSheetChips: document.querySelectorAll('.js-open-sheet'),
+    contextSheet: document.getElementById('context-sheet'),
+    sheetTitle: document.getElementById('sheet-title'),
+    btnCloseSheet: document.getElementById('btn-close-sheet'),
+    sbPaneRoute: document.getElementById('sb-pane-route'),
     sbPaneExplore: document.getElementById('sb-pane-explore'),
     sbPaneList: document.getElementById('sb-pane-list'),
     sbPaneAi: document.getElementById('sb-pane-ai'),
@@ -1115,33 +1120,62 @@ function initApp() {
     updateCenterElevation();
   });
 
-  function switchSidebarTab(tabKey) {
-    state.activeSbTab = tabKey;
-    els.sbTabBtns.forEach((btn) => {
-      const active = btn.dataset.sbtab === tabKey;
-      btn.classList.toggle('is-active', active);
-      btn.setAttribute('aria-selected', String(active));
+  const SHEET_TITLES = {
+    route: 'Chỉ đường an toàn né vùng ngập',
+    ai: 'Hỏi Trợ lý AI & Số khẩn cấp',
+    list: 'Danh sách địa điểm quanh trường',
+    explore: 'Công cụ Nghiên cứu GIS (Đề tài 08)'
+  };
+
+  function closeContextSheet() {
+    state.activeSbTab = '';
+    if (els.contextSheet) els.contextSheet.hidden = true;
+    els.openSheetChips?.forEach((c) => c.classList.remove('is-panel-open'));
+  }
+
+  function openContextSheet(paneKey) {
+    if (!els.contextSheet) return;
+    if (els.spotInspectorCard) els.spotInspectorCard.hidden = true;
+    els.nearestBar.hidden = true;
+    els.searchResults.hidden = true;
+
+    state.activeSbTab = paneKey;
+    els.contextSheet.hidden = false;
+    if (els.sheetTitle) els.sheetTitle.textContent = SHEET_TITLES[paneKey] || 'Thông tin chi tiết';
+
+    if (els.sbPaneRoute) els.sbPaneRoute.hidden = paneKey !== 'route';
+    if (els.sbPaneAi) els.sbPaneAi.hidden = paneKey !== 'ai';
+    if (els.sbPaneList) els.sbPaneList.hidden = paneKey !== 'list';
+    if (els.sbPaneExplore) els.sbPaneExplore.hidden = paneKey !== 'explore';
+
+    els.openSheetChips?.forEach((c) => {
+      c.classList.toggle('is-panel-open', c.dataset.sheet === paneKey);
     });
-    if (els.sbPaneExplore) els.sbPaneExplore.hidden = tabKey !== 'explore';
-    if (els.sbPaneList) els.sbPaneList.hidden = tabKey !== 'list';
-    if (els.sbPaneAi) els.sbPaneAi.hidden = tabKey !== 'ai';
-    if (document.body.classList.contains('is-sidebar-collapsed')) {
-      document.body.classList.remove('is-sidebar-collapsed');
-      if (els.sidebarFabLabel) els.sidebarFabLabel.textContent = '◂ Thu gọn bảng';
-      setTimeout(() => map.invalidateSize(), 210);
+
+    if (paneKey === 'route') {
+      evaluateSelectedRoute(true);
     }
   }
 
-  els.sbTabBtns.forEach((btn) => {
-    btn.addEventListener('click', () => switchSidebarTab(btn.dataset.sbtab));
+  function switchSidebarTab(tabKey) {
+    openContextSheet(tabKey);
+  }
+
+  els.openSheetChips?.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      const targetPane = chip.dataset.sheet;
+      if (!els.contextSheet?.hidden && state.activeSbTab === targetPane) {
+        closeContextSheet();
+      } else {
+        openContextSheet(targetPane);
+      }
+    });
   });
 
-  els.btnToggleSidebar?.addEventListener('click', () => {
-    const collapsed = document.body.classList.toggle('is-sidebar-collapsed');
-    if (els.sidebarFabLabel) {
-      els.sidebarFabLabel.textContent = collapsed ? '▸ Mở bảng tìm kiếm' : '◂ Thu gọn bảng';
-    }
-    setTimeout(() => map.invalidateSize(), 220);
+  els.btnCloseSheet?.addEventListener('click', closeContextSheet);
+
+  els.sbTabBtns.forEach((btn) => {
+    btn.addEventListener('click', () => openContextSheet(btn.dataset.sbtab));
   });
 
   els.btnToggleExpert?.addEventListener('click', () => {
@@ -1149,27 +1183,34 @@ function initApp() {
     document.body.classList.toggle('is-expert-mode', state.isExpertMode);
     els.btnToggleExpert.setAttribute('aria-pressed', String(state.isExpertMode));
     const span = els.btnToggleExpert.querySelector('span');
-    if (span) span.textContent = state.isExpertMode ? 'Chuyên sâu: Bật' : 'Chuyên sâu';
+    if (span) span.textContent = state.isExpertMode ? 'Tắt Chế độ Nghiên cứu GIS' : 'Bật Chế độ Nghiên cứu GIS';
     state.showRings = state.isExpertMode;
     if (els.toggleRings) els.toggleRings.checked = state.isExpertMode;
-    if (state.isExpertMode) centerMarker.dragging?.enable();
-    else centerMarker.dragging?.disable();
-    if (!state.isExpertMode && els.transectDrawer && !els.transectDrawer.hidden) {
-      els.transectDrawer.hidden = true;
-      transectLayerGroup.clearLayers();
+    if (state.isExpertMode) {
+      centerMarker.dragging?.enable();
+      openContextSheet('explore');
+    } else {
+      centerMarker.dragging?.disable();
+      closeContextSheet();
+      if (els.transectDrawer && !els.transectDrawer.hidden) {
+        els.transectDrawer.hidden = true;
+        transectLayerGroup.clearLayers();
+      }
     }
     recomputeAndRender(false);
-    setTimeout(() => map.invalidateSize(), 80);
     showToast(
       state.isExpertMode
-        ? 'Đã bật Chế độ Chuyên sâu (hiện cao độ DEM, ERA5, vòng bán kính & xuất dữ liệu GIS).'
-        : 'Đã chuyển về Chế độ Đơn giản cho người dân.'
+        ? 'Đã mở Công cụ Nghiên cứu GIS (Lát cắt DEM, ERA5, Vòng bán kính & Xuất dữ liệu).'
+        : 'Đã quay về giao diện Bản đồ Đơn giản cho người dân.'
     );
   });
 
   document.addEventListener('click', (e) => {
     if (els.topMoreMenu?.open && !els.topMoreMenu.contains(e.target)) {
       els.topMoreMenu.open = false;
+    }
+    if (!els.searchResults.hidden && !els.searchForm.parentElement.contains(e.target)) {
+      els.searchResults.hidden = true;
     }
   });
   els.topMoreMenu?.querySelector('.nav-dropdown-menu')?.addEventListener('click', () => {
@@ -1261,8 +1302,20 @@ function initApp() {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && state.mode !== 'pan' && !document.querySelector('dialog[open]')) {
-      setMode('pan');
+    if (e.key === 'Escape' && !document.querySelector('dialog[open]')) {
+      if (state.mode !== 'pan') setMode('pan');
+      else if (!els.searchResults.hidden) els.searchResults.hidden = true;
+      else if (els.spotInspectorCard && !els.spotInspectorCard.hidden) {
+        els.spotInspectorCard.hidden = true;
+        spotInspectGroup.clearLayers();
+      } else if (!els.nearestBar.hidden) {
+        els.nearestBar.hidden = true;
+        closeContextSheet();
+    if (els.spotInspectorCard) els.spotInspectorCard.hidden = true;
+    nearestLinkGroup.clearLayers();
+      } else if (els.contextSheet && !els.contextSheet.hidden) {
+        closeContextSheet();
+      }
     }
   });
 
@@ -1334,6 +1387,8 @@ function initApp() {
       showToast('Không tìm thấy điểm an toàn Hạng A/B.');
       return;
     }
+    closeContextSheet();
+    if (els.spotInspectorCard) els.spotInspectorCard.hidden = true;
     nearestLinkGroup.clearLayers();
     const line = L.polyline([[lat, lng], [found.point.lat, found.point.lng]], {
       color: '#15803D',
@@ -1360,6 +1415,8 @@ function initApp() {
 
   els.nearestClose.addEventListener('click', () => {
     els.nearestBar.hidden = true;
+    closeContextSheet();
+    if (els.spotInspectorCard) els.spotInspectorCard.hidden = true;
     nearestLinkGroup.clearLayers();
   });
 
@@ -1389,9 +1446,7 @@ function initApp() {
   });
 
   els.btnFitBuffer.addEventListener('click', () => {
-    if (state.analysis?.bufferPolygon) {
-      map.fitBounds(L.geoJSON(state.analysis.bufferPolygon).getBounds(), { padding: [26, 26] });
-    }
+    map.flyTo([HUMG_CENTER.lat, HUMG_CENTER.lng], 15, { duration: 0.5 });
   });
 
   let moveRaf = null;
@@ -1414,7 +1469,9 @@ function initApp() {
 
   async function inspectSpotAt(lat, lng) {
     if (!els.spotInspectorCard || !els.inspBody) return;
+    closeContextSheet();
     els.nearestBar.hidden = true;
+    els.searchResults.hidden = true;
     spotInspectGroup.clearLayers();
 
     let dem = sampleDemBilinear(lat, lng);
@@ -1613,12 +1670,114 @@ function initApp() {
     );
   });
 
+  const POPULAR_PLACES = [
+    { label: 'Cổng Trường ĐH Mỏ - Địa chất (18 Phố Viên)', lat: 21.072514, lng: 105.77387, color: '#0f766e', pointId: 'S-05' },
+    { label: 'Cuối Phố Viên — Đoạn giao ngõ 199 (Hay ngập sâu)', lat: 21.069413, lng: 105.772544, color: '#dc2626', pointId: 'R-01' },
+    { label: 'Cầu Noi — Đường Phú Minh (Rốn ngập ven sông Nhuệ)', lat: 21.061634, lng: 105.772358, color: '#dc2626', pointId: 'R-06' },
+    { label: 'Ngõ 43 Cổ Nhuế — Xóm trọ sinh viên', lat: 21.058954, lng: 105.780221, color: '#dc2626', pointId: 'R-03' },
+    { label: 'Bệnh viện Đa khoa Phương Đông (Số 9 Phố Viên)', lat: 21.070783, lng: 105.777269, color: '#15803d', pointId: 'S-01' },
+    { label: 'Khu đô thị Resco — Đường Phạm Văn Đồng', lat: 21.0738, lng: 105.7858, color: '#dc2626', pointId: 'R-02' }
+  ];
+
+  function normSearchVi(str) {
+    return String(str || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/gi, 'd')
+      .toLowerCase()
+      .trim();
+  }
+
+  function renderInstantSuggestions(rawQuery) {
+    const qNorm = normSearchVi(rawQuery);
+    if (!qNorm) {
+      els.searchResults.innerHTML =
+        `<li class="search-group-label">Địa điểm xem nhanh quanh trường</li>` +
+        POPULAR_PLACES.map(
+          (p, i) => `<li>
+            <button type="button" data-pop="${i}">
+              <span class="sr-dot" style="background:${p.color};"></span>
+              <span>${escapeHtml(p.label)}</span>
+            </button>
+          </li>`
+        ).join('');
+      els.searchResults.hidden = false;
+      els.searchResults.querySelectorAll('button[data-pop]').forEach((b) => {
+        b.addEventListener('click', () => {
+          const item = POPULAR_PLACES[Number(b.dataset.pop)];
+          els.searchResults.hidden = true;
+          els.locationQuery.value = item.label;
+          closeContextSheet();
+          if (item.pointId && state.points.some((x) => x.id === item.pointId)) {
+            flyToAndOpenPoint(item.pointId);
+          } else {
+            map.flyTo([item.lat, item.lng], 16, { duration: 0.45 });
+          }
+        });
+      });
+      return;
+    }
+
+    const matches = state.points
+      .filter((p) => p.status !== 'hidden' && normSearchVi(`${p.name} ${p.notes || ''} ${p.id}`).includes(qNorm))
+      .slice(0, 7);
+
+    if (matches.length === 0) {
+      els.searchResults.innerHTML = `<li class="search-group-label">Nhấn Enter để tìm địa chỉ "${escapeHtml(rawQuery)}" trên toàn Đông Ngạc...</li>`;
+      els.searchResults.hidden = false;
+      return;
+    }
+
+    els.searchResults.innerHTML =
+      `<li class="search-group-label">Điểm trên bản đồ khớp ngay (${matches.length})</li>` +
+      matches
+        .map((pt) => {
+          const dotColor = pt.layerGroup === 'safe' ? '#15803d' : pt.category === 'heat' ? '#ea580c' : '#dc2626';
+          return `<li>
+            <button type="button" data-ptid="${escapeHtml(pt.id)}">
+              <span class="sr-dot" style="background:${dotColor};"></span>
+              <span>${escapeHtml(pt.name)}</span>
+            </button>
+          </li>`;
+        })
+        .join('');
+    els.searchResults.hidden = false;
+    els.searchResults.querySelectorAll('button[data-ptid]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const pid = b.dataset.ptid;
+        const found = state.points.find((x) => x.id === pid);
+        els.searchResults.hidden = true;
+        if (found) els.locationQuery.value = found.name;
+        closeContextSheet();
+        flyToAndOpenPoint(pid);
+      });
+    });
+  }
+
+  els.locationQuery.addEventListener('focus', () => {
+    renderInstantSuggestions(els.locationQuery.value);
+  });
+  els.locationQuery.addEventListener('input', () => {
+    renderInstantSuggestions(els.locationQuery.value);
+  });
+
   els.searchForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const raw = els.locationQuery.value.trim();
-    if (!raw) return;
+    if (!raw) {
+      renderInstantSuggestions('');
+      return;
+    }
+    const qNorm = normSearchVi(raw);
+    const exactLocal = state.points.find((p) => p.status !== 'hidden' && normSearchVi(p.name).includes(qNorm));
+    if (exactLocal) {
+      els.searchResults.hidden = true;
+      closeContextSheet();
+      flyToAndOpenPoint(exactLocal.id);
+      return;
+    }
     els.searchResults.hidden = false;
-    els.searchResults.innerHTML = `<li><button type="button" disabled>Đang tìm "${escapeHtml(raw)}"...</button></li>`;
+    els.searchResults.innerHTML = `<li class="search-group-label">Đang tìm địa chỉ "${escapeHtml(raw)}"...</li>`;
     try {
       const q = raw.toLowerCase().includes('hà nội') ? raw : `${raw}, Đông Ngạc, Hà Nội`;
       const res = await fetch(
@@ -1626,21 +1785,23 @@ function initApp() {
       );
       const items = await res.json();
       if (!Array.isArray(items) || items.length === 0) {
-        els.searchResults.innerHTML = `<li><button type="button" disabled>Không tìm thấy địa danh phù hợp.</button></li>`;
+        els.searchResults.innerHTML = `<li class="search-group-label">Không tìm thấy "${escapeHtml(raw)}". Thử gõ: Phố Viên, Ngõ 43 Cổ Nhuế, Cầu Noi...</li>`;
         return;
       }
       els.searchResults.innerHTML = items
-        .map((it, idx) => `<li><button type="button" data-idx="${idx}">${escapeHtml(it.display_name)}</button></li>`)
+        .map((it, idx) => `<li><button type="button" data-idx="${idx}"><span class="sr-dot" style="background:#0284c7;"></span><span>${escapeHtml(it.display_name)}</span></button></li>`)
         .join('');
       els.searchResults.querySelectorAll('button[data-idx]').forEach((b) => {
         b.addEventListener('click', () => {
           const picked = items[Number(b.dataset.idx)];
           els.searchResults.hidden = true;
+          closeContextSheet();
           map.flyTo([Number(picked.lat), Number(picked.lon)], 16);
+          inspectSpotAt(Number(picked.lat), Number(picked.lon));
         });
       });
     } catch {
-      els.searchResults.innerHTML = `<li><button type="button" disabled>Không kết nối được máy chủ bản đồ.</button></li>`;
+      els.searchResults.innerHTML = `<li class="search-group-label">Tạm thời không kết nối được máy chủ tìm địa chỉ.</li>`;
     }
   });
 
@@ -2253,8 +2414,6 @@ function initApp() {
   if (!('commandForElement' in HTMLButtonElement.prototype)) {
     els.btnOpenNotebook?.addEventListener('click', () => els.notebookDialog.showModal());
     els.btnCloseNotebook?.addEventListener('click', () => els.notebookDialog.close());
-    els.btnOpenRoute?.addEventListener('click', () => els.routeDialog.showModal());
-    els.btnCloseRoute?.addEventListener('click', () => els.routeDialog.close());
     els.btnOpenClimate.addEventListener('click', () => els.climateDialog.showModal());
     els.btnCloseClimate.addEventListener('click', () => els.climateDialog.close());
     els.btnOpenDrill.addEventListener('click', () => els.drillDialog.showModal());
@@ -2867,9 +3026,9 @@ function initApp() {
       els.routeOriginSelect.value = routeBtn.dataset.orig || '0';
       els.routeDestSelect.value = routeBtn.dataset.dest || '3';
       els.notebookDialog.close();
+      openContextSheet('route');
       await evaluateSelectedRoute(true);
       if (lastRouteBounds) map.fitBounds(lastRouteBounds, { padding: [70, 70], maxZoom: 16 });
-      els.routeDialog.showModal();
       return;
     }
     const flyBtn = e.target.closest('.js-nb-fly');
@@ -3042,21 +3201,22 @@ function initApp() {
     }
   }
 
-  els.btnRunRoute.addEventListener('click', () => evaluateSelectedRoute(true));
-  els.btnSwapRoute.addEventListener('click', () => {
+  els.routeOriginSelect.addEventListener('change', () => evaluateSelectedRoute(true));
+  els.routeDestSelect.addEventListener('change', () => evaluateSelectedRoute(true));
+  els.btnRunRoute.addEventListener('click', async () => {
+    await evaluateSelectedRoute(true);
+    if (lastRouteBounds) map.fitBounds(lastRouteBounds, { padding: [80, 80], maxZoom: 16 });
+  });
+  els.btnSwapRoute.addEventListener('click', async () => {
     const tmp = els.routeOriginSelect.value;
     els.routeOriginSelect.value = els.routeDestSelect.value;
     els.routeDestSelect.value = tmp;
-    evaluateSelectedRoute(true);
+    await evaluateSelectedRoute(true);
+    if (lastRouteBounds) map.fitBounds(lastRouteBounds, { padding: [80, 80], maxZoom: 16 });
   });
   els.btnClearRouteMap.addEventListener('click', () => {
     routeCorridorGroup.clearLayers();
-    showToast('Đã xóa vệt kiểm tra lộ trình trên bản đồ.');
-  });
-  els.btnViewRouteOnMap.addEventListener('click', async () => {
-    await evaluateSelectedRoute(true);
-    els.routeDialog.close();
-    if (lastRouteBounds) map.fitBounds(lastRouteBounds, { padding: [70, 70], maxZoom: 16 });
+    showToast('Đã xóa đường vẽ trên bản đồ.');
   });
 
   // ================= TÍNH NĂNG MỚI 4: MÔ PHỎNG KỊCH BẢN MƯA LỚN / UHI =================
@@ -3305,7 +3465,7 @@ function initApp() {
   renderAdminBroadcast();
   loadLiveWeatherAtHUMG();
   updateQrPreview();
-  recomputeAndRender(true);
+  recomputeAndRender(false);
   updateCenterElevation();
   syncFromCloudApi();
 
