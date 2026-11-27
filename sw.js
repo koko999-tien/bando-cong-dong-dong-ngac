@@ -1,7 +1,11 @@
-const CACHE_NAME = 'humg-community-gis-v20';
+const CACHE_NAME = 'humg-community-gis-v21';
 const CORE_ASSETS = [
   './',
   './index.html',
+  './citizen.css',
+  './citizen-logic.js',
+  './citizen-app.js',
+  './chuyen-gia.html',
   './styles.css',
   './config.js',
   './humg-data.js',

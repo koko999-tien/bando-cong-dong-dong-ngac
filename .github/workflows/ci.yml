@@ -72,6 +72,9 @@ jobs:
       - name: Run Open Resilience Platform Core & Security Tests
         run: npm run test:platform
 
+      - name: Run Citizen-First UX & 7 User Scenario Tests
+        run: npm run test:citizen
+
       - name: Audit high/critical npm vulnerabilities (advisory)
         continue-on-error: true
         run: npm audit --audit-level=high
