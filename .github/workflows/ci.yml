@@ -1,0 +1,77 @@
+name: Open Resilience Platform CI
+
+on:
+  push:
+    branches: ["main", "feat/**"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Syntax, GIS, Security & Platform Verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check JS/MJS syntax across codebase
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const path = require("node:path");
+            const { execFileSync } = require("node:child_process");
+            const skip = new Set(["node_modules", ".git", "vendor", "exports"]);
+            const files = [];
+            function walk(dir) {
+              for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+                if (skip.has(ent.name)) continue;
+                const full = path.join(dir, ent.name);
+                if (ent.isDirectory()) walk(full);
+                else if (/\.(?:m?js)$/.test(ent.name)) files.push(full);
+              }
+            }
+            walk(".");
+            for (const f of files) {
+              execFileSync(process.execPath, ["--check", f], { stdio: "inherit" });
+            }
+            console.log(`Syntax OK: ${files.length} JS/MJS files verified.`);
+          '
+
+      - name: Verify CSS brace integrity (prevent media-query regressions)
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const css = fs.readFileSync("styles.css", "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+            let depth = 0, minDepth = 0;
+            for (const ch of css) {
+              if (ch === "{") depth++;
+              if (ch === "}") { depth--; if (depth < minDepth) minDepth = depth; }
+            }
+            if (depth !== 0 || minDepth < 0) {
+              console.error("CSS brace imbalance detected:", { depth, minDepth });
+              process.exit(1);
+            }
+            console.log("CSS brace integrity OK:", { depth, minDepth });
+          '
+
+      - name: Run Core GIS & Data Quality Tests
+        run: npm test
+
+      - name: Run Open Resilience Platform Core & Security Tests
+        run: npm run test:platform
+
+      - name: Audit high/critical npm vulnerabilities (advisory)
+        continue-on-error: true
+        run: npm audit --audit-level=high

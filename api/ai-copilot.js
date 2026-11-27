@@ -11,27 +11,22 @@ import {
 } from '../humg-data.js';
 import { KNOWLEDGE_NOTEBOOK_CARDS } from '../knowledge-engine.js';
 import { CATEGORY_LABELS } from '../gis-utils.js';
+import { DATA_CLASSES } from '../platform/data/provenance-catalog.js';
+import { applyScientificGuardrails } from '../platform/ai/provider-layer.js';
+import { createBoundedRateLimiter } from '../platform/security/validators.js';
 
 const AI_CONFIG_PATH = 'config/ai-provider.enc.json';
 const FAST_MODELS = ['gemini-3.5-flash-lite', 'gemini-4-hydrogen', 'gemini-4-argon'];
 const DEEP_MODELS = ['gemini-4-hydrogen', 'gemini-3.5-flash-lite', 'gemini-4-argon'];
 
-// Chống lạm dụng tần suất gọi AI theo IP trên mỗi instance (tối đa 18 lượt / 60 giây / IP)
-const rateWindowMap = new Map();
-function checkRateLimit(request, maxPerMin = 18) {
+// Chống lạm dụng tần suất gọi AI theo IP có trần bộ nhớ (Milestone 2 chuyển sang Upstash Redis)
+const aiRateLimiter = createBoundedRateLimiter({ maxRequests: 18, windowMs: 60_000, maxEntries: 2000 });
+function checkRateLimit(request) {
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||
     'anon';
-  const now = Date.now();
-  const rec = rateWindowMap.get(ip) || { count: 0, resetAt: now + 60000 };
-  if (now > rec.resetAt) {
-    rec.count = 0;
-    rec.resetAt = now + 60000;
-  }
-  rec.count += 1;
-  rateWindowMap.set(ip, rec);
-  return rec.count <= maxPerMin;
+  return aiRateLimiter.check(`ai:${ip}`).allowed;
 }
 
 function cleanText(val, maxLen = 600) {
@@ -39,6 +34,16 @@ function cleanText(val, maxLen = 600) {
     .replace(/[<>]/g, '')
     .trim()
     .slice(0, maxLen);
+}
+
+function getAuthSigningSecret() {
+  const configured = process.env.ADMIN_TOKEN_SECRET || process.env.ADMIN_PASSCODE;
+  if (configured && configured.trim().length >= 8) return configured.trim();
+  const isProd = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+  if (isProd) {
+    throw new Error('SECURITY_MISCONFIGURED: Thiếu ADMIN_TOKEN_SECRET hoặc ADMIN_PASSCODE trong production.');
+  }
+  return 'local-dev-only-ephemeral-secret';
 }
 
 function verifyAdminToken(request) {
@@ -50,7 +55,12 @@ function verifyAdminToken(request) {
   const exp = Number(parts[1]);
   if (!Number.isFinite(exp) || Date.now() > exp) return false;
 
-  const secret = process.env.ADMIN_TOKEN_SECRET || process.env.ADMIN_PASSCODE || 'humg-fallback-secret';
+  let secret;
+  try {
+    secret = getAuthSigningSecret();
+  } catch {
+    return false;
+  }
   const expectedSig = crypto.createHmac('sha256', secret).update(`${parts[0]}.${parts[1]}`).digest('hex');
   try {
     const a = Buffer.from(parts[2], 'hex');
@@ -62,8 +72,10 @@ function verifyAdminToken(request) {
 }
 
 function deriveVaultKey() {
-  const secret = process.env.ADMIN_TOKEN_SECRET || process.env.ADMIN_PASSCODE || 'humg-fallback-secret';
-  return crypto.createHash('sha256').update(`ai-vault:${secret}`).digest();
+  // Ưu tiên VAULT_ENCRYPTION_KEY tách biệt với khóa ký token (SEC-03)
+  const dedicated = process.env.VAULT_ENCRYPTION_KEY?.trim();
+  const baseSecret = dedicated && dedicated.length >= 16 ? dedicated : getAuthSigningSecret();
+  return crypto.createHash('sha256').update(`ai-vault:${baseSecret}`).digest();
 }
 
 function encryptSecret(plainText) {
@@ -351,14 +363,32 @@ export async function POST(request) {
         input: fullInput
       });
 
-      const citedMatches = text.match(/\b(?:R-\d{2}|S-\d{2}|CD-[A-Z0-9]+|TD-\d{2})\b/g) || [];
-      const citedPointIds = [...new Set(citedMatches)];
+      const knownPointIds = [...SAMPLE_HUMG_POINTS, ...extraReports].map((p) => p.id);
+      const activeDataClasses = [
+        DATA_CLASSES.OBSERVED_DATA,
+        DATA_CLASSES.SATELLITE_DATA,
+        DATA_CLASSES.MODELLED_DATA
+      ];
+      if (body.liveWeather) activeDataClasses.push(DATA_CLASSES.FORECAST_DATA);
+      if (extraReports.length > 0 || (Array.isArray(livePulse) && livePulse.length > 0)) {
+        activeDataClasses.push(DATA_CLASSES.COMMUNITY_REPORTS);
+      }
+
+      const guarded = applyScientificGuardrails(text, {
+        knownPointIds,
+        dataClasses: activeDataClasses,
+        hasHumanOfficialApproval: false
+      });
 
       return Response.json({
         ok: true,
-        answer: text,
+        answer: guarded.answer,
         modelUsed,
-        citedPointIds
+        citedPointIds: guarded.factsCited,
+        unverifiedCitedIds: guarded.unverifiedCitedIds,
+        dataClasses: guarded.dataClasses,
+        uncertaintyNotes: guarded.uncertaintyNotes,
+        blockedOfficialClaim: guarded.blockedOfficialClaim
       });
     }
 

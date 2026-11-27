@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node test-gis.mjs"
+    "test": "node test-gis.mjs",
+    "test:platform": "node tests/platform.test.mjs",
+    "test:all": "node test-gis.mjs && node tests/platform.test.mjs"
   },
   "dependencies": {
     "@google/genai": "^3.6.1",

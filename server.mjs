@@ -2,11 +2,30 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isSafeSubpath, cleanText } from './platform/security/validators.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
 const LOCAL_DB_PATH = path.join(__dirname, '.local-data', 'cloud-sim.json');
 const LOCAL_DEV_PASS = process.env.ADMIN_PASSCODE || 'local-dev-passcode';
+const LIVE_PULSE_TTL_MS = 6 * 60 * 60 * 1000;
+
+function pruneSimLivePulse(rawList = []) {
+  const now = Date.now();
+  const valid = (Array.isArray(rawList) ? rawList : [])
+    .filter((item) => item && item.pointId && item.status && Number(item.tsMs) > 0 && now - Number(item.tsMs) <= LIVE_PULSE_TTL_MS)
+    .sort((a, b) => Number(b.tsMs) - Number(a.tsMs))
+    .slice(0, 60);
+  const byPoint = {};
+  for (const item of valid) {
+    if (!byPoint[item.pointId]) {
+      byPoint[item.pointId] = { ...item, recentCount: 1 };
+    } else {
+      byPoint[item.pointId].recentCount += 1;
+    }
+  }
+  return { entries: valid, byPoint, recentFeed: valid.slice(0, 15) };
+}
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -62,6 +81,7 @@ async function handleLocalApi(req, res) {
   if (req.method === 'GET') {
     const action = url.searchParams.get('action') || 'public_sync';
     const kpiLive = computeSimKpi(db.surveys || []);
+    const livePulse = pruneSimLivePulse(db.livePulse || []);
     const merged = (db.reports || []).map((r) => ({
       ...r,
       ...(db.moderationMap?.[r.id] || {}),
@@ -82,6 +102,7 @@ async function handleLocalApi(req, res) {
           moderationMap: db.moderationMap || {},
           confirmCounts: db.votes || {},
           broadcast: db.broadcast,
+          livePulse: { byPoint: livePulse.byPoint, recentFeed: livePulse.recentFeed },
           kpiLive,
           auditLog: db.auditLog || [],
           surveyRecords: url.searchParams.get('surveys') === '1' ? db.surveys : undefined
@@ -97,6 +118,7 @@ async function handleLocalApi(req, res) {
         moderationMap: db.moderationMap || {},
         confirmCounts: db.votes || {},
         broadcast: db.broadcast,
+        livePulse: { byPoint: livePulse.byPoint, recentFeed: livePulse.recentFeed },
         kpiLive
       })
     );
@@ -130,6 +152,33 @@ async function handleLocalApi(req, res) {
     await writeSimDb(db);
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+
+  if (action === 'live_checkin') {
+    const pointId = cleanText(body.pointId, 40);
+    const pointName = cleanText(body.pointName || pointId, 140);
+    const status = ['flooding', 'receding', 'clear'].includes(body.status) ? body.status : null;
+    if (!pointId || !status) {
+      res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ ok: false, error: 'Thiếu mã vị trí hoặc trạng thái cập nhật.' }));
+      return;
+    }
+    const nowMs = Date.now();
+    const entry = {
+      id: `LP-${nowMs.toString(36).slice(-5)}`,
+      pointId,
+      pointName,
+      status,
+      note: cleanText(body.note || '', 160),
+      tsMs: nowMs,
+      updatedAt: new Date(nowMs).toISOString()
+    };
+    const pruned = pruneSimLivePulse([entry, ...(db.livePulse || [])]);
+    db.livePulse = pruned.entries;
+    await writeSimDb(db);
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ ok: true, entry, livePulse: { byPoint: pruned.byPoint, recentFeed: pruned.recentFeed } }));
     return;
   }
 
@@ -237,7 +286,7 @@ function resolveSafePath(urlPath) {
   const cleanUrl = decodeURIComponent(urlPath.split('?')[0]);
   const rel = cleanUrl === '/' ? 'index.html' : cleanUrl.replace(/^\/+/, '');
   const target = path.resolve(__dirname, rel);
-  return target.startsWith(__dirname) ? target : null;
+  return isSafeSubpath(__dirname, target) ? target : null;
 }
 
 const server = http.createServer(async (req, res) => {

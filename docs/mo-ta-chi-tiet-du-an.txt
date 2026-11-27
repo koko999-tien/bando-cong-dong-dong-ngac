@@ -1,0 +1,237 @@
+================================================================================
+MÔ TẢ CHI TIẾT DỰ ÁN: BẢN ĐỒ AN TOÀN CỘNG ĐỒNG MỞ PHƯỜNG ĐÔNG NGẠC
+KHU VỰC TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT (HUMG) — ĐỀ TÀI 08
+================================================================================
+
+1. THÔNG TIN TỔNG QUAN
+--------------------------------------------------------------------------------
+- Tên dự án           : Bản đồ An toàn Cộng đồng Mở Phường Đông Ngạc · ĐH Mỏ - Địa chất
+- Chủ đề nghiên cứu   : Đề tài 08 — Thích ứng với nắng nóng và thời tiết cực đoan
+- Đơn vị thực hiện    : Nhóm sinh viên Đề tài 08, Trường Đại học Mỏ - Địa chất (HUMG)
+- Địa bàn trọng tâm   : Bán kính 2,0 km quanh 18 Phố Viên, Phường Đông Ngạc (mới), TP. Hà Nội
+- Tọa độ tâm khảo sát : 21.072514°N, 105.773870°E (WGS84) | 580390.3 E, 2330368.2 N (UTM 48N)
+- Diện tích vùng 2km  : 12,56 km² (trong đó 78,5% diện tích có cao độ DEM ≤ 12,0 m DSM)
+- Địa chỉ truy cập    : https://bando-cong-dong-dong-ngac.vercel.app
+- Kho mã nguồn GitHub : https://github.com/koko999-tien/bando-cong-dong-dong-ngac
+- Phiên bản hiện tại  : v20 (PWA hỗ trợ Offline, đồng bộ Đám mây thời gian thực)
+
+
+2. BỐI CẢNH THỰC TẾ & KHOẢNG TRỐNG THỊ TRƯỜNG GIẢI QUYẾT
+--------------------------------------------------------------------------------
+Dự án xuất phát từ 4 vấn đề thực tế tại khu vực Đông Ngạc – Cổ Nhuế – Đức Thắng
+và những khoảng trống đã được ghi nhận ở các nền tảng cảnh báo ngập hiện hữu:
+
+(1) Lỗ hổng ngập cục bộ trong ngõ xóm trọ & độ trễ cập nhật:
+    Các ứng dụng chính thống như HSDC Maps hay mini-app iHanoi chủ yếu đo trên trục
+    đường lớn, dễ quá tải lưu lượng trong giờ cao điểm mưa bão và cần nhiều bước
+    đăng nhập. Trong khi đó, dải ven sông Nhuệ – kênh Thụy Phương (Cuối Phố Viên,
+    Cầu Noi, Ngõ 43 Cổ Nhuế, KĐT Resco, Ecohome) thường ngập sâu trong các ngõ hẹp
+    không có trạm cảm biến tự động.
+
+(2) Nỗi đau thuê trọ của hơn 20.000 sinh viên & cư dân:
+    Mỗi năm hàng nghìn sinh viên ĐH Mỏ - Địa chất (HUMG), Học viện Tài chính (AOF),
+    ĐH Y tế Công cộng (HUPH) và người lao động thuê trọ quanh khu vực nhưng không có
+    công cụ kiểm tra trước xem khu trọ có thuộc lòng máng ngập (nguy cơ ngập ổ điện
+    tầng 1) hay bị bức xạ nắng gắt mái tôn (45–50°C mùa hè) hay không.
+
+(3) Tính mùa vụ khiến ứng dụng ngập bị bỏ quên 9 tháng mùa khô:
+    Các bản đồ chỉ phục vụ mùa mưa ít được mở vào mùa hanh khô (tháng 11 – tháng 3),
+    trong khi Hà Nội chịu ô nhiễm bụi mịn PM2.5 / AQI ở mức xấu. Tích hợp giám sát
+    AQI & PM2.5 trực tiếp biến dự án thành nền tảng an toàn môi trường dùng 365 ngày/năm.
+
+(4) Kênh lan tỏa cộng đồng thực tế tại Việt Nam:
+    90% cảnh báo ngập và hỏi đáp phòng trọ trong tổ dân phố, KTX, nhóm sinh viên lan
+    truyền qua HÌNH ẢNH trên Zalo/Facebook. Công cụ xuất Thẻ Ảnh Cảnh báo & Thẩm định
+    (.PNG) 1 chạm giúp người dân chia sẻ thông tin chính xác kèm hotline khẩn cấp tức thì.
+
+
+3. NỀN TẢNG DỮ LIỆU THỰC CHỨNG 100% (KHÔNG TỰ CHẾ SỐ LIỆU)
+--------------------------------------------------------------------------------
+Toàn bộ dữ liệu gốc trên bản đồ đều có nguồn kiểm chứng rõ ràng, tuyệt đối không tự
+đặt độ sâu (cm) hay nhiệt độ giả định:
+
+- 60 điểm bản đồ nền xác thực Hạng A & B (trong bán kính 2 km):
+  + 45 điểm Rủi ro (37 điểm ngập úng / trục ngập, 6 điểm nắng gắt / trạm buýt / chợ
+    dân sinh thiếu bóng mát, 2 điểm nguy cơ hạ tầng / giao thông).
+  + 15 điểm An toàn & Y tế xác thực OpenStreetMap (BV Đa khoa Phương Đông số 9 Phố
+    Viên, Trạm Y tế Đức Thắng, Trạm Y tế Cổ Nhuế, BV Đa khoa Phạm Ngọc Thạch, khuôn
+    viên / thư viện Khu A ĐH Mỏ trên gò cao ~17 m DSM, các điểm trú mưa có mái che).
+  + 235+ lượt xác nhận thực tế ban đầu.
+
+- 18 hành lang đường & ngõ xóm trọ hay ngập (OpenStreetMap + báo chí chính thống):
+  Gắn ngưỡng lượng mưa kích hoạt (mm) và mô tả nguy cơ thực tế từng đoạn.
+
+- Lưới địa hình vệ tinh Copernicus DEM GLO-30 (625 điểm mẫu nội suy song tuyến tính):
+  Phủ kín bán kính 2 km quanh ĐH Mỏ, phân định rõ gò cao 16–17 m (ĐH Mỏ, Đê Liên Mạc)
+  với dải lòng máng 9–12 m dọc sông Nhuệ – kênh Thụy Phương.
+
+- Chuỗi số liệu khí tượng tái phân tích ECMWF ERA5 (2024 – 2026):
+  Ghi nhận chi tiết số ngày nắng nóng ≥35°C, nhiệt cảm nhận ≥40°C (63–76 ngày/năm),
+  ngày mưa ≥50 mm và đỉnh mưa tháng 8/2026 đạt 624,8 mm (tổng 11 tháng 2026: 2.120,4 mm).
+
+- Luồng dữ liệu thời gian thực (Live APIs, không cần đăng nhập):
+  + Open-Meteo Weather API: nhiệt độ thực, cảm nhận, độ ẩm, UV, dự báo từng khung 3 giờ
+    trong 24h và 7 ngày tới.
+  + Open-Meteo Air Quality (CAMS): chỉ số US AQI, bụi mịn PM2.5, PM10, UV trực tiếp.
+  + RainViewer Public API: lớp Radar mây mưa 2 giờ gần nhất (cập nhật mỗi 10 phút).
+  + OSRM & Nominatim OpenStreetMap: định tuyến đường phố thực tế (xe máy / đi bộ) và
+    tra cứu tên ngõ / đường tiếng Việt.
+
+
+4. HỆ THỐNG TÍNH NĂNG CHI TIẾT
+--------------------------------------------------------------------------------
+A. DÀNH CHO NGƯỜI DÂN, SINH VIÊN & NGƯỜI THUÊ TRỌ (GIAO DIỆN ĐƠN GIẢN 1 CHẠM)
+   1. Tìm kiếm tức thì không dấu (0ms): Gõ tên ngõ, đường, khu trọ (VD: "pho vien",
+      "ngo 43 co nhue", "cau noi") hiện ngay gợi ý địa điểm + tìm địa chỉ toàn Đông Ngạc.
+   2. Lọc nhanh 4 lớp trực quan: Tất cả | Ngập úng | Trú & Y tế | Nắng gắt.
+      Khi chọn "Nắng gắt", lớp canvas 60fps tự động tắt nước ngập và chuyển sang bản đồ
+      vi khí hậu nhiệt (vùng cam bức xạ nắng gắt + 15 ốc đảo bóng mát xanh ngọc).
+   3. Kịch bản mô phỏng ngập theo lượng mưa (4 mức): Khô ráo (0mm) | Mưa vừa (35mm) |
+      Mưa to (70mm) | Rất to (120mm), vẽ loang nước thủy văn mượt 60fps kết hợp DEM và
+      phễu thoát nước đô thị.
+   4. Chỉ đường thông minh né ngập từ mọi điểm chạm:
+      - Chuyển đổi giữa "Đi xe máy" và "Đi bộ".
+      - Chọn điểm đi / đến bằng GPS hiện tại, danh sách mốc quen thuộc, "Chấm bản đồ"
+        hoặc bấm trực tiếp "Đi từ đây / Chỉ đường tới đây" từ bất kỳ ghim nào.
+      - Tự động so sánh "Tuyến ngắn nhất (Né khi mưa)" với "Tuyến vòng nền cao (Khuyên đi)"
+        qua các dải gò 14,5–17 m, kèm danh sách chỉ dẫn từng đoạn đường phố (số mét).
+   5. Nhịp đập Cộng đồng Trực tiếp — Live Check-in 6 giờ (Chuẩn PetaBencana):
+      - Mỗi điểm rủi ro có 3 nút 1 chạm "Tình trạng NGAY LÚC NÀY?": Đang ngập | Đang rút |
+        Đã khô — đồng bộ thời gian thực lên Cloud, tự hết hạn sau 6 giờ.
+      - Điểm đang ngập phát hiệu ứng vòng cảnh báo đỏ trên bản đồ và hiện trong luồng
+        "Cập nhật hiện trường (6 giờ qua) · TRỰC TIẾP".
+   6. Thẩm định An toàn Nhà trọ / Địa chỉ (Hạng A – D + Checklist 60 giây):
+      - Chạm bất kỳ ngõ / nhà nào để chấm điểm 3 trục thực chứng: An toàn Ngập (55%) ·
+        Dịu mát & Bóng cây (20%) · Y tế & Điểm trú (25%) → Xếp Hạng A, B, C, D.
+      - Tự động sinh Checklist 60 giây thực địa may đo riêng cho tọa độ đó trước khi cọc
+        phòng trọ (vệt ố tường, độ cao sân xe, aptomat tầng 1, mái tôn hướng Tây).
+   7. Danh sách "Địa điểm của tôi" (100% riêng tư trên thiết bị):
+      Lưu tối đa 6 điểm (Nhà trọ, Cổng trường, Bến buýt) trong localStorage để xem Hạng
+      an toàn và chỉ đường về nhà 1 chạm, không cần đăng nhập.
+   8. Xuất Thẻ Ảnh Cảnh báo & Thẩm định (.PNG) gửi nhanh Zalo / Nhóm Trọ:
+      Dựng poster 1080×1350 bằng HTML5 Canvas ngay trên máy người dùng gồm Hạng A–D, thời
+      tiết / AQI hiện tại, checklist và danh bạ khẩn cấp (115, 114, EVNHANOI 1900 1288,
+      Thoát nước HN 024 3976 2245); hỗ trợ chia sẻ trực tiếp Web Share API hoặc tải PNG.
+   9. Trợ lý AI Thực chứng Gemini (Hỗ trợ giọng nói tiếng Việt):
+      Trả lời bằng ngôn ngữ tự nhiên có trích dẫn mã điểm [R-xx]/[S-xx] (bấm để bay thẳng
+      tới điểm trên bản đồ), tích hợp đầy đủ ngữ cảnh 60 điểm, 18 tuyến ngập, DEM, ERA5,
+      thời tiết, AQI PM2.5 và Live Check-in 6 giờ; có bộ máy cục bộ dự phòng khi mất mạng.
+  10. Dự báo 24 giờ, AQI PM2.5 & Radar Mây mưa (RainViewer):
+      Xem biểu đồ mưa 3 giờ/lần, chỉ số bụi mịn PM2.5/PM10/UV, bật tắt Radar mây mưa
+      trực tiếp và áp dụng mức mưa dự báo hôm nay lên bản đồ chỉ với 1 chạm.
+  11. Tìm Nơi trú gần tôi & Báo điểm ngập ẩn danh (Có AI Vision kiểm định ảnh):
+      - 1 chạm định vị Bệnh viện / Điểm trú có mái che gần nhất (tránh điều hướng ra hồ /
+        công viên ngoài trời khi mưa dông sét).
+      - Phiếu báo điểm tự động xóa sạch siêu dữ liệu GPS/EXIF ảnh bằng Canvas trước khi gửi,
+        làm tròn tọa độ ~20m bảo vệ nhà riêng, tự động gộp điểm trùng trong bán kính 50m,
+        và dùng Gemini Vision kiểm định khung cảnh thực tế chống ảnh spam.
+      - Cơ chế tin cậy 3 hạng: Hạng C (mới báo) → tự động thăng lên Hạng B khi có ≥3 cư
+        dân độc lập bấm "+1 Tôi cũng gặp" → Hạng A khi nhóm thực địa / Quản trị xác thực.
+
+B. DÀNH CHO GIẢNG VIÊN & NGHIÊN CỨU GIS (CHẾ ĐỘ NGHIÊN CỨU TRONG MENU)
+   - Ẩn mặc định để người dân không bị rối mắt; bật lên để mở khóa toàn bộ công cụ chuyên sâu:
+   - Lát cắt Địa hình Động Copernicus DEM (vẽ tuyến A→B tự chọn hoặc tuyến mẫu).
+   - Vòng bán kính đồng tâm 500m, điều chỉnh bán kính 0,5 – 10 km, dời tâm khảo sát, hiển thị
+     tọa độ WGS84 / UTM 48N & DEM tại con trỏ chuột.
+   - Bản đồ nhiệt mật độ rủi ro (Heatmap Canvas), thống kê Hạng A/B/C, bảng ERA5 2024–2026.
+   - Xuất dữ liệu mở chuẩn GIS: .KML (Google My Maps), .GeoJSON (QGIS), .CSV (Excel UTF-8)
+     và Gói nguồn .MD nạp thẳng vào Google NotebookLM tạo Podcast & Sơ đồ tư duy.
+
+C. HỆ SINH THÁI TRANG CHỨC NĂNG & QUẢN TRỊ ĐIỀU HÀNH
+   - admin.html                   : Trung tâm Quản trị duyệt điểm A/B/C, xử lý hàng loạt, gộp
+                                    điểm trùng 50m, theo dõi 8 KPI Đề tài 08, phát thanh Thanh
+                                    Cảnh báo khẩn cấp thời gian thực xuống mọi thiết bị, cấu hình
+                                    khóa AI mã hóa AES-256-GCM và nhật ký kiểm toán (Audit Log).
+   - khao-sat.html                : Phiếu Khảo sát Cộng đồng Pre-test (15 câu) & Post-test (6 câu)
+                                    ẩn danh, đồng bộ thống kê trực tiếp lên Cloud.
+   - du-lieu-mo.html              : Cổng Biểu đồ ERA5 2024–2026, Lát cắt DEM và tải dữ liệu mở.
+   - cam-nang-1-cham.html         : Cẩm nang ứng phó 1 trang chuẩn in PDF (Sơ cứu sốc nhiệt Bộ
+                                    Y tế, an toàn điện khu trọ, giảm nhiệt phòng trọ mái tôn).
+   - infographics-va-ban-tin.html : Bộ 03 Infographic & 02 Bản tin Cảnh báo mẫu (Đỏ / Vàng).
+   - thuyet-trinh.html            : Bộ 10 Slide bảo vệ đồ án & Studio Teleprompter quay Video 45s.
+   - phieu-thuc-dia.html          : Phiếu ghi khảo sát thực địa khổ A4 ngang cho nhóm đi hiện trường.
+
+
+5. KIẾN TRÚC CÔNG NGHỆ, BẢO MẬT & TUÂN THỦ PHÁP LÝ
+--------------------------------------------------------------------------------
+- Frontend        : HTML5, CSS3 hiện đại (CSS Grid 3 tầng, logical properties, dvh/dvw),
+                    JavaScript ES Modules thuần không phụ thuộc framework nặng (tốc độ
+                    tải nhanh trên mạng 4G yếu khi mưa bão).
+- Bản đồ & GIS    : Leaflet 1.9.4 + Turf.js 7.2.0 + HTML5 Canvas 60fps (Hydrology, Heat,
+                    Heatmap, EXIF Stripper, Zalo Poster Exporter).
+- Nền bản đồ      : 5 chế độ (Bản đồ Sáng, Bản đồ Phố OSM, Ảnh Vệ tinh Esri, Nền Tối,
+                    Địa hình OpenTopoMap) — 100% không watermark, chuyển được trên cả Mobile.
+- Backend Cloud   : Vercel Serverless Functions (vùng sin1 - Singapore) gồm:
+                    + api/community.js : Đồng bộ +1, báo cáo mới, Live Check-in 6h, khảo sát,
+                      kiểm duyệt, phát thanh cảnh báo, xác thực Admin HMAC-SHA256.
+                    + api/ai-copilot.js: Google Gemini Interactions API v1 (@google/genai
+                      3.6.1, store: false), RAG 60 điểm + 18 tuyến + AQI + Live Pulse,
+                      Gemini Vision kiểm định ảnh hiện trường, giới hạn tần suất theo IP.
+- Lưu trữ Cloud   : Vercel Private Blob Storage (access: private, sin1) — khóa API Gemini
+                    được mã hóa AES-256-GCM trước khi lưu, không bao giờ lộ ra phía client.
+- PWA & Offline   : Service Worker (sw.js v20) chiến lược Network-First cho tài nguyên lõi
+                    và Cache dự phòng khi mất mạng; manifest.webmanifest cho phép cài lên
+                    màn hình chính điện thoại như app bản địa.
+- Tuân thủ Luật BVDLCN số 91/2025/QH15 & Nghị định 13/2023/NĐ-CP:
+  + Không thu thập họ tên, SĐT, email hay số nhà riêng cá nhân.
+  + Ảnh tải lên được vẽ lại qua Canvas tại trình duyệt để xóa 100% EXIF/GPS gốc.
+  + Làm tròn tọa độ ~20m, có ô đồng ý tự nguyện không tích sẵn và luôn dẫn nguồn chính
+    thống của Nhà nước (nchmf.gov.vn, HSDC Maps, iHanoi).
+
+
+6. THIẾT KẾ GIAO DIỆN & TRẢI NGHIỆM NGƯỜI DÙNG (UI/UX)
+--------------------------------------------------------------------------------
+- Kiến trúc Lưới HUD 3 Tầng Không Chồng Lấp (.hud-shell):
+  + Tầng 1 (hud-top)   : Thanh cảnh báo + Ô tìm kiếm thương hiệu + Nhiệt độ thực tế +
+                         Chọn nền bản đồ + Menu + 4 chip lọc lớp.
+  + Tầng 2 (hud-stage) : Khay công cụ bên trái (có 4 tab chuyển nhanh: Chỉ đường, Dự báo
+                         24h, Hỏi AI, Danh sách) + Không gian bản đồ rộng mở + Cột nút
+                         điều khiển bên phải (+ / − / Về ĐH Mỏ / Ký hiệu bung sang trái).
+  + Tầng 3 (hud-bottom): Thanh Kịch bản mưa + Nơi trú gần tôi + Thanh công cụ chính luôn
+                         hiển thị đủ 100% (chuyển thành Bottom Tab Bar 5 nút trên Mobile).
+- Mốc nhận diện trung tâm: Huy hiệu "ĐH Mỏ - Địa chất" kèm vòng sóng định vị xanh ngọc
+  tại 18 Phố Viên giúp người mới truy cập định hướng khu vực trong chưa đầy 1 giây.
+- Tương thích mọi cỡ màn hình: Kiểm chứng 0px chồng đè trên Desktop 1440×900, Laptop Windows
+  phóng 150% (1280×620) và Điện thoại 390×844 (đủ 4/4 chip lọc, 5/5 tab đáy, 0 lỗi Console).
+
+
+7. CẤU TRÚC THƯ MỤC & TỆP CHÍNH CỦA DỰ ÁN
+--------------------------------------------------------------------------------
+hanoi-flood-gis/
+|-- index.html                   (Ứng dụng Bản đồ WebGIS chính & HUD 3 tầng)
+|-- styles.css                   (Hệ thống giao diện thiết kế, Responsive Desktop/Mobile)
+|-- app.js                       (Logic bản đồ, thủy văn Canvas, OSRM, AQI, Radar, Zalo PNG)
+|-- gis-utils.js                 (Thuật toán UTM 48N, DEM, hành lang, Thẩm định A–D, KML/CSV)
+|-- humg-data.js                 (60 điểm xác thực, 18 tuyến ngập OSM, ERA5 2024–2026)
+|-- dem-grid-2km.js              (Lưới 625 điểm cao độ vệ tinh Copernicus DEM GLO-30)
+|-- knowledge-engine.js          (Bộ máy hỏi đáp tình huống cục bộ & xuất NotebookLM .md)
+|-- config.js                    (Cấu hình trung tâm & ngưỡng tự động thăng hạng C→B)
+|-- sw.js                        (Service Worker PWA v20 hỗ trợ hoạt động ngoại tuyến)
+|-- test-gis.mjs                 (Bộ kiểm thử tự động thuật toán không gian & xuất dữ liệu)
+|-- api/
+|   |-- community.js             (Serverless Cloud DB: Votes, Reports, Live Pulse, Surveys, Admin)
+|   |-- ai-copilot.js            (Serverless Gemini Interactions API v1 + Vision + AES Vault)
+|-- admin.html & admin.js        (Trung tâm Quản trị duyệt điểm, KPI & Phát cảnh báo)
+|-- khao-sat.html                (Cổng Khảo sát Pre-test 15 câu & Post-test 6 câu)
+|-- du-lieu-mo.html              (Biểu đồ ERA5, DEM & Cổng dữ liệu mở)
+|-- cam-nang-1-cham.html         (Cẩm nang ứng phó 1 trang in PDF)
+|-- infographics-va-ban-tin.html (Bộ 03 Infographic & 02 Bản tin Cảnh báo)
+|-- thuyet-trinh.html            (10 Slide bảo vệ & Studio quay Video 45 giây)
+|-- phieu-thuc-dia.html          (Phiếu ghi khảo sát thực địa A4 ngang)
+|-- exports/                     (Các tệp .kml, .geojson, .csv, NotebookLM .md xuất sẵn)
+|-- docs/                        (Báo cáo khung 7 chương, Hồ sơ báo chí, Mô tả dự án .txt)
+
+
+8. KIỂM CHỨNG CHẤT LƯỢNG & HƯỚNG PHÁT TRIỂN MỞ RỘNG
+--------------------------------------------------------------------------------
+- Kiểm thử tự động  : 100% bài test thuật toán không gian (test-gis.mjs) đạt chuẩn;
+                      222/222 DOM ID khớp hoàn toàn; 0 lỗi cú pháp JS/CSS.
+- Kiểm chứng Live   : Đã đo tọa độ khung hình thực tế trên domain Vercel (0px chồng đè,
+                      0 lỗi Console, API /api/community và /api/ai-copilot hoạt động ổn định).
+- Lộ trình giai đoạn tiếp theo:
+  1. Mở rộng phạm vi 5 km phủ trọn Cụm Đại học Bắc Từ Liêm (HUMG, Học viện Tài chính,
+     ĐH Y tế Công cộng, KĐT Ngoại Giao Đoàn).
+  2. Tích hợp Bot Telegram / Zalo OA nhận báo ngập qua tin nhắn và gửi cảnh báo tự động
+     khi dự báo mưa ≥ 40 mm hoặc AQI ≥ 150.
+  3. Xây dựng bảng xếp hạng so sánh các trục ngõ trọ an toàn phục vụ mùa nhập học hằng năm.
+================================================================================

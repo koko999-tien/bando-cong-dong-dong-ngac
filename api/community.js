@@ -1,12 +1,22 @@
 import crypto from 'node:crypto';
 import { put, get, list, del } from '@vercel/blob';
+import { DEFAULT_REGION_ID, validateCoordinateInRegion } from '../platform/regions/region-registry.js';
+import { DATA_CLASSES } from '../platform/data/provenance-catalog.js';
+import { ROLES, resolveInitialReportTrust } from '../platform/security/rbac.js';
+import {
+  cleanText,
+  hasSpamContent,
+  validateImageDataUrl,
+  createBoundedRateLimiter
+} from '../platform/security/validators.js';
 
-const HUMG_LAT = 21.072514;
-const HUMG_LNG = 105.77387;
-const MAX_GEOFENCE_METERS = 6500;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const LIVE_PULSE_TTL_MS = 6 * 60 * 60 * 1000;
 const LIVE_PULSE_PATH = 'config/live-pulse.json';
+
+// Chống brute-force & spam phía server có trần bộ nhớ (Milestone 2 chuyển sang Upstash Redis)
+const loginRateLimiter = createBoundedRateLimiter({ maxRequests: 6, windowMs: 15 * 60 * 1000, maxEntries: 2000 });
+const reportRateLimiter = createBoundedRateLimiter({ maxRequests: 5, windowMs: 10 * 60 * 1000, maxEntries: 2000 });
 
 function pruneLivePulse(rawList = []) {
   const now = Date.now();
@@ -38,41 +48,35 @@ function pruneLivePulse(rawList = []) {
   };
 }
 
-function haversineMeters(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return Math.round(2 * R * Math.asin(Math.sqrt(a)));
-}
-
-function cleanText(val, maxLen = 500) {
-  return String(val ?? '')
-    .replace(/[<>]/g, '')
-    .replace(/javascript:/gi, '')
-    .trim()
-    .slice(0, maxLen);
-}
-
-function hasSpamContent(str) {
-  const lower = String(str ?? '').toLowerCase();
-  return /(https?:\/\/|www\.|telegram\.me|t\.me\/|casino|bet88|vay tiền)/i.test(lower);
+function getClientIp(request) {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'anon'
+  );
 }
 
 function getVoterFingerprint(request) {
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    'anon';
+  const ip = getClientIp(request);
   const ua = (request.headers.get('user-agent') || '').slice(0, 120);
-  return crypto.createHash('sha256').update(`${ip}|${ua}|humg-v1`).digest('hex').slice(0, 16);
+  const salt = process.env.FINGERPRINT_SALT || 'humg-v1';
+  return crypto.createHash('sha256').update(`${ip}|${ua}|${salt}`).digest('hex').slice(0, 16);
+}
+
+function getSigningSecret() {
+  const configured = process.env.ADMIN_TOKEN_SECRET || process.env.ADMIN_PASSCODE;
+  if (configured && configured.trim().length >= 8) {
+    return configured.trim();
+  }
+  const isProd = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+  if (isProd) {
+    throw new Error('SECURITY_MISCONFIGURED: Thiếu ADMIN_TOKEN_SECRET hoặc ADMIN_PASSCODE trong môi trường production.');
+  }
+  return 'local-dev-only-ephemeral-secret';
 }
 
 function signAdminToken() {
-  const secret = process.env.ADMIN_TOKEN_SECRET || process.env.ADMIN_PASSCODE || 'humg-fallback-secret';
+  const secret = getSigningSecret();
   const exp = Date.now() + SESSION_TTL_MS;
   const payload = `admin.${exp}`;
   const sig = crypto.createHmac('sha256', secret).update(payload).digest('hex');
@@ -88,7 +92,12 @@ function verifyAdminToken(request) {
   const exp = Number(parts[1]);
   if (!Number.isFinite(exp) || Date.now() > exp) return false;
 
-  const secret = process.env.ADMIN_TOKEN_SECRET || process.env.ADMIN_PASSCODE || 'humg-fallback-secret';
+  let secret;
+  try {
+    secret = getSigningSecret();
+  } catch {
+    return false;
+  }
   const expectedSig = crypto.createHmac('sha256', secret).update(`${parts[0]}.${parts[1]}`).digest('hex');
   try {
     const a = Buffer.from(parts[2], 'hex');
@@ -302,8 +311,15 @@ export async function POST(request) {
     const body = await request.json();
     const action = body?.action || '';
 
-    // 1. Đăng nhập Quản trị viên (Khóa bảo mật phía Server)
+    // 1. Đăng nhập Quản trị viên (Khóa bảo mật phía Server + chống brute-force SEC-04)
     if (action === 'admin_login') {
+      const rl = loginRateLimiter.check(`login:${getClientIp(request)}`);
+      if (!rl.allowed) {
+        return Response.json(
+          { ok: false, error: 'Thử đăng nhập quá nhiều lần. Vui lòng đợi 15 phút trước khi thử lại.' },
+          { status: 429 }
+        );
+      }
       if (!checkPasscodeConstantTime(body.pass)) {
         return Response.json({ ok: false, error: 'Mật khẩu quản trị không chính xác.' }, { status: 401 });
       }
@@ -377,30 +393,46 @@ export async function POST(request) {
       });
     }
 
-    // 3. Người dân gửi điểm mới lên Bản đồ Cộng đồng
+    // 3. Người dân gửi điểm mới lên Bản đồ Cộng đồng (Multi-Region + Vá SEC-01, SEC-04, SEC-06)
     if (action === 'submit_report') {
+      const isAuthedOperator = verifyAdminToken(request);
+      if (!isAuthedOperator) {
+        const rl = reportRateLimiter.check(`report:${getClientIp(request)}`);
+        if (!rl.allowed) {
+          return Response.json(
+            { ok: false, error: 'Bạn đang gửi báo cáo quá nhanh. Vui lòng đợi ít phút trước khi gửi tiếp.' },
+            { status: 429 }
+          );
+        }
+      }
+
       const lat = Number(body.lat);
       const lng = Number(body.lng);
       const name = cleanText(body.name, 150);
       const notes = cleanText(body.notes, 600);
+      const regionId = cleanText(body.regionId || DEFAULT_REGION_ID, 64) || DEFAULT_REGION_ID;
 
       if (!Number.isFinite(lat) || !Number.isFinite(lng) || name.length < 3) {
         return Response.json({ ok: false, error: 'Tên vị trí hoặc tọa độ không hợp lệ.' }, { status: 400 });
       }
-      const distM = haversineMeters(HUMG_LAT, HUMG_LNG, lat, lng);
-      if (distM > MAX_GEOFENCE_METERS) {
-        return Response.json(
-          { ok: false, error: `Vị trí cách ĐH Mỏ ${(distM / 1000).toFixed(1)} km (ngoài phạm vi tiếp nhận khảo sát).` },
-          { status: 400 }
-        );
+      const geoCheck = validateCoordinateInRegion(lat, lng, regionId);
+      if (!geoCheck.valid) {
+        return Response.json({ ok: false, error: geoCheck.reason }, { status: 400 });
       }
       if (hasSpamContent(name) || hasSpamContent(notes)) {
         return Response.json({ ok: false, error: 'Nội dung chứa liên kết quảng cáo hoặc từ khóa bị chặn.' }, { status: 400 });
       }
 
       let safePhoto = '';
-      if (typeof body.photoDataUrl === 'string' && body.photoDataUrl.startsWith('data:image/jpeg;base64,')) {
-        if (body.photoDataUrl.length <= 68000) safePhoto = body.photoDataUrl;
+      if (typeof body.photoDataUrl === 'string' && body.photoDataUrl.length > 0) {
+        const imgCheck = validateImageDataUrl(body.photoDataUrl, {
+          maxDataUrlLength: 68000,
+          allowedMimes: ['image/jpeg']
+        });
+        if (!imgCheck.valid) {
+          return Response.json({ ok: false, error: imgCheck.reason }, { status: 400 });
+        }
+        safePhoto = body.photoDataUrl;
       }
 
       const id = cleanText(body.id, 32) || `CD-${Date.now().toString(36).slice(-5).toUpperCase()}`;
@@ -408,10 +440,17 @@ export async function POST(request) {
       const layerGroup = ['shelter', 'medical'].includes(cat) ? 'safe' : 'risk';
       const photoFlag = cleanText(body.photoQualityFlag || 'ok', 40);
       const roleStr = cleanText(body.reporterRole || 'Cư dân đóng góp trên Web', 80);
-      const isFieldTeam = roleStr.toLowerCase().includes('nhóm khảo sát thực địa');
+
+      // Vá lỗ hổng SEC-01: Chỉ cấp Hạng A & approved khi phiên thực sự đã xác thực, không tin chuỗi tự khai từ client
+      const principal = isAuthedOperator
+        ? { role: ROLES.WARD_OPERATOR, authenticated: true, regionIds: ['*'] }
+        : { role: ROLES.CITIZEN, authenticated: false };
+      const trust = resolveInitialReportTrust(principal, { regionId, photoQualityFlag: photoFlag });
 
       const record = {
         id,
+        regionId,
+        dataClass: trust.dataClass || DATA_CLASSES.COMMUNITY_REPORTS,
         layerGroup,
         category: cat,
         name,
@@ -423,9 +462,9 @@ export async function POST(request) {
         hazardFlags: Array.isArray(body.hazardFlags) ? body.hazardFlags.map((h) => cleanText(h, 40)).slice(0, 6) : [],
         photoDataUrl: safePhoto,
         photoQualityFlag: photoFlag,
-        confidenceTier: isFieldTeam && photoFlag !== 'suspect_spam' ? 'A' : 'C',
+        confidenceTier: trust.confidenceTier,
         confirmCount: 1,
-        status: isFieldTeam && photoFlag !== 'suspect_spam' ? 'approved' : 'pending',
+        status: trust.status,
         sourceType: roleStr,
         sourceCitation: `${cleanText(body.reporterRole || 'Cư dân', 60)} báo trực tuyến (${new Date().toLocaleDateString('vi-VN', { timeZone: 'Asia/Bangkok' })})`,
         observedDate: new Date().toISOString().slice(0, 10),
