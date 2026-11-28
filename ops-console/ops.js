@@ -29,11 +29,37 @@ const state = {
   moderationMap: {},
   auditLog: [],
   studies: [],
-  lastInspectedZone: null
+  lastInspectedZone: null,
+  batchCandidates: []
 };
 
+let cmdMap = null;
+let cmdLayer = null;
 let pickerMap = null;
 let pickerMarker = null;
+
+const KEY_HUBS = [
+  { name: 'Đông Ngạc (Hà Nội)', lat: 21.072514, lng: 105.77387, rKm: 2 },
+  { name: 'Trung tâm Hà Nội', lat: 21.0285, lng: 105.8542, rKm: 5 },
+  { name: 'Sa Pa (Lào Cai)', lat: 22.3364, lng: 103.8438, rKm: 10 },
+  { name: 'TP. Huế', lat: 16.4637, lng: 107.5909, rKm: 8 },
+  { name: 'TP. Đà Nẵng', lat: 16.0544, lng: 108.2022, rKm: 8 },
+  { name: 'TP. Hồ Chí Minh', lat: 10.7769, lng: 106.7009, rKm: 10 },
+  { name: 'TP. Cần Thơ', lat: 10.0452, lng: 105.7469, rKm: 8 }
+];
+
+function quickDistMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const rad = (d) => (d * Math.PI) / 180;
+  const dLat = rad(lat2 - lat1);
+  const dLng = rad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(a)));
+}
+
+function isVietnamCoord(lat, lng) {
+  return Number.isFinite(lat) && Number.isFinite(lng) && lat >= 8.15 && lat <= 23.45 && lng >= 102.1 && lng <= 109.55;
+}
 
 function esc(s) {
   return String(s ?? '')
@@ -93,7 +119,9 @@ function switchView(viewName) {
   document.querySelectorAll('.ops-view').forEach((sec) => {
     sec.hidden = sec.id !== `view-${viewName}`;
   });
-  if (viewName === 'moderation') {
+  if (viewName === 'telemetry') {
+    setTimeout(() => cmdMap?.invalidateSize(), 80);
+  } else if (viewName === 'moderation') {
     ensurePickerMap();
     setTimeout(() => pickerMap?.invalidateSize(), 80);
   }
@@ -188,21 +216,34 @@ async function runClusterProbes() {
           detail: `HTTP ${r.status} · Cao độ tham chiếu HUMG: ${j?.elevation?.[0] ?? '--'} m`
         };
       }
+    },
+    {
+      name: 'Copernicus GloFAS River Discharge API',
+      run: async () => {
+        const r = await fetch('https://flood-api.open-meteo.com/v1/flood?latitude=16.4637&longitude=107.5909&daily=river_discharge&forecast_days=3');
+        const j = await r.json();
+        const q0 = j?.daily?.river_discharge?.[0];
+        return {
+          ok: r.ok && Number.isFinite(Number(q0)),
+          detail: `HTTP ${r.status} · Lưu lượng Sông Hương: ${q0 ?? '--'} m³/s`
+        };
+      }
     }
   ];
 
-  const rows = [];
   let totalPubsAndReports = 0;
-  for (const p of probes) {
-    const t0 = performance.now();
-    try {
-      const out = await p.run();
-      totalPubsAndReports += (out.reportsCnt || 0) + (out.pubsCnt || 0);
-      rows.push({ name: p.name, ok: out.ok, ms: Math.round(performance.now() - t0), detail: out.detail });
-    } catch (err) {
-      rows.push({ name: p.name, ok: false, ms: Math.round(performance.now() - t0), detail: err.message });
-    }
-  }
+  const rows = await Promise.all(
+    probes.map(async (p) => {
+      const t0 = performance.now();
+      try {
+        const out = await p.run();
+        totalPubsAndReports += (out.reportsCnt || 0) + (out.pubsCnt || 0);
+        return { name: p.name, ok: out.ok, ms: Math.round(performance.now() - t0), detail: out.detail };
+      } catch (err) {
+        return { name: p.name, ok: false, ms: Math.round(performance.now() - t0), detail: err.message };
+      }
+    })
+  );
 
   const okCount = rows.filter((x) => x.ok).length;
   const avgMs = Math.round(rows.reduce((s, x) => s + x.ms, 0) / Math.max(1, rows.length));
@@ -252,8 +293,70 @@ async function inspectSelectedZone() {
       <div>• Điểm Nghiên cứu Đã Duyệt nội vùng: <strong>${studyPts.length}</strong> điểm</div>
       <div>• Mẫu cao độ Copernicus GLO-30: <strong>${elevs.length ? `${Math.min(...elevs)}m – ${Math.max(...elevs)}m` : '--'}</strong></div>
     `;
+    renderNationalCommandMap({ lat, lng, radiusKm, label, pois });
   } catch (err) {
     box.textContent = `Không thể quét vùng: ${err.message}`;
+  }
+}
+
+function renderNationalCommandMap(focusZone = null) {
+  if (typeof window.L === 'undefined') return;
+  const mount = document.getElementById('ops-national-map');
+  if (!mount) return;
+  if (!cmdMap) {
+    cmdMap = window.L.map('ops-national-map').setView([16.2, 106.4], 6);
+    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(cmdMap);
+    cmdLayer = window.L.layerGroup().addTo(cmdMap);
+  }
+  cmdLayer.clearLayers();
+
+  for (const hub of KEY_HUBS) {
+    window.L.circle([hub.lat, hub.lng], {
+      radius: hub.rKm * 1000,
+      color: '#0F766E',
+      weight: 1.8,
+      dashArray: '4 4',
+      fillOpacity: 0.08
+    })
+      .bindTooltip(`Trạm vùng: ${hub.name} (R=${hub.rKm}km)`)
+      .addTo(cmdLayer);
+  }
+
+  for (const rep of state.reports.filter((r) => r.status !== 'hidden')) {
+    window.L.circleMarker([Number(rep.lat), Number(rep.lng)], {
+      radius: 6,
+      color: '#FFFFFF',
+      weight: 2,
+      fillColor: rep.layerGroup === 'safe' ? '#16A34A' : '#DC2626',
+      fillOpacity: 0.95
+    })
+      .bindPopup(`<strong>[${esc(rep.id)}] ${esc(rep.name)}</strong><br>${esc(rep.province || 'Cloud')}`)
+      .addTo(cmdLayer);
+  }
+
+  if (focusZone) {
+    const ring = window.L.circle([focusZone.lat, focusZone.lng], {
+      radius: focusZone.radiusKm * 1000,
+      color: '#0284C7',
+      weight: 2.5,
+      fillColor: '#0EA5E9',
+      fillOpacity: 0.14
+    }).addTo(cmdLayer);
+    for (const p of (focusZone.pois || []).slice(0, 30)) {
+      window.L.circleMarker([Number(p.lat), Number(p.lng)], {
+        radius: 5,
+        color: '#fff',
+        weight: 1.5,
+        fillColor: '#15803D',
+        fillOpacity: 0.9
+      })
+        .bindTooltip(p.name)
+        .addTo(cmdLayer);
+    }
+    cmdMap.fitBounds(ring.getBounds(), { padding: [24, 24], maxZoom: 13 });
   }
 }
 
@@ -324,8 +427,42 @@ async function syncAdminData() {
   );
 
   renderModerationCards();
+  renderDuplicateScanner();
+  renderNationalCommandMap(state.lastInspectedZone);
   renderResearchQueue();
   renderAuditTable();
+}
+
+function renderDuplicateScanner() {
+  const box = document.getElementById('dup-scan-box');
+  const badge = document.getElementById('dup-badge');
+  if (!box || !badge) return;
+  const active = state.reports.filter((r) => r.status !== 'hidden');
+  const pairs = [];
+  for (let i = 0; i < active.length; i++) {
+    for (let j = i + 1; j < active.length; j++) {
+      const d = quickDistMeters(Number(active[i].lat), Number(active[i].lng), Number(active[j].lat), Number(active[j].lng));
+      if (d <= 50) {
+        pairs.push({ a: active[i], b: active[j], d });
+      }
+    }
+  }
+  badge.textContent = `${pairs.length} cặp ≤50m`;
+  badge.className = `badge mono ${pairs.length > 0 ? 'badge-warn' : 'badge-ok'}`;
+  if (pairs.length === 0) {
+    box.innerHTML = `<span style="color:var(--ok-ink);font-weight:600;">Không phát hiện điểm báo cáo trùng lặp nào trong bán kính 50 mét.</span>`;
+    return;
+  }
+  box.innerHTML = pairs
+    .slice(0, 8)
+    .map(
+      (p) => `
+      <div class="item-card" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span><strong>[${esc(p.a.id)}] ${esc(p.a.name)}</strong> sát <strong>[${esc(p.b.id)}] ${esc(p.b.name)}</strong> (${p.d} m)</span>
+        <button type="button" class="btn btn-sm btn-danger js-mod-act" data-id="${esc(p.b.id)}" data-act="hide">Ẩn bản trùng ${esc(p.b.id)}</button>
+      </div>`
+    )
+    .join('');
 }
 
 function renderModerationCards() {
@@ -528,6 +665,74 @@ function bindEvents() {
   document.getElementById('btn-reload-mod').addEventListener('click', syncAdminData);
   document.getElementById('btn-reload-studies').addEventListener('click', syncAdminData);
   document.getElementById('btn-reload-audit').addEventListener('click', syncAdminData);
+
+  document.getElementById('ops-batch-geojson')?.addEventListener('change', async (ev) => {
+    const file = ev.target.files?.[0];
+    const st = document.getElementById('batch-geojson-status');
+    const pushBtn = document.getElementById('btn-push-batch-geojson');
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      const arr = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.features) ? parsed.features : [];
+      const valid = [];
+      let rejected = 0;
+      for (const f of arr.slice(0, 100)) {
+        const lat = Number(f.lat ?? f.geometry?.coordinates?.[1]);
+        const lng = Number(f.lng ?? f.geometry?.coordinates?.[0]);
+        if (!isVietnamCoord(lat, lng)) {
+          rejected++;
+          continue;
+        }
+        const props = f.properties || f;
+        const cat = String(props.category || 'flood');
+        valid.push({
+          id: `GEO-${Date.now().toString(36).toUpperCase()}-${valid.length + 1}`,
+          name: String(props.name || props.title || `Điểm GeoJSON ${valid.length + 1}`).slice(0, 140),
+          province: String(props.province || 'Việt Nam').slice(0, 80),
+          category: cat,
+          layerGroup: ['medical', 'shelter'].includes(cat) ? 'safe' : 'risk',
+          lat: Math.round(lat * 1_000_000) / 1_000_000,
+          lng: Math.round(lng * 1_000_000) / 1_000_000,
+          confidenceTier: 'A',
+          dataClass: 'OBSERVED_DATA',
+          status: 'approved',
+          confirmCount: 3,
+          sourceType: 'Nạp lô GeoJSON từ Ops Console',
+          sourceCitation: String(props.sourceCitation || 'Ops Batch Import').slice(0, 140),
+          notes: String(props.notes || '').slice(0, 300)
+        });
+      }
+      state.batchCandidates = valid;
+      pushBtn.disabled = valid.length === 0;
+      st.textContent = `Đã kiểm tra: ${valid.length} điểm hợp lệ trong lãnh thổ Việt Nam (${rejected} điểm bị loại).`;
+    } catch {
+      state.batchCandidates = [];
+      pushBtn.disabled = true;
+      st.textContent = 'Lỗi: Tệp không đúng định dạng JSON / GeoJSON hợp lệ.';
+    }
+  });
+
+  document.getElementById('btn-push-batch-geojson')?.addEventListener('click', async () => {
+    if (!state.adminToken) {
+      toast('Mở khóa ADMIN_PASSCODE trước khi đẩy lô GeoJSON lên Cloud.');
+      return;
+    }
+    if (state.batchCandidates.length === 0) return;
+    const pushBtn = document.getElementById('btn-push-batch-geojson');
+    pushBtn.disabled = true;
+    let okCnt = 0;
+    for (const point of state.batchCandidates) {
+      const { res, data } = await apiFetch('/api/community', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'admin_upsert_point', point })
+      });
+      if (res.ok && data?.ok) okCnt++;
+    }
+    toast(`Đã đẩy thành công ${okCnt}/${state.batchCandidates.length} điểm GeoJSON lên Bản đồ Chính!`);
+    state.batchCandidates = [];
+    document.getElementById('batch-geojson-status').textContent = `Hoàn tất đồng bộ ${okCnt} điểm mới lên Cloud.`;
+    await syncAdminData();
+  });
 
   document.getElementById('ops-upsert-form').addEventListener('submit', async (ev) => {
     ev.preventDefault();

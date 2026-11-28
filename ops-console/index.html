@@ -161,6 +161,14 @@
             </div>
           </article>
         </div>
+
+        <article class="card">
+          <div class="card-head">
+            <h2 class="card-title">Bản đồ Chỉ huy Không gian Toàn quốc (Live Command Overview)</h2>
+            <span id="cmd-map-meta" class="mono" style="font-size:0.76rem;color:var(--ink-muted);">7 trạm đô thị trọng điểm + điểm Cloud trực tiếp</span>
+          </div>
+          <div id="ops-national-map" class="ops-cmd-map"></div>
+        </article>
       </section>
 
       <!-- ================= VIEW 2: COMMUNITY MODERATION & CLOUD MAP PIN-PICKER ================= -->
@@ -174,7 +182,32 @@
         </div>
 
         <div id="lock-notice-mod" class="lock-banner">
-          Bạn đang ở Chế độ Chỉ đọc. Hãy nhập <code>ADMIN_PASSCODE</code> ở khung bên trái để mở khóa thao tác duyệt bài và ghi điểm mới lên Cloud.
+          Bạn đang ở Chế độ Chỉ đọc. Hãy nhập <code>ADMIN_PASSCODE</code> ở khung bên trái để mở khóa thao tác duyệt bài, gộp trùng và nạp lô GeoJSON lên Cloud.
+        </div>
+
+        <div class="two-col-equal">
+          <article class="card">
+            <div class="card-head">
+              <h2 class="card-title">Quét Điểm Trùng Lặp Không gian (≤ 50 m)</h2>
+              <span id="dup-badge" class="badge badge-ok mono">0 cặp trùng</span>
+            </div>
+            <div id="dup-scan-box" style="font-size:0.8rem;color:var(--ink-secondary);">
+              Tự động phát hiện các điểm báo cáo nằm cách nhau dưới 50 mét trên Cloud để ẩn hoặc gộp gọn.
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2 class="card-title">Nạp Lô Tệp .GeoJSON Lên Bản đồ Chính</h2>
+            </div>
+            <div class="btn-row" style="margin-bottom:8px;">
+              <input type="file" id="ops-batch-geojson" accept=".geojson,.json,application/geo+json,application/json" class="input" style="flex:1;">
+              <button type="button" id="btn-push-batch-geojson" class="btn btn-primary" disabled>Đẩy Lô Hợp lệ</button>
+            </div>
+            <div id="batch-geojson-status" class="mono" style="font-size:0.76rem;color:var(--ink-muted);">
+              Chọn tệp FeatureCollection (.geojson) — hệ thống tự lọc tọa độ thuộc lãnh thổ Việt Nam trước khi ghi lên Cloud.
+            </div>
+          </article>
         </div>
 
         <div class="two-col">

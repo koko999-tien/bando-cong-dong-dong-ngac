@@ -18,11 +18,17 @@ import {
 import {
   VIETNAM_VERIFIED_HOTSPOTS,
   VIETNAM_VERIFIED_CORRIDORS,
-  filterCorridorsInZone
+  VIETNAM_VERIFIED_BASINS,
+  filterCorridorsInZone,
+  filterBasinsInZone
 } from './platform/data/vietnam-verified-hotspots.js';
 import {
   ensureZoneDemGrid,
+  sampleAnyDemGrid,
+  computeTerrainGradient,
+  sampleElevationProfile,
   createNationalHydroSurfaceLayer,
+  createHydroFlowVectorsLayer,
   createNationalHeatmapLayer,
   buildMapPictogramIcon
 } from './platform/gis/hydro-surface.js';
@@ -57,6 +63,7 @@ const REVIEWER_TOKEN_KEY = 'vn_resilience_reviewer_token_v1';
 
 const ALL_STATIC_POINTS = [...SAMPLE_HUMG_POINTS, ...VIETNAM_VERIFIED_HOTSPOTS];
 const ALL_STATIC_CORRIDORS = [...FLOOD_STREET_CORRIDORS, ...VIETNAM_VERIFIED_CORRIDORS];
+const ALL_STATIC_BASINS = [...LOW_DEM_BASINS, ...VIETNAM_VERIFIED_BASINS];
 
 const BASEMAP_PROVIDERS = {
   osm: {
@@ -98,6 +105,7 @@ const state = {
   broadcast: null,
   weather: null,
   hourlyForecast: null,
+  riverDischarge: null,
   zoneElevationM: null,
   aqi: null,
   lastUpdatedAt: null,
@@ -108,12 +116,19 @@ const state = {
   basemap: 'osm',
   layers: {
     hydroSurface: true,
+    flowVectors: true,
     basins: true,
     corridors: true,
     waterways: true,
     osmPoi: true,
     heatmap: false,
     radar: false
+  },
+  radarAnim: {
+    frames: [],
+    idx: 0,
+    playing: false,
+    timer: null
   },
   hydroSim: {
     rainMm: 70,
@@ -124,29 +139,26 @@ const state = {
   travelMode: 'bike',
   reportPin: { lat: VIETNAM_ZONES[0].lat, lng: VIETNAM_ZONES[0].lng },
   reportPhotoDataUrl: '',
-  // Phân hệ 2: Nhà Nghiên cứu & Kiểm duyệt
+  // Phân hệ 2: Nhà Nghiên cứu
   researcherToken: sessionStorage.getItem(RESEARCHER_TOKEN_KEY) || '',
   researcherProfile: null,
   mySubmissions: [],
+  studyDrawMode: 'point',
   draftStudyPoints: [],
-  reviewerToken: sessionStorage.getItem(REVIEWER_TOKEN_KEY) || '',
+  draftStudyShapes: [],
   // Phân hệ 3: Bản tin & Công bố
   newsKind: 'all',
   newsRegion: 'all',
+  newsSearchText: '',
   publications: [],
-  newsStats: { disasterNewsCount: 0, researchArticleCount: 0, verifiedResearchersCount: 0 },
-  // Phân hệ 4: Dev & Quản trị Hệ thống
-  devTab: 'mod',
-  devAllRows: [],
-  devAuditLog: [],
-  devReviewQueue: [],
-  devStorageBackend: '--'
+  newsStats: { disasterNewsCount: 0, researchArticleCount: 0, verifiedResearchersCount: 0 }
 };
 
 let nationalMap = null;
 let baseTileLayer = null;
 let radarTileLayer = null;
 let hydroSurfaceLayer = null;
+let flowVectorsLayer = null;
 let heatmapLayer = null;
 let zoneCircleLayer = null;
 let basinsLayer = null;
@@ -409,7 +421,8 @@ function updateHydroSummaryBar() {
     el.textContent = 'Đang quét địa hình vùng...';
     return;
   }
-  el.textContent = `Trũng ~${g.stats.lowlandPct}% · Nền ${g.stats.minM}–${g.stats.maxM} m (${g.rows}×${g.cols})`;
+  const slopeHint = (g.stats.steepPct || 0) >= 6 ? ` · Sườn dốc: ${g.stats.steepPct}%` : '';
+  el.textContent = `Trũng ~${g.stats.lowlandPct}%${slopeHint} · Nền ${g.stats.minM}–${g.stats.maxM} m (${g.rows}×${g.cols})`;
 }
 
 async function refreshActiveZoneData({ flyMap = true } = {}) {
@@ -417,17 +430,18 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
   updateOfflineStrip();
 
   const { lat, lng, radiusKm } = state.zone;
+  state.riverDischarge = null;
 
   const baselineInZone = filterFeaturesInZone(ALL_STATIC_POINTS, lat, lng, radiusKm, 200);
   state.zoneCorridors = filterCorridorsInZone(ALL_STATIC_CORRIDORS, lat, lng, radiusKm);
   state.zonePoints = baselineInZone;
 
-  // Khởi tạo tức thì lưới DEM lõi Đông Ngạc nếu nằm trong vùng 2km
   ensureZoneDemGrid(lat, lng, radiusKm).then((demObj) => {
     if (demObj && Math.abs(state.zone.lat - lat) < 0.001) {
       state.hydroSim.demGrid = demObj;
       updateHydroSummaryBar();
       hydroSurfaceLayer?.redraw();
+      flowVectorsLayer?.redraw();
     }
   });
 
@@ -438,12 +452,15 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
   const osmStatusEl = document.getElementById('osm-enrich-status');
   if (osmStatusEl) osmStatusEl.textContent = 'Đang tải OSM...';
 
-  const [weatherRes, aqiRes, commRes, researchRes, osmRes] = await Promise.allSettled([
+  const [weatherRes, aqiRes, floodRes, commRes, researchRes, osmRes] = await Promise.allSettled([
     fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,apparent_temperature,precipitation,rain,wind_speed_10m&hourly=precipitation,precipitation_probability,temperature_2m&forecast_hours=24&daily=precipitation_sum,temperature_2m_max&timezone=Asia%2FBangkok&forecast_days=2`
     ).then((r) => (r.ok ? r.json() : null)),
     fetch(
       `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=us_aqi,pm2_5,pm10&timezone=Asia%2FBangkok`
+    ).then((r) => (r.ok ? r.json() : null)),
+    fetch(
+      `https://flood-api.open-meteo.com/v1/flood?latitude=${lat}&longitude=${lng}&daily=river_discharge,river_discharge_mean&past_days=7&forecast_days=14`
     ).then((r) => (r.ok ? r.json() : null)),
     fetch(
       `${PROJECT_CONFIG.communityApiUrl || '/api/community'}?action=public_sync&lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`
@@ -483,6 +500,21 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
   if (aqiRes.status === 'fulfilled' && aqiRes.value?.current) {
     const a = aqiRes.value.current;
     state.aqi = { usAqi: Number(a.us_aqi), pm25: Number(a.pm2_5), pm10: Number(a.pm10) };
+  }
+
+  if (floodRes.status === 'fulfilled' && Array.isArray(floodRes.value?.daily?.river_discharge)) {
+    const vals = floodRes.value.daily.river_discharge.map((v) => (Number.isFinite(Number(v)) ? Number(v) : 0));
+    const means = (floodRes.value.daily.river_discharge_mean || []).map((v) => (Number.isFinite(Number(v)) ? Number(v) : 0));
+    const dates = floodRes.value.daily.time || [];
+    const todayIdx = Math.min(7, Math.max(0, vals.length - 1));
+    const todayVal = vals[todayIdx] ?? 0;
+    const meanVal = means[todayIdx] || vals.reduce((s, x) => s + x, 0) / Math.max(1, vals.length);
+    const forecastSlice = vals.slice(todayIdx);
+    const peak14d = forecastSlice.length ? Math.max(...forecastSlice) : todayVal;
+    const ratioVsMean = meanVal > 0.2 ? Math.round((todayVal / meanVal) * 100) / 100 : 1;
+    state.riverDischarge = { dates, vals, means, todayIdx, todayVal, peak14d, ratioVsMean };
+  } else {
+    state.riverDischarge = null;
   }
 
   const commOk = commRes.status === 'fulfilled' && commRes.value?.ok ? commRes.value : null;
@@ -640,7 +672,67 @@ function renderPublicOverview({ flyMap = false } = {}) {
   document.getElementById('env-zone-points-desc').textContent = `${riskCount} rủi ro · ${safeCount} y tế/trú · ${state.osmWaterways.length} thủy hệ`;
 
   renderHourlyRainChart();
+  renderRiverDischargeChart();
   renderZoneMapAndList({ flyMap });
+}
+
+function renderRiverDischargeChart() {
+  const badgeEl = document.getElementById('river-discharge-badge');
+  const metaEl = document.getElementById('river-discharge-meta');
+  const svgMount = document.getElementById('river-hydrograph-svg');
+  if (!badgeEl || !metaEl || !svgMount) return;
+
+  const rd = state.riverDischarge;
+  if (!rd || !Array.isArray(rd.vals) || rd.vals.length < 5) {
+    badgeEl.textContent = 'Mô hình thủy văn lưu vực';
+    metaEl.innerHTML = `<span>Hiện tại: <strong>-- m³/s</strong></span><span>Đỉnh 14 ngày: <strong>--</strong></span><span>So với TB mùa: <strong>--</strong></span>`;
+    svgMount.innerHTML = `<svg viewBox="0 0 320 58" preserveAspectRatio="none"><line x1="0" y1="48" x2="320" y2="48" stroke="#CBD5E1" stroke-dasharray="3 3"/></svg>`;
+    return;
+  }
+
+  const maxV = Math.max(1, ...rd.vals, ...(rd.means || []));
+  const minV = Math.min(0, ...rd.vals);
+  const span = Math.max(1, maxV - minV);
+  const W = 320;
+  const H = 58;
+  const toPt = (v, i) => {
+    const x = 6 + (i / (rd.vals.length - 1)) * (W - 12);
+    const y = H - 7 - ((v - minV) / span) * (H - 16);
+    return [x, y];
+  };
+
+  const allPts = rd.vals.map(toPt);
+  const pastPts = allPts.slice(0, rd.todayIdx + 1);
+  const futPts = allPts.slice(rd.todayIdx);
+  const meanPts = (rd.means || []).length === rd.vals.length ? rd.means.map(toPt) : [];
+
+  const polyStr = (arr) => arr.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+  const [tx, ty] = allPts[rd.todayIdx] || [110, 30];
+  const areaPts = `${allPts[0][0].toFixed(1)},${H - 4} ${polyStr(allPts)} ${allPts[allPts.length - 1][0].toFixed(1)},${H - 4}`;
+
+  const statusTxt =
+    rd.ratioVsMean >= 1.5
+      ? `Dâng cao (×${rd.ratioVsMean.toFixed(1)} TB)`
+      : rd.ratioVsMean >= 1.2
+        ? `Trên TB (×${rd.ratioVsMean.toFixed(1)})`
+        : 'Ổn định theo mùa';
+  badgeEl.textContent = statusTxt;
+  metaEl.innerHTML = `
+    <span>Hiện tại: <strong>${rd.todayVal.toFixed(1)} m³/s</strong></span>
+    <span>Đỉnh 14d: <strong>${rd.peak14d.toFixed(1)} m³/s</strong></span>
+    <span>TB mùa: <strong>×${rd.ratioVsMean.toFixed(2)}</strong></span>
+  `;
+
+  svgMount.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Đồ thị lưu lượng sông 21 ngày">
+      <polygon fill="rgba(14, 165, 233, 0.14)" points="${areaPts}" />
+      ${meanPts.length ? `<polyline fill="none" stroke="#94A3B8" stroke-width="1.2" stroke-dasharray="3 3" points="${polyStr(meanPts)}" />` : ''}
+      <polyline fill="none" stroke="#0F766E" stroke-width="2.1" points="${polyStr(pastPts)}" />
+      <polyline fill="none" stroke="#0284C7" stroke-width="2" stroke-dasharray="4 3" points="${polyStr(futPts)}" />
+      <line x1="${tx.toFixed(1)}" y1="4" x2="${tx.toFixed(1)}" y2="${H - 4}" stroke="#DC2626" stroke-width="1.2" stroke-dasharray="2 2" />
+      <circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="3.2" fill="#DC2626" stroke="#FFFFFF" stroke-width="1.2" />
+    </svg>
+  `;
 }
 
 /* =========================================================================
@@ -661,14 +753,25 @@ function ensureNationalMap() {
   // Lớp Mặt phủ ngập nước thủy văn 60fps Canvas (Mặc định bật)
   hydroSurfaceLayer = createNationalHydroSurfaceLayer(window.L, () => ({
     enabled: state.layers.hydroSurface,
+    showSlope: state.layers.flowVectors,
     simRainMm: state.hydroSim.rainMm,
     opacity: state.hydroSim.opacity,
+    dischargeRatio: state.riverDischarge?.ratioVsMean || 1,
     centerLat: state.zone.lat,
     centerLng: state.zone.lng,
     radiusKm: state.zone.radiusKm,
     demGrid: state.hydroSim.demGrid,
     points: state.zonePoints,
     waterways: state.osmWaterways
+  })).addTo(nationalMap);
+
+  flowVectorsLayer = createHydroFlowVectorsLayer(window.L, () => ({
+    enabled: state.layers.flowVectors,
+    isDark: state.basemap === 'dark' || state.basemap === 'satellite',
+    centerLat: state.zone.lat,
+    centerLng: state.zone.lng,
+    radiusKm: state.zone.radiusKm,
+    demGrid: state.hydroSim.demGrid
   })).addTo(nationalMap);
 
   heatmapLayer = createNationalHeatmapLayer(window.L, () => state.zonePoints);
@@ -709,10 +812,41 @@ function setBasemap(key) {
   baseTileLayer.bringToBack();
 }
 
+function renderRadarFrame() {
+  if (!nationalMap || !state.layers.radar || state.radarAnim.frames.length === 0) return;
+  const frame = state.radarAnim.frames[state.radarAnim.idx] || state.radarAnim.frames[state.radarAnim.frames.length - 1];
+  if (!frame?.path) return;
+  if (radarTileLayer) nationalMap.removeLayer(radarTileLayer);
+  radarTileLayer = window.L.tileLayer(`https://tilecache.rainviewer.com${frame.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+    opacity: 0.58,
+    maxNativeZoom: 7,
+    maxZoom: 18,
+    attribution: 'Radar &copy; RainViewer'
+  }).addTo(nationalMap);
+  const timeEl = document.getElementById('radar-frame-time');
+  if (timeEl && frame.time) {
+    const dt = new Date(frame.time * 1000);
+    timeEl.textContent = `${dt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} (${state.radarAnim.idx + 1}/${state.radarAnim.frames.length})`;
+  }
+}
+
+function stopRadarPlayback() {
+  if (state.radarAnim.timer) {
+    clearInterval(state.radarAnim.timer);
+    state.radarAnim.timer = null;
+  }
+  state.radarAnim.playing = false;
+  const playBtn = document.getElementById('btn-radar-play');
+  if (playBtn) playBtn.textContent = '▶ Phát động';
+}
+
 async function toggleRadarOverlay(enable) {
   state.layers.radar = Boolean(enable);
+  const bar = document.getElementById('radar-timeline-bar');
   if (!nationalMap) return;
   if (!enable) {
+    stopRadarPlayback();
+    if (bar) bar.hidden = true;
     if (radarTileLayer) {
       nationalMap.removeLayer(radarTileLayer);
       radarTileLayer = null;
@@ -722,20 +856,16 @@ async function toggleRadarOverlay(enable) {
   try {
     const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
     const data = res.ok ? await res.json() : null;
-    const frames = data?.radar?.past || [];
-    const latest = frames[frames.length - 1];
-    if (!latest?.path) {
+    const past = (data?.radar?.past || []).slice(-6);
+    if (past.length === 0) {
       showToast('Hiện chưa có khung ảnh Radar RainViewer mới.');
       return;
     }
-    if (radarTileLayer) nationalMap.removeLayer(radarTileLayer);
-    radarTileLayer = window.L.tileLayer(`https://tilecache.rainviewer.com${latest.path}/256/{z}/{x}/{y}/2/1_1.png`, {
-      opacity: 0.56,
-      maxNativeZoom: 7,
-      maxZoom: 18,
-      attribution: 'Radar &copy; RainViewer'
-    }).addTo(nationalMap);
-    showToast('Đã bật lớp phủ Radar Mưa trực tiếp (RainViewer).');
+    state.radarAnim.frames = past;
+    state.radarAnim.idx = past.length - 1;
+    if (bar) bar.hidden = false;
+    renderRadarFrame();
+    showToast('Đã bật lớp Radar mưa 2 giờ qua — bấm ▶ Phát động để xem hướng di chuyển mây mưa.');
   } catch {
     showToast('Không thể kết nối máy chủ Radar RainViewer lúc này.');
   }
@@ -771,25 +901,45 @@ async function inspectClickedCoordinate(lat, lng) {
   if (!box) return;
   box.hidden = false;
 
-  const renderCard = (elevLabel) => {
+  const localDem = sampleAnyDemGrid(state.hydroSim.demGrid, lat, lng);
+  const grad = computeTerrainGradient(state.hydroSim.demGrid, lat, lng);
+  const medianM = state.hydroSim.demGrid?.stats?.p50M ?? state.hydroSim.demGrid?.stats?.p45M ?? null;
+
+  const renderCard = (elevNum) => {
     const r0 = nearRisks[0];
     const s0 = nearSafe[0];
+    const relDiff = elevNum !== null && medianM !== null ? Math.round((elevNum - medianM) * 10) / 10 : null;
+    const relText =
+      relDiff === null
+        ? 'Đang đối chiếu mặt bằng vùng'
+        : relDiff <= -1.2
+          ? `Thấp hơn mặt bằng ${relDiff} m (Dễ tụ nước)`
+          : relDiff >= 1.5
+            ? `Cao hơn mặt bằng +${relDiff} m (Thoát tốt)`
+            : `Ngang mặt bằng vùng (${relDiff >= 0 ? '+' : ''}${relDiff} m)`;
+    const slopeTxt = grad ? `${grad.slopeDeg}° (${grad.slopeDeg >= 16 ? 'Sườn dốc cao' : 'Thoải / Bằng'})` : 'Đang tính...';
+
     box.innerHTML = `
-      <div class="section-head-row" style="margin-bottom:6px;">
-        <strong>Tra cứu Tọa độ Chạm</strong>
+      <div class="section-head-row" style="margin-bottom:4px;">
+        <strong>Chẩn đoán Vi mô Tọa độ Chạm</strong>
         <button type="button" id="btn-close-selected-pt" class="text-btn">Đóng</button>
       </div>
-      <div class="place-card-meta" style="margin-bottom:6px;">
-        <span class="mono-badge">${lat.toFixed(5)}°N, ${lng.toFixed(5)}°E</span>
-        <span class="mono-badge subtle">${esc(elevLabel)}</span>
+      <div class="spot-diag-grid">
+        <div class="spot-diag-cell"><span>Tọa độ</span><strong>${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E</strong></div>
+        <div class="spot-diag-cell"><span>Cao độ mặt đất</span><strong>${elevNum !== null ? `~${elevNum.toFixed(1)} m` : 'Đang đo...'}</strong></div>
+        <div class="spot-diag-cell"><span>Độ dốc bề mặt</span><strong>${esc(slopeTxt)}</strong></div>
+        <div class="spot-diag-cell"><span>Tương quan địa hình</span><strong>${esc(relText)}</strong></div>
       </div>
       <p class="place-card-desc">
-        ${r0 ? `<strong>Điểm rủi ro gần nhất:</strong> ${esc(r0.name)} (${esc(formatDistancePlain(r0.d))})<br>` : 'Chưa ghi nhận điểm rủi ro nào gần tọa độ này trong vòng khoanh.<br>'}
-        ${s0 ? `<strong>Cơ sở y tế / hỗ trợ gần nhất:</strong> ${esc(s0.name)} (${esc(formatDistancePlain(s0.d))})` : 'Chưa tìm thấy trạm y tế gần hơn trong bộ dữ liệu hiện tại.'}
+        ${r0 ? `<strong>Điểm rủi ro gần nhất:</strong> ${esc(r0.name)} (${esc(formatDistancePlain(r0.d))})<br>` : ''}
+        ${s0 ? `<strong>Y tế / Điểm trú gần nhất:</strong> ${esc(s0.name)} (${esc(formatDistancePlain(s0.d))})` : 'Chưa tìm thấy cơ sở hỗ trợ gần hơn trong vùng khoanh.'}
       </p>
+      <div id="spot-dynamic-extra"></div>
       <div class="place-card-actions" style="margin-top:6px;">
-        <button type="button" class="btn btn-sm btn-primary js-spot-rezone" data-lat="${lat}" data-lng="${lng}">Khoanh vùng tại đây</button>
-        <button type="button" class="btn btn-sm btn-secondary js-spot-report" data-lat="${lat}" data-lng="${lng}">Báo sự cố tại tọa độ này</button>
+        ${s0 ? `<button type="button" class="btn btn-sm btn-primary js-spot-evacuate" data-lat="${lat}" data-lng="${lng}" data-slat="${s0.lat}" data-slng="${s0.lng}" data-sname="${esc(s0.name)}">Dẫn đường tới Y tế/Trú</button>` : ''}
+        <button type="button" class="btn btn-sm btn-secondary js-spot-profile" data-lat="${lat}" data-lng="${lng}">Mặt cắt 2 km</button>
+        <button type="button" class="btn btn-sm btn-secondary js-spot-rezone" data-lat="${lat}" data-lng="${lng}">Khoanh vùng</button>
+        <button type="button" class="btn btn-sm btn-secondary js-spot-report" data-lat="${lat}" data-lng="${lng}">Báo sự cố</button>
       </div>
     `;
     document.getElementById('btn-close-selected-pt')?.addEventListener('click', () => {
@@ -797,18 +947,16 @@ async function inspectClickedCoordinate(lat, lng) {
     });
   };
 
-  renderCard('Đang đo cao độ vệ tinh...');
-  try {
-    const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat.toFixed(5)}&longitude=${lng.toFixed(5)}`);
-    const data = res.ok ? await res.json() : null;
-    const elev = Number(data?.elevation?.[0]);
-    if (Number.isFinite(elev)) {
-      renderCard(`Cao độ mặt đất ~${elev.toFixed(1)} m`);
-    } else {
-      renderCard('Chưa rõ cao độ');
+  renderCard(localDem !== null ? localDem : null);
+  if (localDem === null) {
+    try {
+      const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat.toFixed(5)}&longitude=${lng.toFixed(5)}`);
+      const data = res.ok ? await res.json() : null;
+      const elev = Number(data?.elevation?.[0]);
+      if (Number.isFinite(elev)) renderCard(elev);
+    } catch {
+      // keep local card
     }
-  } catch {
-    renderCard('Chưa rõ cao độ (offline)');
   }
 }
 
@@ -896,21 +1044,18 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
       }).addTo(basinsLayer);
     }
 
-    // Vẽ các rốn trũng vệ tinh LOW_DEM_BASINS nếu giao cắt vùng đang khoanh
-    for (const basin of LOW_DEM_BASINS) {
-      const hit = (basin.coordinates || []).some(
-        ([bLat, bLng]) => haversineMeters(state.zone.lat, state.zone.lng, bLat, bLng) <= state.zone.radiusKm * 1000 + 800
-      );
-      if (!hit) continue;
+    // Vẽ các rốn trũng đa đô thị (Đông Ngạc + Hà Nội, Huế, Đà Nẵng, Hội An, TP.HCM, Cần Thơ...) nếu giao cắt vùng khoanh
+    const localBasins = filterBasinsInZone(ALL_STATIC_BASINS, state.zone.lat, state.zone.lng, state.zone.radiusKm);
+    for (const basin of localBasins) {
       window.L.polygon(basin.coordinates, {
         color: '#0284C7',
-        weight: 1.6,
+        weight: 1.7,
         dashArray: '5 4',
         fillColor: '#0EA5E9',
-        fillOpacity: 0.12
+        fillOpacity: 0.13
       })
         .bindPopup(
-          `<strong>${esc(basin.name)}</strong><br><small>Ngưỡng mưa tích nước tham chiếu: ~${basin.rainThresholdMm} mm · Cao độ nền: ${esc(basin.demRange.replace('DSM', ''))}</small>`
+          `<strong>${esc(basin.name)}</strong><br><small>Ngưỡng mưa tích nước tham chiếu: ~${basin.rainThresholdMm} mm · Cao độ nền: ${esc(String(basin.demRange || '').replace('DSM', ''))}</small>`
         )
         .addTo(basinsLayer);
     }
@@ -982,6 +1127,7 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
   }
 
   hydroSurfaceLayer?.redraw();
+  flowVectorsLayer?.redraw();
   if (state.layers.heatmap) heatmapLayer?.redraw();
 
   if (flyMap && ring.getBounds().isValid()) {
@@ -1497,14 +1643,42 @@ function ensureStudyStudioMap() {
     window.L.tileLayer(BASEMAP_PROVIDERS.osm.url, { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(studyMap);
     studyDraftLayer = window.L.layerGroup().addTo(studyMap);
     studyMap.on('click', (ev) => {
-      const idx = state.draftStudyPoints.length + 1;
-      state.draftStudyPoints.push({
-        name: `Điểm khảo sát ${idx} (${getSelectedStudyProvinceMeta().province})`,
-        lat: Math.round(ev.latlng.lat * 1_000_000) / 1_000_000,
-        lng: Math.round(ev.latlng.lng * 1_000_000) / 1_000_000,
-        category: document.getElementById('sub-hazard')?.value || 'flood',
-        notes: 'Điểm khảo sát do nhà nghiên cứu gắn trực tiếp trên bản đồ.'
-      });
+      const lat = Math.round(ev.latlng.lat * 1_000_000) / 1_000_000;
+      const lng = Math.round(ev.latlng.lng * 1_000_000) / 1_000_000;
+      const cat = document.getElementById('sub-hazard')?.value || 'flood';
+      const prov = getSelectedStudyProvinceMeta().province;
+
+      if (state.studyDrawMode === 'point') {
+        const idx = state.draftStudyPoints.length + 1;
+        state.draftStudyPoints.push({
+          name: `Điểm khảo sát ${idx} (${prov})`,
+          lat,
+          lng,
+          category: cat,
+          notes: 'Điểm khảo sát do nhà nghiên cứu gắn trực tiếp trên bản đồ.'
+        });
+      } else {
+        const kind = state.studyDrawMode; // 'line' | 'polygon'
+        let activeShape = state.draftStudyShapes[state.draftStudyShapes.length - 1];
+        if (!activeShape || activeShape.kind !== kind) {
+          activeShape = {
+            kind,
+            name: `${kind === 'polygon' ? 'Vùng đa giác' : 'Tuyến khảo sát'} ${state.draftStudyShapes.length + 1} (${prov})`,
+            category: cat,
+            coords: []
+          };
+          state.draftStudyShapes.push(activeShape);
+        }
+        activeShape.coords.push([lat, lng]);
+        // Đồng bộ đỉnh đại diện vào danh sách điểm kiểm định để hiển thị ngay trên bản đồ vùng khoanh
+        state.draftStudyPoints.push({
+          name: `${activeShape.name} · Đỉnh ${activeShape.coords.length}`,
+          lat,
+          lng,
+          category: cat,
+          notes: `Thuộc ${kind === 'polygon' ? 'đa giác vùng ngập/rủi ro' : 'hành lang tuyến khảo sát'}.`
+        });
+      }
       renderStudyDraftOverlay();
     });
   }
@@ -1515,10 +1689,11 @@ function ensureStudyStudioMap() {
 function renderStudyDraftOverlay() {
   const prev = document.getElementById('sub-points-preview');
   if (prev) {
+    const shapeInfo = state.draftStudyShapes.length > 0 ? ` + ${state.draftStudyShapes.length} tuyến/vùng đa giác` : '';
     prev.textContent =
       state.draftStudyPoints.length > 0
-        ? `Đã chuẩn bị ${state.draftStudyPoints.length} điểm dữ liệu sẵn sàng gửi kiểm định (VD: ${state.draftStudyPoints[0].name}).`
-        : 'Chưa có điểm nào được gắn. Chạm bản đồ hoặc nạp tệp GeoJSON.';
+        ? `Đã chuẩn bị ${state.draftStudyPoints.length} tọa độ${shapeInfo} sẵn sàng gửi kiểm định.`
+        : 'Chưa có đối tượng nào được vẽ. Chọn Điểm / Tuyến / Vùng rồi chạm bản đồ hoặc nạp tệp GeoJSON.';
   }
   if (!studyMap || !studyDraftLayer) return;
   studyDraftLayer.clearLayers();
@@ -1531,9 +1706,21 @@ function renderStudyDraftOverlay() {
     fillOpacity: 0.05
   }).addTo(studyDraftLayer);
 
+  for (const sh of state.draftStudyShapes) {
+    if (sh.kind === 'polygon' && sh.coords.length >= 3) {
+      window.L.polygon(sh.coords, { color: '#0284C7', weight: 2, fillColor: '#0EA5E9', fillOpacity: 0.2 })
+        .bindTooltip(sh.name)
+        .addTo(studyDraftLayer);
+    } else if (sh.coords.length >= 2) {
+      window.L.polyline(sh.coords, { color: '#DC2626', weight: 3.5 })
+        .bindTooltip(sh.name)
+        .addTo(studyDraftLayer);
+    }
+  }
+
   for (const pt of state.draftStudyPoints) {
     window.L.circleMarker([pt.lat, pt.lng], {
-      radius: 7,
+      radius: 6.5,
       color: '#FFFFFF',
       weight: 2,
       fillColor: '#0F766E',
@@ -1542,6 +1729,43 @@ function renderStudyDraftOverlay() {
       .bindTooltip(pt.name)
       .addTo(studyDraftLayer);
   }
+}
+
+function exportStudyDraftGeoJson() {
+  if (state.draftStudyPoints.length === 0 && state.draftStudyShapes.length === 0) {
+    showToast('Chưa có đối tượng không gian nào trên bản đồ nghiên cứu để xuất.');
+    return;
+  }
+  const meta = getSelectedStudyProvinceMeta();
+  const features = [
+    ...state.draftStudyPoints.map((p) => ({
+      type: 'Feature',
+      properties: { name: p.name, category: p.category, province: meta.province, notes: p.notes },
+      geometry: { type: 'Point', coordinates: [p.lng, p.lat] }
+    })),
+    ...state.draftStudyShapes
+      .filter((s) => s.coords.length >= (s.kind === 'polygon' ? 3 : 2))
+      .map((s) => ({
+        type: 'Feature',
+        properties: { name: s.name, category: s.category, province: meta.province },
+        geometry:
+          s.kind === 'polygon'
+            ? {
+                type: 'Polygon',
+                coordinates: [[...s.coords.map(([la, ln]) => [ln, la]), [s.coords[0][1], s.coords[0][0]]]]
+              }
+            : {
+                type: 'LineString',
+                coordinates: s.coords.map(([la, ln]) => [ln, la])
+              }
+      }))
+  ];
+  downloadFile(
+    JSON.stringify({ type: 'FeatureCollection', crs: 'EPSG:4326', generatedAt: new Date().toISOString(), features }, null, 2),
+    `vn-research-draft-${Date.now()}.geojson`,
+    'application/geo+json;charset=utf-8'
+  );
+  showToast(`Đã tải xuống tệp .GeoJSON (${features.length} đối tượng).`);
 }
 
 async function runVietnamElevationTransect() {
@@ -1770,12 +1994,17 @@ async function loadPublicationsFeed() {
   document.getElementById('stat-research-count').textContent = String(state.newsStats.researchArticleCount || 0);
   document.getElementById('stat-researcher-count').textContent = String(state.newsStats.verifiedResearchersCount || 0);
 
-  if (state.publications.length === 0) {
-    listEl.innerHTML = `<div class="card-panel"><p class="muted-body">Chưa có bài viết nào thuộc vùng/danh mục này.</p></div>`;
+  const kw = state.newsSearchText.trim().toLowerCase();
+  const shownPubs = kw
+    ? state.publications.filter((p) => `${p.title || ''} ${p.summary || ''} ${p.province || ''} ${p.authorName || ''}`.toLowerCase().includes(kw))
+    : state.publications;
+
+  if (shownPubs.length === 0) {
+    listEl.innerHTML = `<div class="card-panel"><p class="muted-body">Chưa có bài viết nào khớp bộ lọc / từ khóa hiện tại.</p></div>`;
     return;
   }
 
-  listEl.innerHTML = state.publications
+  listEl.innerHTML = shownPubs
     .map((item) => {
       const isResearch = item.kind === 'research_article';
       const cardCls = isResearch
@@ -1783,6 +2012,7 @@ async function loadPublicationsFeed() {
         : item.severity === 'high'
           ? 'is-news-high'
           : 'is-news-attention';
+      const citeText = `${item.authorName} (${new Date(item.publishedAt || Date.now()).getFullYear()}). ${item.title}. ${item.organization} — VN Resilience Atlas (${item.province}).`;
       return `
         <article class="pub-card ${cardCls}">
           <div class="place-card-meta">
@@ -1800,6 +2030,9 @@ async function loadPublicationsFeed() {
           <div class="form-actions-row">
             <button type="button" class="btn btn-sm btn-primary js-open-pub-zone" data-lat="${item.focusLat}" data-lng="${item.focusLng}" data-radius="${item.focusRadiusKm}" data-name="${esc(item.province)}">
               Mở vùng trên Bản đồ chính
+            </button>
+            <button type="button" class="btn btn-sm btn-secondary js-copy-citation" data-cite="${esc(citeText)}">
+              Chép trích dẫn
             </button>
           </div>
         </article>`;
@@ -1945,6 +2178,9 @@ function bindEvents() {
 
       if (layer === 'radar') {
         toggleRadarOverlay(next);
+      } else if (layer === 'flowVectors') {
+        flowVectorsLayer?.redraw();
+        hydroSurfaceLayer?.redraw();
       } else if (layer === 'hydroSurface') {
         const strip = document.getElementById('hydro-sim-strip');
         if (strip) strip.hidden = !next;
@@ -2006,6 +2242,32 @@ function bindEvents() {
     const lb = document.getElementById('hydro-opacity-label');
     if (lb) lb.textContent = `${pct}%`;
     hydroSurfaceLayer?.redraw();
+  });
+
+  document.getElementById('btn-radar-prev')?.addEventListener('click', () => {
+    if (!state.radarAnim.frames.length) return;
+    stopRadarPlayback();
+    state.radarAnim.idx = (state.radarAnim.idx - 1 + state.radarAnim.frames.length) % state.radarAnim.frames.length;
+    renderRadarFrame();
+  });
+  document.getElementById('btn-radar-next')?.addEventListener('click', () => {
+    if (!state.radarAnim.frames.length) return;
+    stopRadarPlayback();
+    state.radarAnim.idx = (state.radarAnim.idx + 1) % state.radarAnim.frames.length;
+    renderRadarFrame();
+  });
+  document.getElementById('btn-radar-play')?.addEventListener('click', () => {
+    if (!state.radarAnim.frames.length) return;
+    if (state.radarAnim.playing) {
+      stopRadarPlayback();
+      return;
+    }
+    state.radarAnim.playing = true;
+    document.getElementById('btn-radar-play').textContent = '⏸ Tạm dừng';
+    state.radarAnim.timer = setInterval(() => {
+      state.radarAnim.idx = (state.radarAnim.idx + 1) % state.radarAnim.frames.length;
+      renderRadarFrame();
+    }, 850);
   });
 
   // Lọc đối tượng & chế độ mobile
@@ -2165,8 +2427,16 @@ function bindEvents() {
     );
     renderStudyDraftOverlay();
   });
+  document.querySelectorAll('[data-drawmode]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.studyDrawMode = btn.dataset.drawmode;
+      document.querySelectorAll('[data-drawmode]').forEach((b) => b.classList.toggle('is-active', b === btn));
+    });
+  });
+  document.getElementById('btn-export-draft-geojson')?.addEventListener('click', exportStudyDraftGeoJson);
   document.getElementById('btn-clear-study-pts')?.addEventListener('click', () => {
     state.draftStudyPoints = [];
+    state.draftStudyShapes = [];
     renderStudyDraftOverlay();
   });
   document.getElementById('sub-geojson-file')?.addEventListener('change', async (ev) => {
@@ -2211,6 +2481,10 @@ function bindEvents() {
       loadPublicationsFeed();
     });
   });
+  document.getElementById('news-search-input')?.addEventListener('input', (ev) => {
+    state.newsSearchText = ev.target.value || '';
+    loadPublicationsFeed();
+  });
   document.getElementById('btn-news-to-publish')?.addEventListener('click', () => switchPillar('research'));
 
   // Tiện ích toàn cục
@@ -2249,6 +2523,94 @@ function bindEvents() {
       if (z) {
         document.getElementById('vn-zone-search').value = '';
         selectZone(z, { radiusKm: z.defaultRadiusKm, flyMap: true });
+      }
+      return;
+    }
+
+    const spotEvac = ev.target.closest('.js-spot-evacuate');
+    if (spotEvac) {
+      const lat = Number(spotEvac.dataset.lat);
+      const lng = Number(spotEvac.dataset.lng);
+      const sLat = Number(spotEvac.dataset.slat);
+      const sLng = Number(spotEvac.dataset.slng);
+      const sName = spotEvac.dataset.sname || 'Cơ sở hỗ trợ';
+      const extra = document.getElementById('spot-dynamic-extra');
+      if (extra) extra.innerHTML = `<div class="spot-profile-box">Đang tìm lộ trình ngắn nhất tới <strong>${esc(sName)}</strong>...</div>`;
+      const route = (await fetchOsrm([[lat, lng], [sLat, sLng]], 'bike')) || {
+        coordsLngLat: [[lng, lat], [sLng, sLat]],
+        distanceKm: Math.round((haversineMeters(lat, lng, sLat, sLng) * 1.2) / 10) / 100,
+        durationMin: Math.max(2, Math.round(haversineMeters(lat, lng, sLat, sLng) / 280))
+      };
+      if (nationalMap && mainRouteLayer) {
+        mainRouteLayer.clearLayers();
+        const latLngs = route.coordsLngLat.map(([ln, la]) => [la, ln]);
+        const line = window.L.polyline(latLngs, { color: '#16A34A', weight: 5.5, opacity: 0.92 }).addTo(mainRouteLayer);
+        nationalMap.fitBounds(line.getBounds(), { padding: [36, 36], maxZoom: 16 });
+      }
+      if (extra) {
+        extra.innerHTML = `<div class="spot-profile-box"><strong>Tuyến tiếp cận ${esc(sName)}:</strong> Quãng đường <strong>${route.distanceKm} km</strong> (~${route.durationMin} phút di chuyển). Đã vẽ đường màu xanh lá trên bản đồ.</div>`;
+      }
+      return;
+    }
+
+    const spotProfile = ev.target.closest('.js-spot-profile');
+    if (spotProfile) {
+      const lat = Number(spotProfile.dataset.lat);
+      const lng = Number(spotProfile.dataset.lng);
+      const dLng = 1 / (111.32 * Math.max(0.35, Math.cos((lat * Math.PI) / 180))); // ±1 km = 2 km
+      const samples = sampleElevationProfile(state.hydroSim.demGrid, lat, lng - dLng, lat, lng + dLng, 25);
+      const validElevs = samples.map((s) => s.elevM).filter((v) => v !== null);
+      const extra = document.getElementById('spot-dynamic-extra');
+      if (nationalMap && mainRouteLayer) {
+        mainRouteLayer.clearLayers();
+        window.L.polyline(
+          [
+            [lat, lng - dLng],
+            [lat, lng + dLng]
+          ],
+          { color: '#0284C7', weight: 3, dashArray: '5 4' }
+        )
+          .bindTooltip('Tuyến mặt cắt địa hình 2 km (Tây → Đông)')
+          .addTo(mainRouteLayer);
+      }
+      if (extra && validElevs.length >= 5) {
+        const minE = Math.min(...validElevs);
+        const maxE = Math.max(...validElevs);
+        const span = Math.max(1.2, maxE - minE);
+        const stats = state.hydroSim.demGrid?.stats || { minM: minE, p65M: maxE };
+        const relief = Math.max(1.5, stats.p65M - stats.minM);
+        const waterM = stats.minM + relief * (0.26 + 0.68 * Math.min(1.25, state.hydroSim.rainMm / 140));
+        const waterY = Math.max(8, Math.min(54, 54 - ((waterM - minE) / span) * 44));
+        const pts = samples
+          .map((s, idx) => {
+            const val = s.elevM ?? minE;
+            const x = 8 + (idx / (samples.length - 1)) * 244;
+            const y = 54 - ((val - minE) / span) * 44;
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+          })
+          .join(' ');
+        extra.innerHTML = `
+          <div class="spot-profile-box">
+            <strong>Mặt cắt Tây → Đông 2 km:</strong> Thấp nhất <strong>${minE.toFixed(1)} m</strong> · Cao nhất <strong>${maxE.toFixed(1)} m</strong>
+            <svg viewBox="0 0 260 62" style="width:100%;height:58px;display:block;margin-top:4px;background:#fff;border-radius:4px;border:1px solid #E2E8F0;">
+              <rect x="8" y="${waterY.toFixed(1)}" width="244" height="${Math.max(0, 56 - waterY).toFixed(1)}" fill="rgba(14,165,233,0.22)" />
+              <line x1="8" y1="${waterY.toFixed(1)}" x2="252" y2="${waterY.toFixed(1)}" stroke="#0284C7" stroke-width="1.2" stroke-dasharray="3 2" />
+              <polygon fill="rgba(15,118,110,0.16)" points="8,56 ${pts} 252,56" />
+              <polyline fill="none" stroke="#0F766E" stroke-width="2" points="${pts}" />
+              <circle cx="130" cy="${(54 - (((samples[12]?.elevM ?? minE) - minE) / span) * 44).toFixed(1)}" r="3" fill="#DC2626" />
+            </svg>
+          </div>`;
+      }
+      return;
+    }
+
+    const citeBtn = ev.target.closest('.js-copy-citation');
+    if (citeBtn) {
+      try {
+        await navigator.clipboard.writeText(citeBtn.dataset.cite || '');
+        showToast('Đã sao chép trích dẫn khoa học vào bộ nhớ tạm.');
+      } catch {
+        showToast(citeBtn.dataset.cite || '');
       }
       return;
     }

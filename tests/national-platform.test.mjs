@@ -13,10 +13,17 @@ import { SAMPLE_HUMG_POINTS } from '../humg-data.js';
 import {
   VIETNAM_VERIFIED_HOTSPOTS,
   VIETNAM_VERIFIED_CORRIDORS,
-  filterCorridorsInZone
+  VIETNAM_VERIFIED_BASINS,
+  filterCorridorsInZone,
+  filterBasinsInZone
 } from '../platform/data/vietnam-verified-hotspots.js';
 import { GET as researchGET, POST as researchPOST, OPTIONS as researchOPTIONS } from '../api/research-portal.js';
-import { ensureZoneDemGrid, sampleAnyDemGrid } from '../platform/gis/hydro-surface.js';
+import {
+  ensureZoneDemGrid,
+  sampleAnyDemGrid,
+  computeTerrainGradient,
+  sampleElevationProfile
+} from '../platform/gis/hydro-surface.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -56,6 +63,9 @@ try {
   assert.ok(VIETNAM_VERIFIED_CORRIDORS.length >= 12, 'Phải có >= 12 hành lang rủi ro đa đô thị');
   const daNangCorridors = filterCorridorsInZone(VIETNAM_VERIFIED_CORRIDORS, 16.0544, 108.2022, 10);
   assert.ok(daNangCorridors.length >= 2, 'Khoanh vùng Đà Nẵng phải có hành lang ngập kiểm chứng');
+  assert.ok(VIETNAM_VERIFIED_BASINS.length >= 10, 'Phải có >= 10 đa giác rốn ngập đô thị đa tỉnh/thành');
+  const hueBasins = filterBasinsInZone(VIETNAM_VERIFIED_BASINS, 16.4637, 107.5909, 8);
+  assert.ok(hueBasins.length >= 2, 'Khoanh vùng TP. Huế phải có đa giác rốn trũng ven sông Hương / Đông Ba');
 
   // Kiểm tra endpoint zone_osm chặn tọa độ ngoài Việt Nam và trả JSON chuẩn trong Việt Nam
   const badOsm = await researchGET(new Request('http://localhost/api/research-portal?action=zone_osm&lat=35.67&lng=139.65&radiusKm=4'));
@@ -80,6 +90,10 @@ try {
   assert.ok(html.includes('data-map-layer="basins"'), 'Phải có nút bật/tắt Rốn trũng & Vành đai');
   assert.ok(html.includes('data-map-layer="heatmap"'), 'Phải có nút bật/tắt Nhiệt rủi ro');
   assert.ok(html.includes('id="hydro-sim-strip"'), 'Phải có thanh điều khiển mô phỏng mặt nước (USGS/NOAA style)');
+  assert.ok(html.includes('data-map-layer="flowVectors"'), 'Phải có lớp Vector Hướng chảy & Độ dốc');
+  assert.ok(html.includes('id="river-discharge-card"'), 'Phải có biểu đồ Lưu lượng dòng chảy lưu vực 21 ngày (GloFAS)');
+  assert.ok(html.includes('id="radar-timeline-bar"'), 'Phải có thanh tua chuỗi thời gian Radar mưa 2 giờ');
+  assert.ok(html.includes('data-drawmode="polygon"'), 'Cổng Nghiên cứu phải hỗ trợ vẽ Đa giác (Polygon) & Tuyến (LineString)');
   assert.ok(!html.includes('id="pillar-dev"'), 'Trang chính tuyệt đối KHÔNG được chứa khu vực Quản trị & Dev');
   assert.ok(!html.includes('data-pillar="dev"'), 'Thanh điều hướng trang chính KHÔNG được hiện nút Quản trị & Dev');
   assert.ok(!html.includes('id="reviewer-panel"'), 'Trang chính KHÔNG được chứa khung nhập ADMIN_PASSCODE');
@@ -127,6 +141,10 @@ try {
   const humgElev = sampleAnyDemGrid(coreDem, 21.072514, 105.77387);
   assert.ok(Number.isFinite(humgElev) && humgElev > 0 && humgElev < 30, 'Nội suy song tuyến tính cao độ HUMG hợp lệ');
   assert.ok(coreDem.stats.lowlandPct > 20, 'Thống kê tỷ lệ vùng trũng hợp lệ');
+  const grad = computeTerrainGradient(coreDem, 21.072514, 105.77387);
+  assert.ok(grad && Number.isFinite(grad.slopeDeg) && grad.slopeDeg >= 0, 'Giải tích gradient độ dốc & hướng chảy hợp lệ');
+  const prof = sampleElevationProfile(coreDem, 21.0725, 105.768, 21.0725, 105.779, 15);
+  assert.equal(prof.length, 15, 'Lấy mẫu mặt cắt địa hình tức thì hợp lệ');
 
   const css = await fs.readFile(path.join(rootDir, 'citizen.css'), 'utf8');
   assert.ok(css.includes('::-webkit-scrollbar-button'), 'CSS phải ẩn nút mũi tên ▼ thanh cuộn mặc định Windows');

@@ -238,6 +238,26 @@
                 </div>
               </article>
 
+              <!-- CHUỖI LƯU LƯỢNG DÒNG CHẢY LƯU VỰC SÔNG 21 NGÀY (COPERNICUS GLOFAS) -->
+              <article id="river-discharge-card" class="telemetry-panel">
+                <div class="section-head-row">
+                  <strong class="panel-label">Lưu lượng dòng chảy lưu vực (m³/s)</strong>
+                  <span id="river-discharge-badge" class="mono-badge subtle">Đang tải chuỗi 21 ngày</span>
+                </div>
+                <div id="river-discharge-meta" class="discharge-meta-row mono-num">
+                  <span>Hiện tại: <strong>--</strong></span>
+                  <span>Đỉnh 14 ngày: <strong>--</strong></span>
+                  <span>So với TB mùa: <strong>--</strong></span>
+                </div>
+                <div id="river-hydrograph-svg" class="hydrograph-mount" aria-label="Đồ thị thủy văn lưu lượng dòng chảy 7 ngày qua và 14 ngày tới"></div>
+                <div class="hourly-axis-labels mono-num">
+                  <span>-7 ngày</span>
+                  <span>Hôm nay</span>
+                  <span>+7 ngày</span>
+                  <span>+14 ngày</span>
+                </div>
+              </article>
+
               <!-- BỘ LỌC & DANH SÁCH ĐỐI TƯỢNG TRONG VÒNG KHOANH -->
               <div class="map-toolbar-card">
                 <div class="filter-pills" role="group" aria-label="Lọc lớp điểm trong vùng đang khoanh">
@@ -431,13 +451,14 @@
               </div>
               <div class="map-ctrl-sep" aria-hidden="true"></div>
               <div class="map-ctrl-group" role="group" aria-label="Lớp chuyên đề thủy văn và hạ tầng">
-                <button type="button" class="map-ctrl-btn is-active" data-map-layer="hydroSurface" aria-pressed="true" title="Mặt phủ nước ngập mô phỏng theo địa hình vệ tinh & điểm ngập">Mặt phủ ngập nước</button>
+                <button type="button" class="map-ctrl-btn is-active" data-map-layer="hydroSurface" aria-pressed="true" title="Mặt phủ nước ngập 3 tầng & cảnh báo sườn dốc sạt lở">Mặt phủ ngập nước</button>
+                <button type="button" class="map-ctrl-btn is-active" data-map-layer="flowVectors" aria-pressed="true" title="Mũi tên hướng nước mưa chảy tràn trên bề mặt xuống vùng trũng">Hướng chảy &amp; Độ dốc</button>
                 <button type="button" class="map-ctrl-btn is-active" data-map-layer="basins" aria-pressed="true" title="Rốn trũng địa hình, vành đai cự ly & tuyến thoát hiểm nền cao">Rốn trũng &amp; Vành đai</button>
                 <button type="button" class="map-ctrl-btn is-active" data-map-layer="corridors" aria-pressed="true" title="Tuyến đường ngập / sạt lở lịch sử">Hành lang rủi ro</button>
                 <button type="button" class="map-ctrl-btn is-active" data-map-layer="waterways" aria-pressed="true" title="Mạng lưới sông, kênh rạch OSM trong vùng">Thủy hệ</button>
                 <button type="button" class="map-ctrl-btn is-active" data-map-layer="osmPoi" aria-pressed="true" title="Bệnh viện, trạm y tế, cứu hỏa OSM trong vùng">Y tế OSM</button>
                 <button type="button" class="map-ctrl-btn" data-map-layer="heatmap" aria-pressed="false" title="Bản đồ nhiệt mật độ điểm rủi ro">Nhiệt rủi ro</button>
-                <button type="button" class="map-ctrl-btn" data-map-layer="radar" aria-pressed="false" title="Ảnh radar mưa thời gian thực RainViewer">Radar mưa</button>
+                <button type="button" class="map-ctrl-btn" data-map-layer="radar" aria-pressed="false" title="Ảnh radar mưa thời gian thực RainViewer (có tua 2 giờ)">Radar mưa</button>
               </div>
             </div>
 
@@ -470,6 +491,15 @@
 
             <div id="national-map" class="leaflet-mount" aria-label="Bản đồ địa không gian an toàn thiên tai Việt Nam"></div>
 
+            <!-- THANH TUA CHUỖI ẢNH RADAR MƯA 2 GIỜ QUA (HIỆN KHI BẬT RADAR MƯA) -->
+            <div id="radar-timeline-bar" class="radar-timeline-bar" hidden role="region" aria-label="Điều khiển chuỗi thời gian Radar mưa">
+              <span class="hydro-sim-tag">RADAR 2H</span>
+              <button type="button" id="btn-radar-prev" class="rain-preset-btn" aria-label="Khung trước">◀</button>
+              <button type="button" id="btn-radar-play" class="rain-preset-btn is-active">▶ Phát động</button>
+              <button type="button" id="btn-radar-next" class="rain-preset-btn" aria-label="Khung tiếp">▶|</button>
+              <span id="radar-frame-time" class="mono-num">--:--</span>
+            </div>
+
             <!-- PHIẾU THÔNG TIN CHI TIẾT ĐIỂM HOẶC TRA CỨU TỌA ĐỘ CHẠM -->
             <div id="map-selected-card" class="map-detail-card" hidden></div>
 
@@ -479,6 +509,7 @@
                 <span><span class="dot dot-water-shallow"></span>Đọng trũng nhẹ</span>
                 <span><span class="dot dot-water-mid"></span>Ngập vừa</span>
                 <span><span class="dot dot-water-deep"></span>Rốn ngập sâu</span>
+                <span><span class="flow-arrow-glyph" aria-hidden="true">→</span>Hướng chảy</span>
                 <span><span class="dot dot-red"></span>Điểm / Tuyến rủi ro</span>
                 <span><span class="dot dot-green"></span>Y tế (+) / Điểm trú (✓)</span>
                 <span><span class="dot dot-amber"></span>Chờ kiểm chứng (?)</span>
@@ -670,10 +701,18 @@
             <div class="stack-panel">
               <div class="card-panel">
                 <div class="section-head-row">
-                  <h2 class="section-title">Bản đồ Khoanh vùng Nghiên cứu</h2>
-                  <button type="button" id="btn-clear-study-pts" class="text-btn">Xóa điểm đã chấm</button>
+                  <h2 class="section-title">Bản đồ Số hóa Hình học Nghiên cứu</h2>
+                  <div class="form-actions-row">
+                    <button type="button" id="btn-export-draft-geojson" class="text-btn">Tải .GeoJSON nháp</button>
+                    <button type="button" id="btn-clear-study-pts" class="text-btn">Xóa hình đã vẽ</button>
+                  </div>
                 </div>
-                <p class="muted-body">Chạm trực tiếp lên bản đồ để thêm tọa độ vào tập dữ liệu nghiên cứu.</p>
+                <div class="segmented-switch" role="group" aria-label="Chế độ vẽ đối tượng không gian">
+                  <button type="button" class="seg-btn is-active" data-drawmode="point">Chấm Điểm (Point)</button>
+                  <button type="button" class="seg-btn" data-drawmode="line">Vẽ Tuyến (LineString)</button>
+                  <button type="button" class="seg-btn" data-drawmode="polygon">Khoanh Vùng (Polygon)</button>
+                </div>
+                <p class="muted-body">Chạm bản đồ để chấm điểm khảo sát, nối tuyến ngập/sạt lở hoặc khoanh đa giác rốn trũng.</p>
                 <div id="research-studio-map" class="mini-map-mount" style="height:310px;"></div>
               </div>
 
@@ -738,6 +777,10 @@
             <button type="button" class="filter-pill" data-news-region="tay-nguyen">Tây Nguyên</button>
             <button type="button" class="filter-pill" data-news-region="nam">Đông Nam Bộ</button>
             <button type="button" class="filter-pill" data-news-region="dbscl">ĐBSCL</button>
+          </div>
+          <div class="search-row">
+            <label for="news-search-input" class="sr-only">Tìm kiếm tiêu đề, lưu vực sông, tỉnh/thành hoặc tên nhà nghiên cứu</label>
+            <input type="search" id="news-search-input" class="text-input text-input-compact" placeholder="Tìm nhanh công trình, tỉnh/thành, lưu vực sông hoặc tên tác giả...">
           </div>
         </div>
 

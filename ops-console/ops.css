@@ -478,6 +478,15 @@ body {
   margin-bottom: 10px;
 }
 
+.ops-cmd-map {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 310px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+}
+
 .json-terminal {
   margin: 0;
   padding: 12px 14px;

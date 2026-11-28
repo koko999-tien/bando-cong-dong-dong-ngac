@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vn-resilience-gis-v25';
+const CACHE_NAME = 'vn-resilience-gis-v26';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -56,8 +56,7 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('nominatim.openstreetmap.org') ||
     url.hostname.includes('overpass-api.de') ||
     url.hostname.includes('photon.komoot.io') ||
-    url.hostname.includes('api.open-meteo.com') ||
-    url.hostname.includes('air-quality-api.open-meteo.com') ||
+    url.hostname.includes('open-meteo.com') ||
     url.hostname.includes('rainviewer.com') ||
     url.hostname.includes('arcgisonline.com') ||
     url.hostname.includes('opentopomap.org') ||
