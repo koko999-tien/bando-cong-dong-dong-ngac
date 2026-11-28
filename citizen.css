@@ -533,14 +533,16 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
 .zone-suggestions li strong { font-size: 0.85rem; font-weight: 700; }
 .zone-suggestions li span { font-size: 0.75rem; color: var(--ink-muted); }
 
-/* Dải chọn nhanh đô thị cuộn mượt 1 dòng */
+/* Dải chọn nhanh đô thị cuộn mượt 1 dòng với mép mờ báo hiệu cuộn */
 .zone-quick-strip {
   display: flex;
   align-items: center;
   gap: 5px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  padding: 0 18px 2px 0;
   scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 0%, #000 calc(100% - 22px), transparent 100%);
 }
 .zone-quick-strip::-webkit-scrollbar { display: none; }
 
@@ -1584,25 +1586,42 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   transform: translateX(13px);
 }
 
-/* Thanh tua Radar mưa 2h nổi */
+/* Nhãn cảnh báo đang bật chế độ mô phỏng giả định + Thanh tua Radar mưa 2h */
+.map-sim-banner {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(560px, 100%);
+  padding: 4px 8px 4px 12px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 251, 235, 0.96);
+  backdrop-filter: saturate(180%) blur(16px);
+  -webkit-backdrop-filter: saturate(180%) blur(16px);
+  border: 1px solid #FDE68A;
+  color: #92400E;
+  font-size: 0.72rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-hud);
+}
+.map-sim-banner[hidden] { display: none; }
+
 .radar-timeline-bar {
-  position: absolute;
-  top: 56px;
-  right: 12px;
-  z-index: 435;
+  pointer-events: auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 5px 12px;
   border-radius: var(--radius-pill);
   background: var(--bg-hud);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   border: 1px solid var(--border-hud);
   color: var(--ink);
-  font-size: 0.74rem;
+  font-size: 0.73rem;
   box-shadow: var(--shadow-hud);
 }
+.radar-timeline-bar[hidden] { display: none; }
 
 /* Dock Nổi Đáy Bản Đồ: Viên nang kính mờ sáng 1 dòng */
 .map-hud-bottom {
@@ -2112,11 +2131,33 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
 }
 .news-stat-box span { font-size: 0.81rem; color: var(--ink-muted); }
 
+.live-basin-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(238px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
 .basin-feed-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--bg-surface);
+}
+.basin-feed-item .js-open-pub-zone {
+  align-self: flex-start;
+}
+.basin-reason-note {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #9A3412;
+  background: #FFF7ED;
+  border: 1px solid #FED7AA;
+  border-radius: 8px;
+  padding: 4px 8px;
 }
 .basin-feed-item.is-gdacs {
   background: #FFF1F2;
@@ -2682,8 +2723,14 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   .zone-radius-wrap .text-input {
     font-size: 0.88rem;
   }
+  .hydro-sim-main {
+    width: 100%;
+  }
   .hydro-sim-left {
-    gap: 4px;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 6px;
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
@@ -2692,15 +2739,26 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   .hydro-sim-tag {
     padding: 2px 7px;
     font-size: 0.67rem;
-    flex-shrink: 0;
+    flex: 0 0 auto;
+  }
+  .hydro-preset-group {
+    flex: 0 0 auto;
+    gap: 2px;
   }
   .rain-preset-btn {
-    padding: 2px 6px;
+    padding: 2px 6.5px;
     font-size: 0.68rem;
-    flex-shrink: 0;
+    white-space: nowrap;
+    flex: 0 0 auto;
   }
   #btn-toggle-hydro-drawer {
-    margin-left: 4px;
+    flex: 0 0 auto;
+    margin-left: auto;
+    padding-left: 8px;
+  }
+  .map-sim-banner {
+    font-size: 0.68rem;
+    padding: 4px 8px;
   }
 }
 
@@ -2746,7 +2804,7 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     right: 0;
     bottom: 0;
     z-index: 436;
-    height: 114px;
+    height: 126px;
     max-height: calc(100% - 8px);
     background: var(--bg-glass-strong);
     backdrop-filter: saturate(180%) blur(22px);
@@ -2757,8 +2815,12 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     overflow: hidden;
     transition: height 260ms cubic-bezier(0.22, 1, 0.36, 1);
   }
+  .workbench-left-dock .dock-zone-header {
+    padding: 4px 12px 8px;
+    gap: 6px;
+  }
   .workbench-split[data-sheet="peek"] .workbench-left-dock {
-    height: 114px;
+    height: 126px;
   }
   .workbench-split[data-sheet="peek"] .workbench-left-dock > :not(.mobile-sheet-grabber):not(.dock-zone-header) {
     display: none;
@@ -2778,11 +2840,15 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     position: absolute;
     left: 8px;
     right: 8px;
-    bottom: 122px;
+    bottom: 134px;
     z-index: 428;
     padding: 0;
     background: transparent;
     border: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
     pointer-events: none;
     transition: bottom 260ms cubic-bezier(0.22, 1, 0.36, 1);
   }
@@ -2791,6 +2857,7 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   }
   .workbench-split .map-hud-bottom .hydro-sim-strip {
     pointer-events: auto;
+    max-width: 100%;
     box-shadow: var(--shadow-hud);
   }
   .workbench-split .hydro-sim-strip.is-compact {
@@ -2798,7 +2865,7 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     border-radius: var(--radius-pill);
   }
   .workbench-split .leaflet-bottom {
-    bottom: 160px !important;
+    bottom: 178px !important;
   }
 }
 
@@ -2952,7 +3019,9 @@ html.is-large-text .subtab-bar {
     background: transparent;
     z-index: 425;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
     pointer-events: none;
     transition: left 240ms cubic-bezier(0.22, 1, 0.36, 1);
   }
@@ -3198,11 +3267,12 @@ html.is-large-text .subtab-bar {
 }
 
 .my-place-go strong {
-  display: block;
-  font-size: 0.78rem;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 0.77rem;
+  line-height: 1.25;
 }
 
 .my-place-go span {
@@ -3495,6 +3565,34 @@ body[data-basemap="satellite"] .ring-dist-label {
   background: rgba(15, 23, 42, 0.84);
   color: #F8FAFC;
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Cụm điểm gom theo cấp thu phóng giúp bản đồ thoáng sạch không chồng lấn */
+.vn-cluster-badge {
+  background: transparent;
+  border: 0;
+}
+.vn-cluster-pill {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  border: 2.5px solid #FFFFFF;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.25);
+  transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.vn-cluster-badge.is-risk .vn-cluster-pill {
+  background: #E11D48;
+}
+.vn-cluster-badge.is-safe .vn-cluster-pill {
+  background: #0F766E;
+}
+.vn-cluster-badge:hover .vn-cluster-pill {
+  transform: scale(1.12);
 }
 
 /* Specular rim highlights trên bề mặt kính nổi */

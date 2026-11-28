@@ -337,11 +337,12 @@ export function createNationalHydroSurfaceLayer(L, getContextFn) {
       const fadeStartSq = maxRadiusDegSq * 0.65;
 
       const demGrid = ctxState.demGrid;
-      const stats = demGrid?.stats || { minM: 6, p25M: 8.5, p45M: 10.5, p65M: 13, maxM: 18, steepPct: 0 };
-      const relief = Math.max(1.5, Math.min(34, stats.p65M - stats.minM));
+      const stats = demGrid?.stats || null;
+      const hasRealDem = Boolean(stats && Array.isArray(demGrid?.grid));
+      const relief = hasRealDem ? Math.max(1.5, Math.min(34, stats.p65M - stats.minM)) : 6;
       const rainFrac = Math.min(1.3, rainMm / 140) + Math.max(0, (dischargeRatio - 1.1) * 0.22);
-      const waterSurfaceThreshold = stats.minM + relief * (0.26 + 0.68 * rainFrac);
-      const hasMountainousRelief = (stats.maxSlopeDeg || 0) >= 8;
+      const waterSurfaceThreshold = hasRealDem ? stats.minM + relief * (0.26 + 0.68 * rainFrac) : -9999;
+      const hasMountainousRelief = hasRealDem && (stats.maxSlopeDeg || 0) >= 8;
 
       const isMobile =
         (typeof window !== 'undefined' &&
@@ -350,8 +351,8 @@ export function createNationalHydroSurfaceLayer(L, getContextFn) {
             navigator.maxTouchPoints > 0)) ||
         false;
 
-      // Trên điện thoại: Tăng hệ số downscale lên 5 để giảm 65% tải pixel CPU/GPU, giữ mượt 60fps
-      const scale = isMobile ? 5 : 3;
+      // Tối ưu CPU/GPU: Dùng bảng tra tọa độ 1D theo hàng + tích lũy O(R²) cục bộ thay vì O(W×H×N)
+      const scale = isMobile ? 4 : 3;
       const wSmall = Math.max(1, Math.ceil(size.x / scale));
       const hSmall = Math.max(1, Math.ceil(size.y / scale));
       const off = document.createElement('canvas');
@@ -362,45 +363,102 @@ export function createNationalHydroSurfaceLayer(L, getContextFn) {
       const data = img.data;
       const depthField = new Float32Array(wSmall * hSmall);
       const insideMask = new Uint8Array(wSmall * hSmall);
+      const spotField = new Float32Array(wSmall * hSmall);
+      const wwField = new Float32Array(wSmall * hSmall);
 
       const zoom = this._map.getZoom();
       const spotRadiusSmall = Math.max(4.5, Math.min(18, Math.pow(1.36, zoom - 12) * 5.2));
       const spotRadSq = spotRadiusSmall * spotRadiusSmall;
+      const wwRadSmall = spotRadiusSmall * 0.78;
+      const wwRadSq = wwRadSmall * wwRadSmall;
 
-      const floodSpots = (ctxState.points || [])
-        .filter((p) => p.status !== 'hidden' && p.layerGroup === 'risk' && p.category !== 'heat')
-        .map((p) => {
-          const px = this._map.latLngToContainerPoint([Number(p.lat), Number(p.lng)]);
-          return {
-            sx: px.x / scale,
-            sy: px.y / scale,
-            isLandslide: p.category === 'landslide',
-            weight: p.severity === 'severe' ? 1.32 : 0.96
-          };
-        });
+      if (showHydroWater && (rainMm >= 20 || dischargeRatio >= 1.25)) {
+        const floodSpots = (ctxState.points || [])
+          .filter((p) => p.status !== 'hidden' && p.layerGroup === 'risk' && p.category !== 'heat')
+          .map((p) => {
+            const pxPt = this._map.latLngToContainerPoint([Number(p.lat), Number(p.lng)]);
+            return {
+              sx: pxPt.x / scale,
+              sy: pxPt.y / scale,
+              isLandslide: p.category === 'landslide',
+              weight: p.severity === 'severe' ? 1.26 : 0.92
+            };
+          });
 
-      const waterwayVertices = [];
-      if (Array.isArray(ctxState.waterways)) {
-        for (const ww of ctxState.waterways) {
-          const coords = ww.coordinates || [];
-          for (let i = 0; i < coords.length; i += 2) {
-            const px = this._map.latLngToContainerPoint(coords[i]);
-            waterwayVertices.push({ sx: px.x / scale, sy: px.y / scale });
+        for (let k = 0; k < floodSpots.length; k++) {
+          const sp = floodSpots[k];
+          if (sp.isLandslide) continue;
+          const xMin = Math.max(0, Math.floor(sp.sx - spotRadiusSmall));
+          const xMax = Math.min(wSmall - 1, Math.ceil(sp.sx + spotRadiusSmall));
+          const yMin = Math.max(0, Math.floor(sp.sy - spotRadiusSmall));
+          const yMax = Math.min(hSmall - 1, Math.ceil(sp.sy + spotRadiusSmall));
+          if (xMax < 0 || yMax < 0 || xMin >= wSmall || yMin >= hSmall) continue;
+          for (let py = yMin; py <= yMax; py++) {
+            const dy = py - sp.sy;
+            const dy2 = dy * dy;
+            for (let px = xMin; px <= xMax; px++) {
+              const dx = px - sp.sx;
+              const d2 = dx * dx + dy2;
+              if (d2 < spotRadSq) {
+                spotField[py * wSmall + px] += (1 - d2 / spotRadSq) * sp.weight * 0.88;
+              }
+            }
+          }
+        }
+
+        if (Array.isArray(ctxState.waterways)) {
+          const rCeil = Math.ceil(wwRadSmall);
+          for (const ww of ctxState.waterways) {
+            const coords = ww.coordinates || [];
+            for (let i = 0; i < coords.length; i += 2) {
+              const wPt = this._map.latLngToContainerPoint(coords[i]);
+              const sx = wPt.x / scale;
+              const sy = wPt.y / scale;
+              const xMin = Math.max(0, Math.floor(sx - rCeil));
+              const xMax = Math.min(wSmall - 1, Math.ceil(sx + rCeil));
+              const yMin = Math.max(0, Math.floor(sy - rCeil));
+              const yMax = Math.min(hSmall - 1, Math.ceil(sy + rCeil));
+              if (xMax < 0 || yMax < 0 || xMin >= wSmall || yMin >= hSmall) continue;
+              for (let py = yMin; py <= yMax; py++) {
+                const dy = py - sy;
+                const dy2 = dy * dy;
+                for (let px = xMin; px <= xMax; px++) {
+                  const dx = px - sx;
+                  const d2 = dx * dx + dy2;
+                  if (d2 < wwRadSq) {
+                    const contrib = (1 - d2 / wwRadSq) * 0.5;
+                    const cIdx = py * wSmall + px;
+                    if (contrib > wwField[cIdx]) wwField[cIdx] = contrib;
+                  }
+                }
+              }
+            }
           }
         }
       }
 
+      const llTopLeft = this._map.containerPointToLatLng([scale * 0.5, scale * 0.5]);
+      const llTopRight = this._map.containerPointToLatLng([((wSmall - 1) * scale) + scale * 0.5, scale * 0.5]);
+      const lng0 = llTopLeft.lng;
+      const dLngPerPx = wSmall > 1 ? (llTopRight.lng - llTopLeft.lng) / (wSmall - 1) : 0;
+      const rowLats = new Float64Array(hSmall);
+      for (let py = 0; py < hSmall; py++) {
+        rowLats[py] = this._map.containerPointToLatLng([scale * 0.5, py * scale + scale * 0.5]).lat;
+      }
+
       const gradStepDeg = 0.0011;
       const shadeStepMeters = 2 * gradStepDeg * 110574;
+      const rFactor = Math.min(1.35, rainMm / 70 + Math.max(0, (dischargeRatio - 1) * 0.35));
 
       for (let py = 0; py < hSmall; py++) {
-        const screenY = py * scale + scale * 0.5;
+        const latPt = rowLats[py];
+        const dLat = latPt - cLat;
+        const dLatSq = dLat * dLat;
+        if (dLatSq > maxRadiusDegSq) continue;
         for (let px = 0; px < wSmall; px++) {
-          const screenX = px * scale + scale * 0.5;
-          const ll = this._map.containerPointToLatLng([screenX, screenY]);
-          const dLat = ll.lat - cLat;
-          const dLng = (ll.lng - cLng) * cosLat;
-          const distSq = dLat * dLat + dLng * dLng;
+          const lngPt = lng0 + px * dLngPerPx;
+          const dLng = (lngPt - cLng) * cosLat;
+          const distSq = dLatSq + dLng * dLng;
           if (distSq > maxRadiusDegSq) continue;
 
           const cellIdx = py * wSmall + px;
@@ -409,35 +467,14 @@ export function createNationalHydroSurfaceLayer(L, getContextFn) {
             distSq <= fadeStartSq ? 1 : Math.max(0, 1 - (distSq - fadeStartSq) / (maxRadiusDegSq - fadeStartSq));
 
           let depthScore = 0;
-          const dem = sampleAnyDemGrid(demGrid, ll.lat, ll.lng);
+          const dem = hasRealDem ? sampleAnyDemGrid(demGrid, latPt, lngPt) : null;
           if (showHydroWater && dem !== null && dem < waterSurfaceThreshold) {
             const normDepth = (waterSurfaceThreshold - dem) / Math.max(1.2, relief * 0.55);
-            depthScore += Math.min(1.9, normDepth * 0.94);
+            depthScore += Math.min(1.85, normDepth * 0.9);
           }
 
           if (showHydroWater && (rainMm >= 20 || dischargeRatio >= 1.25)) {
-            const rFactor = Math.min(1.4, rainMm / 70 + Math.max(0, (dischargeRatio - 1) * 0.35));
-            for (let k = 0; k < floodSpots.length; k++) {
-              const sp = floodSpots[k];
-              if (sp.isLandslide) continue;
-              const dx = px - sp.sx;
-              const dy = py - sp.sy;
-              const d2 = dx * dx + dy * dy;
-              if (d2 < spotRadSq) {
-                depthScore += (1 - d2 / spotRadSq) * sp.weight * 0.92 * rFactor;
-              }
-            }
-            const wwRadSq = spotRadSq * 0.6;
-            for (let w = 0; w < waterwayVertices.length; w++) {
-              const wv = waterwayVertices[w];
-              const dx = px - wv.sx;
-              const dy = py - wv.sy;
-              const d2 = dx * dx + dy * dy;
-              if (d2 < wwRadSq) {
-                depthScore += (1 - d2 / wwRadSq) * 0.52 * rFactor * Math.min(1.5, dischargeRatio);
-                break;
-              }
-            }
+            depthScore += spotField[cellIdx] * rFactor + wwField[cellIdx] * rFactor * Math.min(1.5, dischargeRatio);
           }
 
           depthScore *= edgeFade;
@@ -448,25 +485,25 @@ export function createNationalHydroSurfaceLayer(L, getContextFn) {
             let rCol = 14;
             let gCol = 165;
             let bCol = 233;
-            let alpha = 40;
+            let alpha = 36;
             if (depthScore >= 1.32) {
               const t = Math.min(1, (depthScore - 1.32) / 0.85);
               rCol = Math.round(24 - t * 6);
-              gCol = Math.round(58 - t * 14);
-              bCol = Math.round(170 - t * 32);
-              alpha = Math.min(192, 128 + t * 62);
+              gCol = Math.round(68 - t * 14);
+              bCol = Math.round(176 - t * 28);
+              alpha = Math.min(176, 118 + t * 56);
             } else if (depthScore >= 0.65) {
               const t = (depthScore - 0.65) / (1.32 - 0.65);
-              rCol = Math.round(2 + t * 27);
-              gCol = Math.round(132 - t * 54);
-              bCol = Math.round(199 + t * 17);
-              alpha = 74 + t * 44;
+              rCol = Math.round(2 + t * 22);
+              gCol = Math.round(132 - t * 50);
+              bCol = Math.round(199 + t * 14);
+              alpha = 68 + t * 44;
             } else {
               const t = (depthScore - 0.22) / (0.65 - 0.22);
               rCol = Math.round(56 - t * 54);
               gCol = Math.round(189 - t * 57);
               bCol = Math.round(248 - t * 49);
-              alpha = 32 + t * 42;
+              alpha = 28 + t * 40;
             }
             data[idx] = rCol;
             data[idx + 1] = gCol;
@@ -478,7 +515,7 @@ export function createNationalHydroSurfaceLayer(L, getContextFn) {
           // Vùng đồi núi: Cảnh báo sườn dốc sạt lở mượt 3 sắc độ khi mưa >= 35 mm
           let paintedSlope = false;
           if (hasMountainousRelief && ctxState.showSlope && rainMm >= 35) {
-            const grad = computeTerrainGradient(demGrid, ll.lat, ll.lng);
+            const grad = computeTerrainGradient(demGrid, latPt, lngPt);
             if (grad && grad.slopeDeg >= 8) {
               const slopeFactor = Math.min(1.45, ((grad.slopeDeg - 6.5) / 14) * (rainMm / 85)) * edgeFade;
               if (slopeFactor > 0.16) {
@@ -493,27 +530,25 @@ export function createNationalHydroSurfaceLayer(L, getContextFn) {
           }
 
           // Hillshade 3D địa hình tinh tế trên nền khô bên trong vùng khoanh
-          if (!paintedSlope && demGrid && dem !== null && (px + py) % 1 === 0) {
-            const zE = sampleAnyDemGrid(demGrid, ll.lat, ll.lng + gradStepDeg);
-            const zW = sampleAnyDemGrid(demGrid, ll.lat, ll.lng - gradStepDeg);
-            const zN = sampleAnyDemGrid(demGrid, ll.lat + gradStepDeg, ll.lng);
-            const zS = sampleAnyDemGrid(demGrid, ll.lat - gradStepDeg, ll.lng);
+          if (!paintedSlope && hasRealDem && dem !== null) {
+            const zE = sampleAnyDemGrid(demGrid, latPt, lngPt + gradStepDeg);
+            const zW = sampleAnyDemGrid(demGrid, latPt, lngPt - gradStepDeg);
+            const zN = sampleAnyDemGrid(demGrid, latPt + gradStepDeg, lngPt);
+            const zS = sampleAnyDemGrid(demGrid, latPt - gradStepDeg, lngPt);
             if (zE !== null && zW !== null && zN !== null && zS !== null) {
               const dzX = (zE - zW) / shadeStepMeters;
               const dzY = (zN - zS) / shadeStepMeters;
               const hill = (-dzX * 0.65 + dzY * 0.65) * 3.8;
               if (hill < -0.025) {
-                // Sườn khuất sáng hướng Đông Nam: bóng đổ slate rất dịu
                 data[idx] = 15;
                 data[idx + 1] = 23;
                 data[idx + 2] = 42;
-                data[idx + 3] = Math.round(Math.min(26, Math.abs(hill) * 95) * edgeFade);
+                data[idx + 3] = Math.round(Math.min(24, Math.abs(hill) * 90) * edgeFade);
               } else if (hill > 0.03) {
-                // Gò cao đón sáng hướng Tây Bắc: ánh sáng relief rất nhẹ
                 data[idx] = 248;
                 data[idx + 1] = 250;
                 data[idx + 2] = 252;
-                data[idx + 3] = Math.round(Math.min(22, hill * 80) * edgeFade);
+                data[idx + 3] = Math.round(Math.min(20, hill * 76) * edgeFade);
               }
             }
           }
@@ -591,11 +626,16 @@ export function createHydroFlowVectorsLayer(L, getContextFn) {
           this._maybeStartAnim();
         }
       };
+      this._boundPause = () => {
+        this._stopAnim();
+      };
+      map.on('movestart zoomstart', this._boundPause);
       map.on('moveend zoomend resize', this._boundRedraw);
       if (typeof document !== 'undefined') document.addEventListener('visibilitychange', this._boundVis);
       this.redraw();
     },
     onRemove(map) {
+      map.off('movestart zoomstart', this._boundPause);
       map.off('moveend zoomend resize', this._boundRedraw);
       if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', this._boundVis);
       if (this._raf) cancelAnimationFrame(this._raf);
@@ -651,9 +691,14 @@ export function createHydroFlowVectorsLayer(L, getContextFn) {
     _maybeStartAnim() {
       this._stopAnim();
       const ctxState = getContextFn();
+      const rainMm = Number(ctxState.simRainMm) || 0;
+      const dischargeRatio = Number(ctxState.dischargeRatio) || 1;
+      // Ngày khô (<= 4 mm) chỉ giữ mũi tên địa hình tĩnh dịu mắt, không cho hạt lũ chạy khắp nơi
+      const hasActiveRunoff = rainMm > 4 || dischargeRatio >= 1.35;
       const canAnimate =
         !prefersReduced &&
         this._animatedOverride &&
+        hasActiveRunoff &&
         ctxState.animated !== false &&
         ctxState.enabled &&
         ctxState.demGrid &&
@@ -912,7 +957,8 @@ export function buildMapPictogramIcon(L, pt, zoom = 14) {
           ? 19
           : 25;
 
-  const isSevere = pt.layerGroup === 'risk' && pt.severity === 'severe' && tier !== 'sm';
+  // Chỉ nháy beacon cảnh báo ở điểm ĐANG có phản ánh ngập thực tế trong 6 giờ gần đây
+  const isSevere = Boolean(pt.isLiveFlooding) && pt.layerGroup === 'risk' && tier !== 'sm';
   const key = `${pt.confidenceTier}|${pt.layerGroup}|${pt.category}|${tier}|${size}|${isSevere ? 1 : 0}`;
   let html = MARKER_SVG_CACHE.get(key);
   if (!html) {

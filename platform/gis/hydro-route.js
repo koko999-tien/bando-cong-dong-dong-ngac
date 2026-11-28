@@ -301,9 +301,12 @@ export function evaluateRouteHydroTerrain({
 
   let passability = 'passable';
   let passabilityLabel = `Thông thoáng cho ${veh.label} theo kịch bản mưa`;
-  if (maxDepthCm >= veh.dangerCm || maxDv >= veh.dangerDv) {
+  if (maxDepthCm >= veh.dangerCm) {
     passability = 'impassable_deep';
     passabilityLabel = veh.dangerLabel;
+  } else if (maxDv >= veh.dangerDv) {
+    passability = 'impassable_deep';
+    passabilityLabel = `Dòng chảy xiết (~${maxDepthCm} cm, lực đẩy nước mạnh) — Không nên đi qua`;
   } else if (
     maxDepthCm >= veh.warnCm ||
     maxDv >= veh.dangerDv * 0.6 ||
@@ -312,7 +315,7 @@ export function evaluateRouteHydroTerrain({
     liveFloodHits > 0
   ) {
     passability = 'caution_stall';
-    passabilityLabel = veh.warnLabel;
+    passabilityLabel = liveFloodHits > 0 && maxDepthCm < veh.warnCm ? 'Đang có ngập thực tế quanh tuyến — Nên đi vòng' : veh.warnLabel;
   }
 
   const compositeScore = Math.round(

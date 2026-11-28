@@ -382,10 +382,21 @@ export async function syncOfficialHydroMetFeed({ forceRefresh = false } = {}) {
       fl.daily?.river_discharge_mean?.[0] != null && Number(fl.daily.river_discharge_mean[0]) > 0
         ? Number(fl.daily.river_discharge_mean[0])
         : null;
-    const dischargeRatio =
+    const rawDischargeRatio =
       riverDischargeMs != null && riverMeanMs != null ? Math.round((riverDischargeMs / riverMeanMs) * 100) / 100 : 1;
+    // Tránh nhiễu pixel GloFAS trên kênh nhỏ (< 5 m³/s) khi trời tạnh không mưa
+    const dischargeRatio =
+      riverDischargeMs != null && riverDischargeMs < 5 && (riverMeanMs == null || riverMeanMs < 5) && rain24hMm < 10 && rainNowMm < 2
+        ? 1
+        : rawDischargeRatio;
 
     const alert = classifyBasinAlert({ rainNowMm, rain24hMm, windGustKmh, dischargeRatio });
+    const reasonParts = [];
+    if (rain24hMm >= 50) reasonParts.push(`Mưa 24h đạt ${rain24hMm} mm`);
+    else if (rain24hMm >= 20) reasonParts.push(`Mưa 24h ${rain24hMm} mm`);
+    if (rainNowMm >= 5) reasonParts.push(`Đang mưa ${rainNowMm} mm/h`);
+    if (windGustKmh >= 62) reasonParts.push(`Gió giật ${windGustKmh} km/h`);
+    if (dischargeRatio >= 1.2) reasonParts.push(`Lưu lượng gấp ${dischargeRatio}× TB 7 ngày`);
 
     return {
       ...st,
@@ -396,7 +407,8 @@ export async function syncOfficialHydroMetFeed({ forceRefresh = false } = {}) {
       riverDischargeMs,
       dischargeRatio,
       alertLevel: alert.level,
-      alertLabel: alert.label
+      alertLabel: alert.label,
+      alertReason: reasonParts.join(' · ') || 'Thời tiết và lưu lượng sông trong ngưỡng ổn định'
     };
   });
 
@@ -420,8 +432,9 @@ export async function syncOfficialHydroMetFeed({ forceRefresh = false } = {}) {
       fromDate: f?.properties?.fromdate || null
     }));
 
-  const activeWarningsCount =
-    basins.filter((b) => b.alertLevel === 'emergency' || b.alertLevel === 'warning').length + gdacsAlerts.length;
+  const warningBasinsCount = basins.filter((b) => b.alertLevel === 'emergency' || b.alertLevel === 'warning').length;
+  const watchBasinsCount = basins.filter((b) => b.alertLevel === 'watch').length;
+  const activeWarningsCount = warningBasinsCount + gdacsAlerts.length;
 
   const payload = {
     ok: true,
@@ -429,6 +442,8 @@ export async function syncOfficialHydroMetFeed({ forceRefresh = false } = {}) {
     sourceSummary: ['Open-Meteo Weather', 'Copernicus GloFAS Flood', 'GDACS UN/EC'],
     basins,
     gdacsAlerts,
+    warningBasinsCount,
+    watchBasinsCount,
     activeWarningsCount,
     cache: 'MISS'
   };

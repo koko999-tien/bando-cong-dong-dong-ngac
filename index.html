@@ -119,8 +119,8 @@
               <div class="zone-search-cluster">
                 <div class="zone-search-box">
                   <svg class="input-leading-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
-                  <label for="vn-zone-search" class="sr-only">Tìm tỉnh, thành phố, huyện, xã hoặc tuyến đường tại Việt Nam</label>
-                  <input type="search" id="vn-zone-search" class="text-input has-leading-icon" autocomplete="off" placeholder="Tìm tỉnh, quận/huyện, phường/xã…">
+            <label for="vn-zone-search" class="sr-only">Tìm tỉnh, thành phố, huyện, xã hoặc tuyến đường tại Việt Nam</label>
+            <input type="search" id="vn-zone-search" class="text-input has-leading-icon" autocomplete="off" placeholder="Tìm tỉnh, phường/xã…">
                   <ul id="vn-zone-suggestions" class="zone-suggestions" hidden role="listbox" aria-label="Gợi ý khu vực tại Việt Nam"></ul>
                 </div>
 
@@ -221,6 +221,10 @@
                         <div class="cadastral-row">
                           <span>Quy mô dân cư trong vòng khoanh:</span>
                           <strong id="vn-zone-pop" class="mono-num">Đang ước tính...</strong>
+                        </div>
+                        <div class="cadastral-row">
+                          <span>Đặc trưng địa hình vùng khoanh:</span>
+                          <strong id="hydro-terrain-summary" class="mono-num">Đang tổng hợp độ cao...</strong>
                         </div>
                       </div>
                     </div>
@@ -642,32 +646,37 @@
               </svg>
             </div>
 
-            <!-- THANH TUA CHUỖI ẢNH RADAR MƯA 2 GIỜ QUA (SVG THUẦN KHÔNG KÝ TỰ UNICODE THÔ) -->
-            <div id="radar-timeline-bar" class="radar-timeline-bar" hidden role="region" aria-label="Điều khiển chuỗi thời gian Radar mưa">
-              <span class="hydro-sim-tag">Radar 2h</span>
-              <button type="button" id="btn-radar-prev" class="rain-preset-btn" aria-label="Khung trước">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
-              </button>
-              <button type="button" id="btn-radar-play" class="rain-preset-btn is-active">Phát động</button>
-              <button type="button" id="btn-radar-next" class="rain-preset-btn" aria-label="Khung tiếp">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
-              </button>
-              <span id="radar-frame-time" class="mono-num">--:--</span>
-            </div>
-
             <!-- PHIẾU THÔNG TIN CHI TIẾT ĐIỂM HOẶC TRA CỨU TỌA ĐỘ CHẠM -->
             <div id="map-selected-card" class="map-detail-card" hidden></div>
 
-            <!-- DOCK NỔI ĐÁY BẢN ĐỒ: VIÊN NANG GỌN, XỔ THANH TRƯỢT KHI CẦN -->
+            <!-- DOCK NỔI ĐÁY BẢN ĐỒ: CHỈ BÁO MÔ PHỎNG + RADAR + VIÊN NANG GỌN -->
             <div class="map-hud-bottom">
+              <div id="map-sim-banner" class="map-sim-banner" hidden role="status">
+                <span id="map-sim-banner-text">Đang mô phỏng giả định (không phải ngập thực tế lúc này)</span>
+                <button type="button" id="btn-reset-live-rain" class="rain-preset-btn is-active">Về Thực tế</button>
+              </div>
+
+              <!-- THANH TUA CHUỖI ẢNH RADAR MƯA 2 GIỜ QUA (KHÔNG BAO GIỜ BỊ POPOVER CHE) -->
+              <div id="radar-timeline-bar" class="radar-timeline-bar" hidden role="region" aria-label="Điều khiển chuỗi thời gian Radar mưa">
+                <span class="hydro-sim-tag">Radar 2h</span>
+                <button type="button" id="btn-radar-prev" class="rain-preset-btn" aria-label="Khung trước">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <button type="button" id="btn-radar-play" class="rain-preset-btn is-active">Phát động</button>
+                <button type="button" id="btn-radar-next" class="rain-preset-btn" aria-label="Khung tiếp">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                </button>
+                <span id="radar-frame-time" class="mono-num">--:--</span>
+              </div>
+
               <div id="hydro-sim-strip" class="hydro-sim-strip is-compact" role="region" aria-label="Điều chỉnh kịch bản lượng mưa và độ đậm mặt phủ nước">
                 <div class="hydro-sim-main">
                   <div class="hydro-sim-left">
                     <span class="hydro-sim-tag">Mưa</span>
                     <div class="hydro-preset-group" role="group" aria-label="Mức mưa giả định">
-                      <button type="button" class="rain-preset-btn" data-rain-preset="live" title="Theo lượng mưa dự báo lúc này">Thực tế</button>
+                      <button type="button" class="rain-preset-btn is-active" data-rain-preset="live" title="Theo lượng mưa dự báo thực tế lúc này">Thực tế</button>
                       <button type="button" class="rain-preset-btn" data-rain-preset="40">40mm</button>
-                      <button type="button" class="rain-preset-btn is-active" data-rain-preset="70">70mm</button>
+                      <button type="button" class="rain-preset-btn" data-rain-preset="70">70mm</button>
                       <button type="button" class="rain-preset-btn" data-rain-preset="120">120mm</button>
                       <button type="button" class="rain-preset-btn" data-rain-preset="180">180mm</button>
                     </div>
@@ -675,14 +684,14 @@
                   </div>
 
                   <div class="hydro-sim-sliders">
-                    <button type="button" id="btn-toggle-flow-anim" class="rain-preset-btn is-active" aria-pressed="true" title="Bật hoặc tạm dừng hiệu ứng hạt dòng chảy trên bản đồ">Dòng chảy động</button>
+                    <button type="button" id="btn-toggle-flow-anim" class="rain-preset-btn is-active" aria-pressed="true" title="Bật hoặc tạm dừng hiệu ứng hạt dòng chảy khi có mưa">Dòng chảy động</button>
                     <label class="hydro-slider-item" for="hydro-rain-slider">
-                      <span>Mưa <strong id="hydro-rain-label" class="mono-num">70 mm</strong></span>
-                      <input type="range" id="hydro-rain-slider" class="hydro-range" min="0" max="200" step="5" value="70">
+                      <span>Mưa <strong id="hydro-rain-label" class="mono-num">0 mm</strong></span>
+                      <input type="range" id="hydro-rain-slider" class="hydro-range" min="0" max="200" step="5" value="0">
                     </label>
                     <label class="hydro-slider-item" for="hydro-opacity-slider">
-                      <span>Phủ <strong id="hydro-opacity-label" class="mono-num">75%</strong></span>
-                      <input type="range" id="hydro-opacity-slider" class="hydro-range hydro-range-sm" min="25" max="100" step="5" value="75">
+                      <span>Phủ <strong id="hydro-opacity-label" class="mono-num">70%</strong></span>
+                      <input type="range" id="hydro-opacity-slider" class="hydro-range hydro-range-sm" min="25" max="100" step="5" value="70">
                     </label>
                   </div>
                 </div>
@@ -698,9 +707,7 @@
                     <span class="legend-extra"><span class="dot dot-amber"></span>Chờ duyệt</span>
                   </div>
                   <div class="hud-bottom-meta mono-num">
-                    <span id="hydro-terrain-summary" class="hydro-terrain-meta">Trũng --%</span>
-                    <span class="hud-sep" aria-hidden="true">·</span>
-                    <span id="map-cursor-coords" class="map-coords-hint">Chạm bản đồ xem chi tiết</span>
+                    <span id="map-cursor-coords" class="map-coords-hint">Chạm bản đồ xem độ cao &amp; địa giới</span>
                   </div>
                 </div>
               </div>
@@ -995,7 +1002,7 @@
               <span id="live-basin-sync-meta" class="muted-meta">Tổng hợp tự động mưa, gió giật (Open-Meteo), lưu lượng sông (Copernicus GloFAS) &amp; cảnh báo khu vực</span>
               <button type="button" id="btn-refresh-basin-feed" class="btn btn-sm btn-secondary">Làm mới Lưu vực</button>
             </div>
-            <div id="live-basin-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:8px;margin-top:8px;">
+            <div id="live-basin-cards-grid" class="live-basin-cards-grid">
               <p class="muted-body">Đang tải số liệu 7 lưu vực...</p>
             </div>
           </div>
@@ -1059,11 +1066,11 @@
           </div>
 
           <details class="clean-disclosure" style="margin-top:8px;">
-            <summary><span>Quy chế bảo vệ ẩn danh 300 m, khóa K=2 chỗ &amp; pháp lý NĐ 13/2023 (<span id="sos-zone-squad-count" class="mono-num">--</span> người trực)</span></summary>
+            <summary><span>Quy chế bảo vệ ẩn danh 300 m, tối đa 2 người nhận / ca &amp; pháp lý NĐ 13/2023 (<span id="sos-zone-squad-count" class="mono-num">--</span> người trực)</span></summary>
             <div class="disclosure-body">
               <div class="sos-guarantees-grid">
                 <div class="sos-guarantee-item">
-                  <strong>1. Phát cảnh báo Thẳng &amp; Chống tắc (K=2)</strong>
+                  <strong>1. Phát cảnh báo Thẳng &amp; Chống tụ tập (tối đa 2 người)</strong>
                   <span>Khi bạn gửi hỗ trợ, cảnh báo phát ngay tới mọi người dùng đang ở gần; chỉ mở tối đa 2 chỗ nhận để không kéo đám đông gây kẹt xe.</span>
                 </div>
                 <div class="sos-guarantee-item">
@@ -1251,24 +1258,24 @@
 
               <div class="env-grid">
                 <div class="env-card">
-                  <span class="env-card-label">Vận tốc chảy tràn (Manning)</span>
+                  <span class="env-card-label" title="Ước tính tốc độ dòng chảy theo độ dốc (công thức Manning)">Tốc độ dòng chảy (ước tính)</span>
                   <strong id="ai-manning-v" class="env-card-value mono-num">0.00 m/s</strong>
-                  <span id="ai-depth-est" class="env-card-desc">Độ sâu ước tính: 0 cm</span>
+                  <span id="ai-depth-est" class="env-card-desc">Độ sâu ước tính: ~0 cm</span>
                 </div>
                 <div class="env-card">
-                  <span class="env-card-label">Tích số bất ổn định (D×V)</span>
+                  <span class="env-card-label" title="Tích số độ sâu × vận tốc nước D×V (ngưỡng trượt ngã xe máy ~0.15 m²/s)">Lực nước đẩy xe (D×V)</span>
                   <strong id="ai-dv-val" class="env-card-value mono-num">0.000 m²/s</strong>
-                  <span id="ai-stability-lbl" class="env-card-desc">Ngưỡng trượt xe: 0.15 m²/s</span>
+                  <span id="ai-stability-lbl" class="env-card-desc">Ngưỡng an toàn xe máy: &lt; 0.15</span>
                 </div>
                 <div class="env-card">
-                  <span class="env-card-label">Động học di chuyển</span>
-                  <strong id="ai-kinematic-val" class="env-card-value mono-num">Đang chờ GPS</strong>
-                  <span id="ai-dwell-lbl" class="env-card-desc">Phát hiện dừng kẹt &ge; 90 giây</span>
+                  <span class="env-card-label">Tốc độ di chuyển thực tế</span>
+                  <strong id="ai-kinematic-val" class="env-card-value mono-num">Chưa bật GPS</strong>
+                  <span id="ai-dwell-lbl" class="env-card-desc">Nhấn Bật GPS Hộ tống hoặc thử kịch bản</span>
                 </div>
                 <div class="env-card">
-                  <span class="env-card-label">Xác suất cần hỏi thăm</span>
-                  <strong id="ai-distress-prob" class="env-card-value mono-num">8%</strong>
-                  <span id="ai-qcvn-lbl" class="env-card-desc">Đang đối chiếu QCVN 05:2023</span>
+                  <span class="env-card-label">Khả năng cần hỗ trợ</span>
+                  <strong id="ai-distress-prob" class="env-card-value mono-num">--</strong>
+                  <span id="ai-qcvn-lbl" class="env-card-desc">Đang đối chiếu không khí thực tế</span>
                 </div>
               </div>
 

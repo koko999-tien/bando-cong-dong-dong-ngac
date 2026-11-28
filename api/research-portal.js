@@ -213,37 +213,44 @@ async function fetchZoneOsmLive(lat, lng, radiusKm) {
   const w = (lng - dDeg).toFixed(4);
   const n = (lat + dDeg).toFixed(4);
   const e = (lng + dDeg).toFixed(4);
-  const ql = `[out:json][timeout:5][bbox:${s},${w},${n},${e}];(node["amenity"~"hospital|clinic|doctors|fire_station|townhall"]["name"];way["amenity"~"hospital|clinic|doctors|fire_station|townhall"]["name"];way["waterway"~"river|canal|drain"]["name"];);out center 55;`;
-  try {
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 4200);
-    const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(ql)}`, {
-      headers: { 'User-Agent': 'DongNgacOpenGIS/3.0' },
-      signal: controller.signal
-    });
-    clearTimeout(t);
-    if (!res.ok) throw new Error(`OVERPASS_${res.status}`);
-    const normalized = normalizeOverpassElements(await res.json());
-    if (normalized.pois.length === 0 && normalized.waterways.length === 0) throw new Error('OVERPASS_EMPTY');
-    const out = { ...normalized, radiusMeters: qRadiusMeters, source: 'overpass_direct' };
-    if (osmZoneMemoryCache.size >= OSM_CACHE_MAX_ENTRIES) {
-      const firstKey = osmZoneMemoryCache.keys().next().value;
-      if (firstKey) osmZoneMemoryCache.delete(firstKey);
-    }
-    osmZoneMemoryCache.set(cacheKey, { savedAt: Date.now(), data: out });
-    return { ...out, cache: 'MISS' };
-  } catch {
-    const photonPois = await fetchPhotonZoneFallback(lat, lng, qRadiusMeters);
-    const out = { pois: photonPois, waterways: [], radiusMeters: qRadiusMeters, source: photonPois.length ? 'osm_photon_live' : 'fallback_empty' };
-    if (photonPois.length > 0) {
+  const ql = `[out:json][timeout:6][bbox:${s},${w},${n},${e}];(node["amenity"~"hospital|clinic|doctors|fire_station|townhall"]["name"];way["amenity"~"hospital|clinic|doctors|fire_station|townhall"]["name"];way["waterway"~"river|canal|drain"]["name"];);out center 55;`;
+  const overpassEndpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter'
+  ];
+  for (const endpoint of overpassEndpoints) {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 3800);
+      const res = await fetch(`${endpoint}?data=${encodeURIComponent(ql)}`, {
+        headers: { 'User-Agent': 'DongNgacOpenGIS/3.0' },
+        signal: controller.signal
+      });
+      clearTimeout(t);
+      if (!res.ok) continue;
+      const normalized = normalizeOverpassElements(await res.json());
+      if (normalized.pois.length === 0 && normalized.waterways.length === 0) continue;
+      const out = { ...normalized, radiusMeters: qRadiusMeters, source: 'overpass_direct' };
       if (osmZoneMemoryCache.size >= OSM_CACHE_MAX_ENTRIES) {
         const firstKey = osmZoneMemoryCache.keys().next().value;
         if (firstKey) osmZoneMemoryCache.delete(firstKey);
       }
       osmZoneMemoryCache.set(cacheKey, { savedAt: Date.now(), data: out });
+      return { ...out, cache: 'MISS' };
+    } catch {
+      // Thử mirror Overpass kế tiếp nếu endpoint bị quá tải
     }
-    return out;
   }
+  const photonPois = await fetchPhotonZoneFallback(lat, lng, qRadiusMeters);
+  const out = { pois: photonPois, waterways: [], radiusMeters: qRadiusMeters, source: photonPois.length ? 'osm_photon_live' : 'fallback_empty' };
+  if (photonPois.length > 0) {
+    if (osmZoneMemoryCache.size >= OSM_CACHE_MAX_ENTRIES) {
+      const firstKey = osmZoneMemoryCache.keys().next().value;
+      if (firstKey) osmZoneMemoryCache.delete(firstKey);
+    }
+    osmZoneMemoryCache.set(cacheKey, { savedAt: Date.now(), data: out });
+  }
+  return out;
 }
 
 function getClientIp(request) {

@@ -13,7 +13,8 @@ import {
   SAMPLE_HUMG_POINTS,
   FLOOD_STREET_CORRIDORS,
   LOW_DEM_BASINS,
-  SAFE_DETOUR_ROUTES
+  SAFE_DETOUR_ROUTES,
+  ROUTE_PRESETS
 } from './humg-data.js';
 import {
   VIETNAM_VERIFIED_HOTSPOTS,
@@ -59,6 +60,7 @@ import {
 } from './platform/regions/vietnam-directory.js';
 import {
   RENTAL_INSPECTION_CHECKLIST,
+  CITIZEN_LANDMARKS,
   PLAIN_SOURCE_LABELS,
   haversineMeters,
   formatDistancePlain,
@@ -153,9 +155,9 @@ const state = {
     timer: null
   },
   hydroSim: {
-    rainMm: 70,
-    opacity: 0.75,
-    preset: '70',
+    rainMm: 0,
+    opacity: 0.7,
+    preset: 'live',
     flowAnimated: true,
     demGrid: null
   },
@@ -468,16 +470,30 @@ function mergeZonePoints({ baselineInZone, commRes, researchRes, osmPois, lat, l
     .sort((a, b) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
 }
 
+function updateHydroSimModeBanner() {
+  const banner = document.getElementById('map-sim-banner');
+  const txt = document.getElementById('map-sim-banner-text');
+  if (!banner || !txt) return;
+  const preset = state.hydroSim.preset;
+  const mm = Math.round(Number(state.hydroSim.rainMm) || 0);
+  const isSimulated = preset !== 'live' && mm > 4;
+  banner.hidden = !isSimulated;
+  if (isSimulated) {
+    txt.textContent = `Đang mô phỏng giả định: Mưa ${mm} mm (không phải ngập thực tế lúc này)`;
+  }
+}
+
 function updateHydroSummaryBar() {
+  updateHydroSimModeBanner();
   const el = document.getElementById('hydro-terrain-summary');
   if (!el) return;
   const g = state.hydroSim.demGrid;
   if (!g?.stats) {
-    el.textContent = 'Đang quét địa hình vùng...';
+    el.textContent = 'Chưa có lưới độ cao chi tiết vùng này — đang dùng mốc điểm thực tế';
     return;
   }
-  const slopeHint = (g.stats.steepPct || 0) >= 6 ? ` · Sườn dốc: ${g.stats.steepPct}%` : '';
-  el.textContent = `Trũng ~${g.stats.lowlandPct}%${slopeHint} · Nền ${g.stats.minM}–${g.stats.maxM} m (${g.rows}×${g.cols})`;
+  const slopeHint = (g.stats.steepPct || 0) >= 6 ? ` · Sườn dốc ${g.stats.steepPct}%` : '';
+  el.textContent = `Vùng trũng ~${g.stats.lowlandPct}%${slopeHint} · Độ cao ${g.stats.minM}–${g.stats.maxM} m (${g.rows}×${g.cols} điểm)`;
 }
 
 async function refreshActiveZoneData({ flyMap = true } = {}) {
@@ -555,6 +571,7 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
       const lb = document.getElementById('hydro-rain-label');
       if (sl) sl.value = String(liveSim);
       if (lb) lb.textContent = `${liveSim} mm`;
+      updateHydroSimModeBanner();
     }
   }
 
@@ -601,13 +618,16 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
     state.osmPois = Array.isArray(osmOk.pois) ? osmOk.pois : [];
     state.osmWaterways = Array.isArray(osmOk.waterways) ? osmOk.waterways : [];
     if (osmStatusEl) {
-      osmStatusEl.textContent =
-        state.osmPois.length + state.osmWaterways.length > 0
-          ? `+${state.osmPois.length} y tế/trú · +${state.osmWaterways.length} thủy hệ`
-          : 'Đã đồng bộ vùng';
+      if (osmOk.source === 'osm_photon_live' && state.osmWaterways.length === 0) {
+        osmStatusEl.textContent = `+${state.osmPois.length} y tế/trú (OSM · kênh rạch chi tiết tạm bận)`;
+      } else if (state.osmPois.length + state.osmWaterways.length > 0) {
+        osmStatusEl.textContent = `+${state.osmPois.length} y tế/trú · +${state.osmWaterways.length} kênh/sông OSM`;
+      } else {
+        osmStatusEl.textContent = 'Đã kiểm tra OSM vùng';
+      }
     }
   } else if (osmStatusEl) {
-    osmStatusEl.textContent = 'Đang dùng dữ liệu nền';
+    osmStatusEl.textContent = 'OSM tạm bận — hiển thị dữ liệu cộng đồng';
   }
 
   state.zonePoints = mergeZonePoints({
@@ -951,12 +971,13 @@ function renderPublicOverview({ flyMap = false } = {}) {
     elevPill.textContent = `Nền ~${state.zoneElevationM} m`;
   }
 
+  const stampLabel = state.lastUpdatedAt ? formatTimeHm(state.lastUpdatedAt) : '';
   if (state.weather) {
     document.getElementById('env-rain-val').textContent =
       state.weather.rainMm >= 0.5 ? `${state.weather.rainMm.toFixed(1)} mm/h` : `0 mm/h`;
-    document.getElementById('env-rain-desc').textContent = `Ngày ~${Math.round(state.weather.dailyRainMm)} mm · Gió ${Math.round(state.weather.windKmh || 0)} km/h`;
+    document.getElementById('env-rain-desc').textContent = `Cả ngày ~${Math.round(state.weather.dailyRainMm)} mm · Gió ${Math.round(state.weather.windKmh || 0)} km/h${stampLabel ? ` · ${stampLabel}` : ''}`;
     document.getElementById('env-heat-val').textContent = `${Math.round(state.weather.temp)}°C`;
-    document.getElementById('env-heat-desc').textContent = `Cảm nhận ${Math.round(state.weather.apparentTemp)}°C${state.weather.apparentTemp >= 38 ? ' · Nắng gắt' : ''}`;
+    document.getElementById('env-heat-desc').textContent = `Cảm nhận ${Math.round(state.weather.apparentTemp)}°C${state.weather.apparentTemp >= 38 ? ' · Nắng gắt' : ''} · Open-Meteo`;
   } else {
     document.getElementById('env-rain-val').textContent = '-- mm/h';
     document.getElementById('env-rain-desc').textContent = `Đang đồng bộ ${state.zone.province}...`;
@@ -969,11 +990,11 @@ function renderPublicOverview({ flyMap = false } = {}) {
     ? `${Math.round(state.aqi.usAqi)}`
     : '--';
   document.getElementById('env-aqi-desc').textContent = Number.isFinite(state.aqi?.pm25)
-    ? `${aqiInfo.headline} · PM2.5 ${Math.round(state.aqi.pm25)}`
+    ? `${aqiInfo.headline} · Bụi PM2.5 ${Math.round(state.aqi.pm25)} · Mô hình CAMS`
     : aqiInfo.headline;
 
   document.getElementById('env-zone-points-val').textContent = `${state.zonePoints.length} điểm`;
-  document.getElementById('env-zone-points-desc').textContent = `${riskCount} rủi ro · ${safeCount} an toàn · ${state.zoneCorridors.length} tuyến`;
+  document.getElementById('env-zone-points-desc').textContent = `${riskCount} từng ngập khi mưa · ${safeCount} trú ẩn/y tế · ${state.zoneCorridors.length} tuyến`;
 
   const rainPct = state.weather ? Math.min(100, Math.max(6, Math.round((Number(state.weather.dailyRainMm || 0) / 120) * 100))) : 8;
   const heatPct = state.weather ? Math.min(100, Math.max(12, Math.round(((Number(state.weather.apparentTemp || 28) - 10) / 36) * 100))) : 40;
@@ -1250,15 +1271,12 @@ function ensureNationalMap() {
   zoneMarkersLayer = window.L.layerGroup().addTo(nationalMap);
   mainRouteLayer = window.L.layerGroup().addTo(nationalMap);
 
-  let lastZoomTier = '';
+  let lastZoomVal = null;
   nationalMap.on('zoomend', () => {
     const z = nationalMap.getZoom();
-    const tier = z <= 13 ? 'sm' : z === 14 ? 'md' : 'lg';
-    if (tier !== lastZoomTier) {
-      lastZoomTier = tier;
-      zoneMarkersLayer?.eachLayer((m) => {
-        if (m._vnPt) m.setIcon(buildMapPictogramIcon(window.L, m._vnPt, z));
-      });
+    if (z !== lastZoomVal) {
+      lastZoomVal = z;
+      renderZoneMapAndList({ flyMap: false });
     }
   });
 
@@ -1630,23 +1648,105 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
     }
   }
 
-  // Ký hiệu bản đồ trực quan theo cấp thu phóng (Zoom-Adaptive SVG Pictograms)
+  // Gom cụm thông minh theo ô lưới màn hình ở mức thu phóng rộng để tránh chồng lấn 60+ điểm
   const curZoom = nationalMap.getZoom() || 14;
-  for (const pt of filtered) {
-    const marker = window.L.marker([Number(pt.lat), Number(pt.lng)], {
-      icon: buildMapPictogramIcon(window.L, pt, curZoom)
-    })
-      .bindTooltip(`<strong>${esc(pt.name)}</strong><br><span class="mono-num">${esc(formatDistancePlain(pt.distanceMeters))}</span>`, {
-        direction: 'top',
-        offset: [0, -8],
-        className: 'vn-map-tooltip'
+  const clusterCellPx = curZoom >= 16 ? 0 : curZoom === 15 ? 30 : curZoom === 14 ? 42 : 52;
+  const liveByPt = state.livePulse?.byPoint || {};
+  const enrichedPts = filtered.map((pt) => ({
+    ...pt,
+    isLiveFlooding: liveByPt[pt.id]?.status === 'flooding'
+  }));
+
+  if (clusterCellPx > 0 && enrichedPts.length > 10) {
+    const buckets = new Map();
+    for (const pt of enrichedPts) {
+      const pxPt = nationalMap.latLngToContainerPoint([Number(pt.lat), Number(pt.lng)]);
+      const gx = Math.floor(pxPt.x / clusterCellPx);
+      const gy = Math.floor(pxPt.y / clusterCellPx);
+      const key = `${gx}:${gy}`;
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(pt);
+    }
+
+    for (const group of buckets.values()) {
+      // Giữ các điểm đang báo ngập nóng <6h luôn hiển thị riêng, chỉ gom nhóm các điểm tĩnh chồng chéo
+      const liveItems = group.filter((p) => p.isLiveFlooding);
+      const staticItems = group.filter((p) => !p.isLiveFlooding);
+
+      for (const lpt of liveItems) {
+        const m = window.L.marker([Number(lpt.lat), Number(lpt.lng)], {
+          icon: buildMapPictogramIcon(window.L, lpt, curZoom)
+        })
+          .bindTooltip(`<strong>${esc(lpt.name)}</strong><br><span class="mono-num">Đang báo ngập mới · ${esc(formatDistancePlain(lpt.distanceMeters))}</span>`, {
+            direction: 'top',
+            offset: [0, -8],
+            className: 'vn-map-tooltip'
+          })
+          .on('click', (ev) => {
+            window.L.DomEvent.stopPropagation(ev);
+            showSelectedPointCard(lpt);
+          });
+        m._vnPt = lpt;
+        m.addTo(zoneMarkersLayer);
+      }
+
+      if (staticItems.length === 1) {
+        const pt = staticItems[0];
+        const m = window.L.marker([Number(pt.lat), Number(pt.lng)], {
+          icon: buildMapPictogramIcon(window.L, pt, curZoom)
+        })
+          .bindTooltip(`<strong>${esc(pt.name)}</strong><br><span class="mono-num">${esc(formatDistancePlain(pt.distanceMeters))}</span>`, {
+            direction: 'top',
+            offset: [0, -8],
+            className: 'vn-map-tooltip'
+          })
+          .on('click', (ev) => {
+            window.L.DomEvent.stopPropagation(ev);
+            showSelectedPointCard(pt);
+          });
+        m._vnPt = pt;
+        m.addTo(zoneMarkersLayer);
+      } else if (staticItems.length > 1) {
+        const cLat = staticItems.reduce((s, x) => s + Number(x.lat), 0) / staticItems.length;
+        const cLng = staticItems.reduce((s, x) => s + Number(x.lng), 0) / staticItems.length;
+        const safeCnt = staticItems.filter((x) => x.layerGroup === 'safe').length;
+        const riskCnt = staticItems.length - safeCnt;
+        const tone = safeCnt > riskCnt ? 'is-safe' : 'is-risk';
+        const clusterIcon = window.L.divIcon({
+          className: `vn-cluster-badge ${tone}`,
+          html: `<span class="vn-cluster-pill mono-num" title="Chạm để phóng to xem ${staticItems.length} vị trí">${staticItems.length}</span>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        });
+        window.L.marker([cLat, cLng], { icon: clusterIcon })
+          .bindTooltip(
+            `<strong>Cụm ${staticItems.length} vị trí</strong><br><small>${riskCnt > 0 ? `${riskCnt} điểm từng ngập khi mưa · ` : ''}${safeCnt > 0 ? `${safeCnt} nơi trú/y tế` : ''}</small><br><span style="color:#0F766E;">Chạm để phóng to tách điểm</span>`,
+            { direction: 'top', offset: [0, -10], className: 'vn-map-tooltip' }
+          )
+          .on('click', (ev) => {
+            window.L.DomEvent.stopPropagation(ev);
+            nationalMap.setView([cLat, cLng], Math.min(17, curZoom + 2), { animate: true });
+          })
+          .addTo(zoneMarkersLayer);
+      }
+    }
+  } else {
+    for (const pt of enrichedPts) {
+      const marker = window.L.marker([Number(pt.lat), Number(pt.lng)], {
+        icon: buildMapPictogramIcon(window.L, pt, curZoom)
       })
-      .on('click', (ev) => {
-        window.L.DomEvent.stopPropagation(ev);
-        showSelectedPointCard(pt);
-      });
-    marker._vnPt = pt;
-    marker.addTo(zoneMarkersLayer);
+        .bindTooltip(`<strong>${esc(pt.name)}</strong><br><span class="mono-num">${esc(formatDistancePlain(pt.distanceMeters))}</span>`, {
+          direction: 'top',
+          offset: [0, -8],
+          className: 'vn-map-tooltip'
+        })
+        .on('click', (ev) => {
+          window.L.DomEvent.stopPropagation(ev);
+          showSelectedPointCard(pt);
+        });
+      marker._vnPt = pt;
+      marker.addTo(zoneMarkersLayer);
+    }
   }
 
   hydroSurfaceLayer?.redraw();
@@ -1844,6 +1944,18 @@ async function handleVietnamZoneSearch() {
 /* =========================================================================
    5. PHÂN TÍCH LỘ TRÌNH, KIỂM TRA NƠI Ở & BÁO SỰ CỐ TOÀN QUỐC
    ========================================================================= */
+function normPlaceText(str) {
+  return String(str || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function geocodeVietnamPlace(text) {
   const q = String(text || '').trim();
   const coordMatch = q.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
@@ -1854,11 +1966,42 @@ async function geocodeVietnamPlace(text) {
       return { name: `Tọa độ (${lat.toFixed(4)}, ${lng.toFixed(4)})`, lat, lng };
     }
   }
-  const zoneHit = searchVietnamZones(q, 'all', 1)[0];
-  if (zoneHit) return { name: zoneHit.name, lat: zoneHit.lat, lng: zoneHit.lng };
-  const localPt = state.zonePoints.find((p) => (p.name || '').toLowerCase().includes(q.toLowerCase()));
-  if (localPt) return { name: localPt.name, lat: Number(localPt.lat), lng: Number(localPt.lng) };
-  if (!state.isOffline) {
+
+  const primaryRaw = q.split(/[,–\-]/)[0].trim();
+  const normQ = normPlaceText(q);
+  const normPrimary = normPlaceText(primaryRaw);
+
+  // 1. Ưu tiên khớp đúng mốc đặc trưng / điểm cầu / tuyến phổ thông trước tránh bị tên tỉnh "Hà Nội" nuốt mất địa chỉ cụ thể
+  const candidatePool = [
+    ...(Array.isArray(CITIZEN_LANDMARKS) ? CITIZEN_LANDMARKS : []),
+    ...(Array.isArray(ROUTE_PRESETS) ? ROUTE_PRESETS : []),
+    ...(Array.isArray(state.zonePoints) ? state.zonePoints : []),
+    ...ALL_STATIC_POINTS
+  ];
+
+  // Khớp trực tiếp cụm chính (vd: "nga tu cau noi" -> khớp "cau noi", "benh vien da khoa phuong dong" -> khớp "phuong dong")
+  const primaryShort = normPrimary.replace(/^(nga tu|nga ba|phuong|quan|duong|pho|cong|khu vuc)\s+/i, '').trim();
+  if (primaryShort.length >= 4 && primaryShort !== normPlaceText(state.zone.name)) {
+    const localHit = candidatePool.find((p) => {
+      const pn = normPlaceText(p.label || p.name || '');
+      return pn && (pn === normPrimary || pn.includes(normPrimary) || (primaryShort.length >= 5 && pn.includes(primaryShort)));
+    });
+    if (localHit) {
+      return { name: localHit.label || localHit.name || q, lat: Number(localHit.lat), lng: Number(localHit.lng) };
+    }
+  }
+
+  // 2. Nếu query là đúng tên tâm vùng đang mở (hoặc chính xác tên một tỉnh/vùng mà không có tên đường đi kèm)
+  const topZoneHit = searchVietnamZones(q, 'all', 1)[0];
+  if (topZoneHit) {
+    const zNorm = normPlaceText(topZoneHit.name);
+    if (normQ === zNorm || (!q.includes(',') && normQ.length <= zNorm.length + 4 && zNorm.includes(normQ))) {
+      return { name: topZoneHit.name, lat: topZoneHit.lat, lng: topZoneHit.lng };
+    }
+  }
+
+  // 3. Định vị địa chỉ cụ thể toàn quốc bằng OpenStreetMap Nominatim
+  if (!state.isOffline && normQ.length >= 3) {
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=vn&q=${encodeURIComponent(q)}`
@@ -1869,7 +2012,12 @@ async function geocodeVietnamPlace(text) {
       // fallback
     }
   }
-  return { name: state.zone.name, lat: state.zone.lat, lng: state.zone.lng };
+
+  if (topZoneHit) return { name: topZoneHit.name, lat: topZoneHit.lat, lng: topZoneHit.lng };
+  const anyLocalPt = candidatePool.find((p) => normPlaceText(p.label || p.name).includes(normQ));
+  if (anyLocalPt) return { name: anyLocalPt.label || anyLocalPt.name, lat: Number(anyLocalPt.lat), lng: Number(anyLocalPt.lng) };
+
+  return { name: state.zone.name, lat: state.zone.lat, lng: state.zone.lng, resolvedFallback: true };
 }
 
 async function fetchOsrmRoutes(waypoints, travelMode, includeAlternatives = false) {
@@ -1907,6 +2055,15 @@ async function runNationalRouteComparison(e) {
     const start = await geocodeVietnamPlace(document.getElementById('route-start-input')?.value);
     const end = await geocodeVietnamPlace(document.getElementById('route-end-input')?.value);
 
+    if (haversineMeters(start.lat, start.lng, end.lat, end.lng) < 40) {
+      document.getElementById('route-comparison-output').hidden = false;
+      document.getElementById('route-reason-banner').innerHTML = `<strong>Chưa tách được 2 vị trí khác nhau (${esc(start.name)}):</strong><br>Vui lòng chọn điểm đi và điểm đến rõ hơn (ví dụ: thêm tên đường hoặc chọn trên bản đồ).`;
+      document.getElementById('route-compare-cards').innerHTML = '';
+      document.getElementById('route-honesty-banner').textContent = '';
+      showToast('Điểm đi và điểm đến đang trùng tọa độ — vui lòng nhập địa chỉ cụ thể hơn.');
+      return;
+    }
+
     const riskPoints = state.zonePoints.filter((p) => p.layerGroup === 'risk');
     const liveFloodPointIds = new Set(
       Object.values(state.livePulse?.byPoint || {})
@@ -1930,7 +2087,8 @@ async function runNationalRouteComparison(e) {
     const direct = directList[0] || {
       coordsLngLat: [[start.lng, start.lat], [end.lng, end.lat]],
       distanceKm: Math.round((haversineMeters(start.lat, start.lng, end.lat, end.lng) * 1.25) / 10) / 100,
-      durationMin: Math.max(3, Math.round(haversineMeters(start.lat, start.lng, end.lat, end.lng) / 300))
+      durationMin: Math.max(3, Math.round(haversineMeters(start.lat, start.lng, end.lat, end.lng) / 300)),
+      isStraightLineFallback: true
     };
 
     const simRainMm = Math.max(Number(state.hydroSim.rainMm || 0), Number(state.weather?.dailyRainMm || 0));
@@ -1976,13 +2134,23 @@ async function runNationalRouteComparison(e) {
     document.getElementById('route-comparison-output').hidden = false;
     const reasonExtra =
       recommendAlt && bestAlt.hydro.floodedLengthM < directHydro.floodedLengthM
-        ? ` Giảm đoạn nghi đọng nước từ ~${directHydro.floodedLengthM} m xuống ~${bestAlt.hydro.floodedLengthM} m (đáy tuyến cao nhất từ ${bestAlt.hydro.minElevM} m).`
+        ? ` Giảm đoạn nghi đọng nước từ ~${directHydro.floodedLengthM} m xuống ~${bestAlt.hydro.floodedLengthM} m (điểm nền thấp nhất ${bestAlt.hydro.minElevM} m).`
         : '';
-    document.getElementById('route-reason-banner').innerHTML = `<strong>${esc(start.name)} → ${esc(end.name)}:</strong><br>${esc(cmp.reason + reasonExtra)}`;
+    const geocodeWarn =
+      start.resolvedFallback || end.resolvedFallback
+        ? ' Lưu ý: một đầu tuyến chưa tìm thấy chính xác trên OSM nên tạm quy về tâm vùng.'
+        : '';
+    const osrmFallbackWarn =
+      direct.isStraightLineFallback
+        ? ' (Máy chủ dẫn đường đường phố tạm gián đoạn — đang vẽ đoạn nối thẳng tham khảo).'
+        : '';
+    document.getElementById('route-reason-banner').innerHTML = `<strong>${esc(start.name)} → ${esc(end.name)}:</strong><br>${esc(cmp.reason + reasonExtra + geocodeWarn + osrmFallbackWarn)}`;
 
     const dRisk = cmp.directSummary.riskCount;
     const aRisk = cmp.detourSummary.riskCount;
     const passBadge = (h) => `<span class="route-passability-badge is-${esc(h.passability)}">${esc(h.passabilityLabel)}</span>`;
+    const formatRouteStatsLine = (riskCnt, h, isFallback) =>
+      `Đi gần <strong>${riskCnt} vị trí</strong> từng ngập · Độ sâu mô phỏng tối đa <strong>~${h.maxDepthCm} cm</strong> (lực nước ${h.maxDv} m²/s) · Đoạn trũng ~${h.floodedLengthM} m · Độ cao thấp nhất ${h.minElevM} m${isFallback ? ' · <em>Đường nối thẳng</em>' : ''}.`;
 
     document.getElementById('route-compare-cards').innerHTML = `
       <article class="route-option-card ${!recommendAlt ? 'is-recommended' : ''}">
@@ -1990,7 +2158,7 @@ async function runNationalRouteComparison(e) {
         <div class="route-metrics"><span>${cmp.directSummary.distanceKm} km</span><span>~${cmp.directSummary.durationMin} phút</span></div>
         ${passBadge(directHydro)}
         <p class="muted-body">
-          Đi gần <strong>${dRisk} vị trí</strong> rủi ro · Ngập mô phỏng tối đa <strong>~${directHydro.maxDepthCm} cm</strong> (D×V ${directHydro.maxDv} m²/s) · Đoạn trũng ~${directHydro.floodedLengthM} m · Nền thấp nhất ${directHydro.minElevM} m.
+          ${formatRouteStatsLine(dRisk, directHydro, direct.isStraightLineFallback)}
         </p>
       </article>
       <article class="route-option-card ${recommendAlt ? 'is-recommended' : ''}">
@@ -1998,7 +2166,7 @@ async function runNationalRouteComparison(e) {
         <div class="route-metrics"><span>${cmp.detourSummary.distanceKm} km</span><span>~${cmp.detourSummary.durationMin} phút</span></div>
         ${passBadge(bestAlt.hydro)}
         <p class="muted-body">
-          Đi gần <strong>${aRisk} vị trí</strong> rủi ro · Ngập mô phỏng tối đa <strong>~${bestAlt.hydro.maxDepthCm} cm</strong> (D×V ${bestAlt.hydro.maxDv} m²/s) · Đoạn trũng ~${bestAlt.hydro.floodedLengthM} m · Nền thấp nhất ${bestAlt.hydro.minElevM} m.
+          ${formatRouteStatsLine(aRisk, bestAlt.hydro, bestAlt.geom.isStraightLineFallback)}
         </p>
       </article>
     `;
@@ -2685,18 +2853,36 @@ async function loadLiveBasinBulletins(forceRefresh = false) {
     const data = await res.json();
     if (!res.ok || !data?.ok || !Array.isArray(data.basins)) throw new Error('FEED_ERR');
     if (meta) {
-      const warnCnt = Number(data.activeWarningsCount || 0);
-      meta.textContent = `Cập nhật lúc ${formatTimeHm(data.syncedAt)} · ${warnCnt > 0 ? `${warnCnt} lưu vực/khu vực đang ở ngưỡng theo dõi cao` : '7 lưu vực ổn định'} (${data.cache || 'LIVE'})`;
+      const warnBasinCnt = Number(
+        data.warningBasinsCount ?? data.basins.filter((b) => b.alertLevel === 'emergency' || b.alertLevel === 'warning').length
+      );
+      const watchBasinCnt = Number(
+        data.watchBasinsCount ?? data.basins.filter((b) => b.alertLevel === 'watch').length
+      );
+      const gdacsCnt = Array.isArray(data.gdacsAlerts) ? data.gdacsAlerts.length : 0;
+      const summaryParts = [];
+      if (warnBasinCnt > 0) summaryParts.push(`${warnBasinCnt} lưu vực Cảnh báo`);
+      if (watchBasinCnt > 0) summaryParts.push(`${watchBasinCnt} lưu vực Theo dõi`);
+      if (gdacsCnt > 0) summaryParts.push(`${gdacsCnt} cảnh báo GDACS`);
+      const summaryTxt = summaryParts.length > 0 ? summaryParts.join(' · ') : '7 lưu vực ổn định';
+      meta.textContent = `Cập nhật lúc ${formatTimeHm(data.syncedAt)} · ${summaryTxt} · Nguồn Open-Meteo & Flood API`;
     }
     const basinCards = data.basins
       .map((b) => {
         const toneCls = b.alertLevel === 'emergency' ? 'tone-danger' : b.alertLevel === 'warning' || b.alertLevel === 'watch' ? 'tone-community' : 'tone-verified';
+        const ratioNote = Number(b.dischargeRatio) >= 1.15 ? ` (×${b.dischargeRatio} TB tuần)` : '';
+        const reasonLine = b.alertReason && b.alertLevel !== 'normal'
+          ? `<div class="basin-reason-note">${esc(b.alertReason)}</div>`
+          : '';
         return `<div class="basin-feed-item">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
-            <strong style="font-size:0.84rem;">${esc(b.basinName)}</strong>
-            <span class="source-tag ${toneCls}">${esc(b.alertLabel)}</span>
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:4px;">
+              <strong style="font-size:0.84rem;">${esc(b.basinName)}</strong>
+              <span class="source-tag ${toneCls}">${esc(b.alertLabel)}</span>
+            </div>
+            <div class="muted-meta" style="margin-bottom:6px;">${esc(b.province)} · Mưa 24h: <strong class="mono-num">${b.rain24hMm} mm</strong> · Gió giật: <strong class="mono-num">${b.windGustKmh} km/h</strong>${b.riverDischargeMs != null ? ` · Lưu lượng: <strong class="mono-num">${b.riverDischargeMs} m³/s</strong>${esc(ratioNote)}` : ' · Dữ liệu lưu lượng đang đồng bộ'}</div>
+            ${reasonLine}
           </div>
-          <div class="muted-meta" style="margin-bottom:8px;">${esc(b.province)} · Mưa 24h: <strong class="mono-num">${b.rain24hMm} mm</strong> · Gió giật: <strong class="mono-num">${b.windGustKmh} km/h</strong>${b.riverDischargeMs != null ? ` · Lưu lượng: <strong class="mono-num">${b.riverDischargeMs} m³/s</strong>` : ''}</div>
           <button type="button" class="btn btn-sm btn-secondary js-open-pub-zone" data-lat="${b.lat}" data-lng="${b.lng}" data-radius="8" data-name="${esc(b.province)}">Xem trên Bản đồ</button>
         </div>`;
       })
@@ -2989,7 +3175,9 @@ function bindEvents() {
     if (hintEl) {
       hintEl.textContent = `Đang mô phỏng mặt phủ theo mốc +${idx}h: mưa ${mm.toFixed(1)} mm/h (XS ${prob}% → quy đổi kịch bản ${simMm} mm).`;
     }
+    updateHydroSimModeBanner();
     hydroSurfaceLayer?.redraw();
+    flowVectorsLayer?.redraw();
   };
   hourlyBarsEl?.addEventListener('click', (ev) => {
     const col = ev.target.closest('.hourly-bar-col[data-mm]');
@@ -3125,8 +3313,13 @@ function bindEvents() {
       const lb = document.getElementById('hydro-rain-label');
       if (sl) sl.value = String(mm);
       if (lb) lb.textContent = `${mm} mm`;
+      updateHydroSimModeBanner();
       hydroSurfaceLayer?.redraw();
+      flowVectorsLayer?.redraw();
     });
+  });
+  document.getElementById('btn-reset-live-rain')?.addEventListener('click', () => {
+    document.querySelector('[data-rain-preset="live"]')?.click();
   });
   document.getElementById('hydro-rain-slider')?.addEventListener('input', (ev) => {
     const mm = Number(ev.target.value);
@@ -3135,7 +3328,9 @@ function bindEvents() {
     document.querySelectorAll('[data-rain-preset]').forEach((b) => b.classList.remove('is-active'));
     const lb = document.getElementById('hydro-rain-label');
     if (lb) lb.textContent = `${mm} mm`;
+    updateHydroSimModeBanner();
     hydroSurfaceLayer?.redraw();
+    flowVectorsLayer?.redraw();
   });
   document.getElementById('hydro-opacity-slider')?.addEventListener('input', (ev) => {
     const pct = Number(ev.target.value);
@@ -3718,7 +3913,9 @@ function bindEvents() {
       const sName = spotEvac.dataset.sname || 'Cơ sở hỗ trợ';
       const extra = document.getElementById('spot-dynamic-extra');
       if (extra) extra.innerHTML = `<div class="spot-profile-box">Đang tìm lộ trình ngắn nhất tới <strong>${esc(sName)}</strong>...</div>`;
-      const route = (await fetchOsrm([[lat, lng], [sLat, sLng]], 'bike')) || {
+      const osrmRoute = await fetchOsrm([[lat, lng], [sLat, sLng]], 'bike');
+      const isFallback = !osrmRoute;
+      const route = osrmRoute || {
         coordsLngLat: [[lng, lat], [sLng, sLat]],
         distanceKm: Math.round((haversineMeters(lat, lng, sLat, sLng) * 1.2) / 10) / 100,
         durationMin: Math.max(2, Math.round(haversineMeters(lat, lng, sLat, sLng) / 280))
@@ -3726,11 +3923,11 @@ function bindEvents() {
       if (nationalMap && mainRouteLayer) {
         mainRouteLayer.clearLayers();
         const latLngs = route.coordsLngLat.map(([ln, la]) => [la, ln]);
-        const line = window.L.polyline(latLngs, { color: '#16A34A', weight: 5.5, opacity: 0.92 }).addTo(mainRouteLayer);
+        const line = window.L.polyline(latLngs, { color: '#16A34A', weight: 5.5, dashArray: isFallback ? '6 5' : null, opacity: 0.92 }).addTo(mainRouteLayer);
         nationalMap.fitBounds(line.getBounds(), { padding: [36, 36], maxZoom: 16 });
       }
       if (extra) {
-        extra.innerHTML = `<div class="spot-profile-box"><strong>Tuyến tiếp cận ${esc(sName)}:</strong> Quãng đường <strong>${route.distanceKm} km</strong> (~${route.durationMin} phút di chuyển). Đã vẽ đường màu xanh lá trên bản đồ.</div>`;
+        extra.innerHTML = `<div class="spot-profile-box"><strong>Tuyến tiếp cận ${esc(sName)}:</strong> Quãng đường <strong>${route.distanceKm} km</strong> (~${route.durationMin} phút). ${isFallback ? '<em>Lưu ý: Máy chủ dẫn đường đang bận, tạm hiển thị hướng nối thẳng tham khảo.</em>' : 'Đã vẽ lộ trình màu xanh lá trên bản đồ.'}</div>`;
       }
       return;
     }
@@ -4026,7 +4223,7 @@ const appSafetyState = {
   escortWatchId: null,
   lastSpeedKmh: 0,
   stationarySinceMs: null,
-  kinematics: { prevSpeedKmh: 18, currentSpeedKmh: 18, stationarySeconds: 0 },
+  kinematics: { prevSpeedKmh: null, currentSpeedKmh: null, stationarySeconds: 0 },
   telemetryHistory: []
 };
 
@@ -4288,7 +4485,11 @@ function runProactiveAiEvaluation(customOverride = null) {
     nearFloodSpotMeters: customOverride?.nearFloodSpotMeters ?? nearFloodDist
   });
 
-  const kin = customOverride?.kinematics || appSafetyState.kinematics;
+  const hasLiveGpsKinematics = Boolean(customOverride || appSafetyState.escortWatchId !== null) && Number.isFinite(appSafetyState.kinematics?.currentSpeedKmh);
+  const rawKin = customOverride?.kinematics || appSafetyState.kinematics;
+  const kin = hasLiveGpsKinematics
+    ? rawKin
+    : { prevSpeedKmh: 0, currentSpeedKmh: 0, stationarySeconds: 0 };
   const result = evaluateUserDistressProbability({
     hydro,
     slopeDeg: grad?.slopeDeg ?? 1.2,
@@ -4318,18 +4519,38 @@ function runProactiveAiEvaluation(customOverride = null) {
         ? 'Nguy hiểm cuốn trôi (>0.35)'
         : hydro.vehicleStability === 'high_stall_risk'
           ? 'Dễ chết máy / trượt bánh'
-          : 'Ổn định phương tiện (<0.15)';
+          : 'Trong ngưỡng an toàn (<0.15)';
   }
-  if (kEl) kEl.textContent = `${kin.currentSpeedKmh.toFixed(0)} km/h`;
-  if (dwEl) dwEl.textContent = kin.stationarySeconds > 0 ? `Đứng yên: ${Math.round(kin.stationarySeconds)} giây (trước đó ${Math.round(kin.prevSpeedKmh)} km/h)` : 'Di chuyển thông suốt';
-  if (prEl) prEl.textContent = `${result.probabilityPct}%`;
+  if (!hasLiveGpsKinematics) {
+    if (kEl) kEl.textContent = 'Chưa bật GPS';
+    if (dwEl) dwEl.textContent = 'Nhấn Bật GPS Hộ tống hoặc chạy thử kịch bản bên dưới';
+    if (prEl) prEl.textContent = '--';
+  } else {
+    if (kEl) kEl.textContent = `${Number(kin.currentSpeedKmh).toFixed(0)} km/h`;
+    if (dwEl) {
+      dwEl.textContent =
+        kin.stationarySeconds > 0
+          ? `Đứng yên: ${Math.round(kin.stationarySeconds)} giây (trước đó ${Math.round(kin.prevSpeedKmh)} km/h)`
+          : 'Di chuyển thông suốt';
+    }
+    if (prEl) prEl.textContent = `${result.probabilityPct}%`;
+  }
   if (qcEl) {
+    const ratioNum = Number(result.breakdown.qcvnAirRatio || 1);
     qcEl.textContent = result.breakdown.qcvnCompliant
-      ? 'Đạt QCVN 05:2023/BTNMT'
-      : `Vượt QCVN 05:2023 (×${result.breakdown.qcvnAirRatio})`;
+      ? 'Không khí trong ngưỡng chuẩn QCVN'
+      : `Không khí kém (bụi PM2.5 gấp ×${ratioNum} chuẩn)`;
   }
-  if (hlEl) hlEl.textContent = result.headline;
-  if (dsEl) dsEl.textContent = result.explanation;
+  if (hlEl) {
+    hlEl.textContent = !hasLiveGpsKinematics
+      ? 'Đang ở chế độ chờ — chưa theo dõi hành trình'
+      : result.headline;
+  }
+  if (dsEl) {
+    dsEl.textContent = !hasLiveGpsKinematics
+      ? 'Chỉ số thời tiết và thủy lực bên trên lấy theo vị trí vùng đang xem. Khi bạn bật GPS Hộ tống, thiết bị mới bắt đầu đo tốc độ và phát hiện dừng kẹt cục bộ.'
+      : result.explanation;
+  }
 
   appSafetyState.telemetryHistory.push({
     probPct: result.probabilityPct,
@@ -5265,8 +5486,11 @@ function bindSosAndAppEvents() {
     if (appSafetyState.escortWatchId !== null) {
       navigator.geolocation?.clearWatch(appSafetyState.escortWatchId);
       appSafetyState.escortWatchId = null;
+      appSafetyState.stationarySinceMs = null;
+      appSafetyState.kinematics = { prevSpeedKmh: null, currentSpeedKmh: null, stationarySeconds: 0 };
       btn.setAttribute('aria-pressed', 'false');
       btn.textContent = 'Bật GPS Hộ tống';
+      runProactiveAiEvaluation();
       showToast('Đã tắt theo dõi hộ tống GPS.');
       return;
     }
