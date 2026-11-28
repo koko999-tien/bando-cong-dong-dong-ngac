@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540">
+  <defs>
+    <style>
+      .title { font: 700 20px system-ui, sans-serif; fill: #0f4c5c; }
+      .sub { font: 400 13px system-ui, sans-serif; fill: #475569; }
+      .bldg-title { font: 800 15px system-ui, sans-serif; fill: #0f172a; }
+      .bldg-sub { font: 500 11px system-ui, sans-serif; fill: #334155; }
+      .tag-cool { font: 700 12px system-ui, sans-serif; fill: #15803d; }
+      .tag-med { font: 700 12px system-ui, sans-serif; fill: #1d4ed8; }
+      .tag-risk { font: 700 11px system-ui, sans-serif; fill: #b91c1c; }
+      .tag-warn { font: 700 11px system-ui, sans-serif; fill: #b45309; }
+    </style>
+  </defs>
+  <rect width="960" height="540" rx="16" fill="#f8fafc"/>
+  <rect x="20" y="20" width="920" height="500" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+
+  <text x="44" y="54" class="title">SƠ ĐỒ ĐỊNH HƯỚNG AN TOÀN QUANH ĐH MỎ - ĐỊA CHẤT (KHU A · A1 · B)</text>
+  <text x="44" y="74" class="sub">Minh họa kết nối 3 khu, hành lang râm mát, đường tới Trạm Y tế và vùng cảnh báo ngập cuối Phố Viên – Sông Nhuệ</text>
+
+  <!-- Vùng ngập Sông Nhuệ / Cuối Phố Viên -->
+  <path d="M 520 350 C 560 315, 650 325, 675 375 C 695 430, 620 480, 540 465 C 485 455, 495 385, 520 350 Z"
+        fill="rgba(220, 38, 38, 0.12)" stroke="#dc2626" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="585" y="425" text-anchor="middle" class="tag-risk">VÙNG NGẬP SÂU &amp; XOÁY CỐNG</text>
+  <text x="585" y="442" text-anchor="middle" class="tag-risk">Cuối Phố Viên – Bờ Sông Nhuệ</text>
+
+  <!-- Tuyến đi bộ mát nhất A -> A1 -->
+  <path d="M 160 220 C 230 190, 290 140, 390 140 C 485 140, 525 185, 540 245"
+        fill="none" stroke="#16a34a" stroke-width="8" stroke-linecap="round"/>
+  <rect x="195" y="128" width="245" height="24" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+  <text x="317" y="144" text-anchor="middle" class="tag-cool">① Tuyến đi mát nhất 11h00–14h30</text>
+
+  <!-- Tuyến nhanh tới Trạm Y tế -->
+  <path d="M 160 240 L 505 250" fill="none" stroke="#2563eb" stroke-width="4.5" stroke-dasharray="9 6" stroke-linecap="round"/>
+  <path d="M 390 150 L 505 245" fill="none" stroke="#2563eb" stroke-width="4.5" stroke-dasharray="9 6" stroke-linecap="round"/>
+  <path d="M 790 250 C 710 215, 620 220, 560 250" fill="none" stroke="#2563eb" stroke-width="4.5" stroke-dasharray="9 6" stroke-linecap="round"/>
+
+  <!-- Khu A -->
+  <rect x="70" y="185" width="160" height="92" rx="10" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+  <text x="150" y="218" text-anchor="middle" class="bldg-title">KHU A (18 PHỐ VIÊN)</text>
+  <text x="150" y="238" text-anchor="middle" class="bldg-sub">Nền cao ~17 m · Thư viện</text>
+  <text x="150" y="256" text-anchor="middle" class="tag-med">→ Y tế trường: ~3 phút</text>
+
+  <!-- Khu A1 -->
+  <rect x="310" y="255" width="165" height="88" rx="10" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
+  <text x="392" y="288" text-anchor="middle" class="bldg-title">KHU A1 (CAO TẦNG)</text>
+  <text x="392" y="308" text-anchor="middle" class="bldg-sub">Sảnh tầng 1 tránh mưa/nắng</text>
+  <text x="392" y="326" text-anchor="middle" class="tag-med">→ Y tế trường: ~4 phút</text>
+
+  <!-- Trạm Y tế & BV Phương Đông -->
+  <rect x="465" y="198" width="175" height="78" rx="10" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2.5"/>
+  <text x="552" y="226" text-anchor="middle" class="bldg-title">TRẠM Y TẾ HUMG</text>
+  <text x="552" y="245" text-anchor="middle" class="bldg-sub">Sơ cứu sốc nhiệt &amp; cấp cứu</text>
+  <text x="552" y="262" text-anchor="middle" class="tag-med">BV Phương Đông cách 310 m</text>
+
+  <!-- Khu B -->
+  <rect x="720" y="185" width="175" height="96" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <text x="807" y="217" text-anchor="middle" class="bldg-title">KHU B (PHẠM VĂN NGHỊ)</text>
+  <text x="807" y="236" text-anchor="middle" class="bldg-sub">Bờ Tây Sông Nhuệ (~8–10 m)</text>
+  <text x="807" y="255" text-anchor="middle" class="tag-risk">Chú ý ngập lối Cầu Phố Viên</text>
+  <text x="807" y="271" text-anchor="middle" class="tag-med">→ BV / Y tế: đi đường cao</text>
+
+  <!-- Cảnh báo nắng gắt -->
+  <rect x="70" y="340" width="215" height="28" rx="6" fill="#fef3c7" stroke="#d97706"/>
+  <text x="177" y="358" text-anchor="middle" class="tag-warn">☀ Sân mở &amp; trạm buýt nắng gắt 11h–14h30</text>
+</svg>

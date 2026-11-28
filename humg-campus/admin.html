@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>Quản trị — HUMG SafeMap (Khu A, A1, B)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./admin.css">
+</head>
+<body>
+  <!-- MÀN HÌNH ĐĂNG NHẬP QUẢN TRỊ (PHONG CÁCH GEOENV RUN 2026) -->
+  <div id="admin-login-screen" class="login-wrap">
+    <div class="login-card">
+      <div class="login-head">
+        <div class="login-logo" aria-hidden="true">M</div>
+        <h1>Đăng nhập quản trị</h1>
+        <p>Chỉ ban quản trị / nhóm khảo sát HUMG SafeMap được quyền truy cập khu vực này.</p>
+      </div>
+
+      <div id="login-error" class="login-err" hidden role="alert"></div>
+
+      <form id="admin-login-form" class="login-form">
+        <div class="field">
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" required autocomplete="username" class="input-field" placeholder="email của bạn">
+        </div>
+        <div class="field">
+          <label for="login-pass">Mật khẩu</label>
+          <input id="login-pass" type="password" required autocomplete="current-password" class="input-field" placeholder="••••••••">
+        </div>
+        <button type="submit" id="btn-login-submit" class="btn-primary-geo">Đăng nhập</button>
+        <div class="login-hint-box">
+          <span>Tài khoản mẫu (Demo): <code>admin@humg.edu.vn</code> / <code>humg2026</code></span>
+          <button type="button" id="btn-fill-demo" class="link-btn">Điền nhanh tài khoản mẫu</button>
+        </div>
+      </form>
+      <div style="text-align:center;margin-top:16px;">
+        <a href="./index.html" class="back-link">← Quay lại Bản đồ Trường Mỏ</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- KHUNG QUẢN TRỊ CHÍNH (SIDEBAR TRÁI + NỘI DUNG PHẢI) -->
+  <div id="admin-shell" class="admin-layout" hidden>
+    <header class="mobile-admin-bar">
+      <button type="button" id="btn-mob-menu" class="icon-btn" aria-label="Mở menu">☰</button>
+      <strong>HUMG SafeMap Admin</strong>
+      <a href="./index.html" class="link-btn">Bản đồ ↗</a>
+    </header>
+
+    <aside id="admin-sidebar" class="admin-sidebar" aria-label="Menu quản trị">
+      <div class="sidebar-brand">
+        <div class="sidebar-logo" aria-hidden="true">M</div>
+        <div>
+          <strong>HUMG SafeMap</strong>
+          <span>Quản trị Khu A · A1 · B</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button type="button" class="nav-item is-active" data-section="overview">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>
+          <span>Tổng quan</span>
+        </button>
+        <button type="button" class="nav-item" data-section="points">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 5h8M13 12h8M13 19h8M3 17l2 2 4-4M3 7l2 2 4-4"></path></svg>
+          <span>Điểm A, A1, B &amp; Ngập</span>
+        </button>
+        <button type="button" class="nav-item" data-section="feedback">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          <span>Góp ý &amp; trải nghiệm</span>
+          <span id="nav-badge-fb" class="nav-badge">0</span>
+        </button>
+        <button type="button" class="nav-item" data-section="quiz">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2z"></path></svg>
+          <span>Kết quả Quiz 15 câu</span>
+        </button>
+        <button type="button" class="nav-item" data-section="complaints">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4M12 17h.01"></path></svg>
+          <span>Báo ngập &amp; Khiếu nại</span>
+          <span id="nav-badge-comp" class="nav-badge nav-badge-red">0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <a href="./index.html" class="foot-btn">← Xem Bản đồ công khai</a>
+        <button type="button" id="btn-admin-logout" class="foot-btn foot-btn-danger">Đăng xuất</button>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <!-- ================= 1. TỔNG QUAN (ĐÚNG CẤU TRÚC GEOENV RUN) ================= -->
+      <section id="sec-overview" class="sec-panel">
+        <div class="sec-head">
+          <div>
+            <h1>Tổng quan</h1>
+            <p class="sec-sub">Bảng điều hành dữ liệu Trường ĐH Mỏ - Địa chất (Số liệu mô phỏng ảo + tương tác thực trên trình duyệt)</p>
+          </div>
+          <span class="demo-pill">Số liệu ảo + Live Session</span>
+        </div>
+
+        <!-- THẺ 1: 5 CHỈ SỐ CỐT LÕI (GRID 5 CỘT TABULAR-NUMS) -->
+        <div class="card">
+          <div class="kpi-5-grid">
+            <div>
+              <p class="kpi-lbl">Tổng điểm bản đồ</p>
+              <p id="kpi-total-pts" class="kpi-val">0</p>
+            </div>
+            <div>
+              <p class="kpi-lbl">Khu trường (A/A1/B)</p>
+              <p id="kpi-zones" class="kpi-val text-emerald">3</p>
+            </div>
+            <div>
+              <p class="kpi-lbl">Điểm &amp; Vùng ngập</p>
+              <p id="kpi-floods" class="kpi-val text-red">0</p>
+            </div>
+            <div>
+              <p class="kpi-lbl">Lượt làm Quiz 15 câu</p>
+              <p id="kpi-quiz-count" class="kpi-val">0</p>
+            </div>
+            <div>
+              <p class="kpi-lbl">Điểm TB Quiz</p>
+              <p id="kpi-quiz-avg" class="kpi-val text-amber">--/15</p>
+            </div>
+          </div>
+          <button type="button" class="inline-arrow-link js-go-sec" data-target="points">
+            Vào quản lý điểm Khu A, A1, B <span aria-hidden="true">→</span>
+          </button>
+        </div>
+
+        <!-- THẺ 2: LƯỢT TRUY CẬP (TỔNG LƯỢT / HÔM NAY / NGƯỜI DÙNG + PHÂN BỐ TRANG + 7 NGÀY) -->
+        <div class="card">
+          <div class="card-top-row">
+            <h3 class="card-h3">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1e5fc4" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              Lượt truy cập
+            </h3>
+            <button type="button" id="btn-sim-traffic" class="btn-outline-sm">+ Mô phỏng +15 lượt truy cập</button>
+          </div>
+
+          <div class="kpi-3-grid">
+            <div>
+              <p class="kpi-lbl">Tổng lượt</p>
+              <p id="vis-total" class="kpi-val">3.842</p>
+            </div>
+            <div>
+              <p class="kpi-lbl">Hôm nay</p>
+              <p id="vis-today" class="kpi-val">247</p>
+            </div>
+            <div>
+              <p class="kpi-lbl">Người dùng</p>
+              <p id="vis-unique" class="kpi-val">1.619</p>
+            </div>
+          </div>
+
+          <div id="vis-by-page" class="page-breakdown"></div>
+          <div id="vis-7day-chart" class="chart-7day"></div>
+        </div>
+
+        <!-- THẺ 3: KHÓA KHU VỰC CÔNG KHAI (2 BƯỚC XÁC NHẬN KIỂU GEOENV RUN) -->
+        <div class="card">
+          <h3 class="card-h3">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            Khóa khu vực công khai
+          </h3>
+          <div class="lock-row">
+            <span id="public-lock-badge" class="status-pill is-open">Đang mở</span>
+            <button type="button" id="btn-toggle-public-lock" class="btn-primary-geo btn-auto">Khóa khu vực công khai</button>
+          </div>
+          <p id="public-lock-msg" class="muted-msg"></p>
+        </div>
+
+        <!-- 4 THẺ TRUY CẬP NHANH DẠNG LƯỚI 2×2 (ĐỦ 4 THẺ TỔNG QUAN) -->
+        <div class="overview-4-grid">
+          <div class="card">
+            <h3 class="card-h3">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1e5fc4" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              Quản lý điểm Khu A, A1, B
+            </h3>
+            <button type="button" class="quick-nav-row js-go-sec" data-target="points">
+              <span>Vào quản lý 3 khu &amp; điểm ngập</span>
+              <span class="badge-chip badge-blue" id="ov-pts-badge">17 điểm</span>
+            </button>
+          </div>
+
+          <div class="card">
+            <h3 class="card-h3">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg>
+              Hòm thư góp ý &amp; phản ánh
+            </h3>
+            <button type="button" class="quick-nav-row js-go-sec" data-target="feedback">
+              <span>Xem góp ý &amp; trải nghiệm</span>
+              <span class="badge-chip badge-amber" id="ov-fb-badge">2 mới</span>
+            </button>
+          </div>
+
+          <div class="card">
+            <h3 class="card-h3">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M18 2H6v7a6 6 0 0 0 12 0V2z"></path></svg>
+              Kết quả Quiz 15 câu
+            </h3>
+            <button type="button" class="quick-nav-row js-go-sec" data-target="quiz">
+              <span>Xem bảng điểm Bộ Quiz 15 câu</span>
+              <span class="badge-chip badge-amber" id="ov-quiz-badge">492 lượt</span>
+            </button>
+          </div>
+
+          <div class="card">
+            <h3 class="card-h3">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4M12 17h.01"></path></svg>
+              Khiếu nại &amp; Báo ngập
+            </h3>
+            <button type="button" class="quick-nav-row js-go-sec" data-target="complaints">
+              <span>Xem báo cáo điểm ngập quanh Mỏ</span>
+              <span class="badge-chip badge-red" id="ov-comp-badge">2 chờ xử lý</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 2. QUẢN LÝ ĐIỂM A, A1, B & NGẬP ================= -->
+      <section id="sec-points" class="sec-panel" hidden>
+        <div class="sec-head">
+          <div>
+            <h1>Quản lý Điểm Khu A, A1, B &amp; Vùng Ngập quanh Mỏ</h1>
+            <p class="sec-sub">Danh mục các điểm thực địa đang hiển thị trên bản đồ HUMG SafeMap.</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="table-toolbar">
+            <input type="search" id="pts-search" class="input-field" style="max-width:300px;" placeholder="Tìm Khu A, A1, B, Phố Viên, Cổ Nhuế...">
+            <select id="pts-filter" class="input-field" style="max-width:210px;">
+              <option value="all">Tất cả nhóm điểm</option>
+              <option value="zone">3 Khu A, A1, B</option>
+              <option value="flood">Điểm ngập &amp; nguy hiểm</option>
+              <option value="heat">Nắng nóng</option>
+              <option value="medical">Y tế &amp; Nhà thuốc</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Mã</th>
+                  <th>Tên địa điểm</th>
+                  <th>Phân nhóm</th>
+                  <th>Cao độ</th>
+                  <th>Tọa độ (WGS84)</th>
+                </tr>
+              </thead>
+              <tbody id="admin-pts-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 3. GÓP Ý & TRẢI NGHIỆM ================= -->
+      <section id="sec-feedback" class="sec-panel" hidden>
+        <div class="sec-head">
+          <div>
+            <h1>Hòm thư Góp ý &amp; Trải nghiệm</h1>
+            <p class="sec-sub">Tổng hợp phản hồi đi thử tuyến đường mát &amp; đường tới Trạm Y tế.</p>
+          </div>
+        </div>
+        <div id="admin-feedback-list" class="stack-cards"></div>
+      </section>
+
+      <!-- ================= 4. KẾT QUẢ QUIZ 15 CÂU ================= -->
+      <section id="sec-quiz" class="sec-panel" hidden>
+        <div class="sec-head">
+          <div>
+            <h1>Thống kê &amp; Bảng điểm Bộ Quiz 15 Câu</h1>
+            <p class="sec-sub">Bao gồm bộ số liệu mẫu giả lập cộng với các lượt nộp bài mới nhất từ trang chính.</p>
+          </div>
+          <button type="button" id="btn-export-quiz-csv" class="btn-outline-sm">Xuất CSV Kết quả</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Mã lượt</th>
+                  <th>Sinh viên / Người tham gia</th>
+                  <th>Lớp / Đơn vị</th>
+                  <th>Điểm số</th>
+                  <th>Thời gian</th>
+                </tr>
+              </thead>
+              <tbody id="admin-quiz-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 5. BÁO NGẬP & KHIẾU NẠI ================= -->
+      <section id="sec-complaints" class="sec-panel" hidden>
+        <div class="sec-head">
+          <div>
+            <h1>Khiếu nại &amp; Báo cáo Điểm ngập quanh Mỏ</h1>
+            <p class="sec-sub">Theo dõi và đánh dấu xử lý các điểm tắc cống, ngập cục bộ do cộng đồng gửi về.</p>
+          </div>
+        </div>
+        <div id="admin-complaints-list" class="stack-cards"></div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="./admin.js"></script>
+</body>
+</html>

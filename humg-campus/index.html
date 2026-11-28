@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1e5fc4">
+  <title>HUMG SafeMap — Bản đồ Khu A, A1, B &amp; Bộ Quiz 15 câu An toàn Trường Mỏ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <!-- THANH ĐIỀU HƯỚNG CHÍNH GỌN NHẸ -->
+  <header class="top-nav">
+    <div class="top-nav-inner">
+      <a href="#map" class="brand" id="btn-brand-home">
+        <span class="brand-badge" aria-hidden="true">M</span>
+        <div>
+          <strong class="brand-title">HUMG SafeMap</strong>
+          <span class="brand-sub">Khu A · A1 · B &amp; Điểm ngập quanh Mỏ</span>
+        </div>
+      </a>
+
+      <nav class="main-tabs" role="tablist" aria-label="Phân hệ chính">
+        <button type="button" class="tab-btn is-active" data-view="map" role="tab" aria-selected="true">
+          Bản đồ quanh Mỏ
+        </button>
+        <button type="button" class="tab-btn" data-view="quiz" role="tab" aria-selected="false">
+          Bộ Quiz <span class="pill-count">15 câu</span>
+        </button>
+        <button type="button" class="tab-btn" data-view="guide" role="tab" aria-selected="false">
+          Sơ cứu &amp; Trải nghiệm (<span id="exp-count">0</span>)
+        </button>
+      </nav>
+
+      <div class="nav-right">
+        <a href="https://bando-cong-dong-dong-ngac.vercel.app" target="_blank" rel="noopener" class="nav-link-muted hide-sm">Web Toàn quốc ↗</a>
+        <a href="./admin.html" class="nav-admin-btn">Quản trị</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- MÀN HÌNH TẠM KHÓA CÔNG KHAI (KHI QUẢN TRỊ BẬT KHÓA) -->
+  <main id="public-locked-screen" class="locked-overlay" hidden>
+    <div class="locked-card">
+      <div class="locked-icon" aria-hidden="true">!</div>
+      <h1>Khu vực công khai đang tạm bảo trì</h1>
+      <p>Quản trị viên đã bật chế độ khóa khu vực công khai để cập nhật dữ liệu điểm ngập Khu A, A1, B quanh Trường ĐH Mỏ - Địa chất.</p>
+      <div class="locked-actions">
+        <a href="./admin.html" class="btn btn-primary">Mở Trang Quản trị</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- KHÔNG GIAN 1: BẢN ĐỒ TƯƠNG TÁC QUANH TRƯỜNG MỎ -->
+  <main id="view-map" class="map-workspace">
+    <div class="mobile-switch">
+      <button type="button" class="mob-btn is-active" data-mob="map">Bản đồ trực quan</button>
+      <button type="button" class="mob-btn" data-mob="panel">3 Khu &amp; Điểm cảnh báo</button>
+    </div>
+
+    <div class="split-layout" id="split-layout" data-mob="map">
+      <aside class="sidebar">
+        <!-- 1. CHỌN NHANH 3 KHU TRƯỜNG MỎ (A, A1, B) -->
+        <section class="card">
+          <div class="card-head">
+            <h2>3 Khu Giảng đường Trường Mỏ</h2>
+            <span id="live-context-badge" class="badge badge-amber">11h00–14h30: Nắng gắt</span>
+          </div>
+          <div class="zone-grid" role="group" aria-label="Chọn khu vực trường Mỏ">
+            <button type="button" class="zone-btn is-active" data-zone="A">
+              <strong>Khu A</strong>
+              <span>18 Phố Viên · Nền 17m</span>
+            </button>
+            <button type="button" class="zone-btn" data-zone="A1">
+              <strong>Khu A1</strong>
+              <span>Cao tầng · Sảnh tầng 1</span>
+            </button>
+            <button type="button" class="zone-btn" data-zone="B">
+              <strong>Khu B</strong>
+              <span>Phạm Văn Nghị · Nền 8.5m</span>
+            </button>
+          </div>
+          <p id="active-zone-note" class="zone-note"></p>
+        </section>
+
+        <!-- 2. MÔ PHỎNG KHUNG GIỜ & CHẾ ĐỘ MƯA / NẮNG -->
+        <section class="card">
+          <div class="card-head">
+            <label for="time-slider"><strong>Mô phỏng khung giờ &amp; Thời tiết</strong></label>
+            <span id="time-display" class="mono-pill">12:30</span>
+          </div>
+          <input id="time-slider" type="range" min="6" max="20" step="0.5" value="12.5" class="slider">
+          <div class="mode-row">
+            <button type="button" id="btn-mode-heat" class="chip-btn is-active">☀ Nắng gắt (12:30)</button>
+            <button type="button" id="btn-mode-rain" class="chip-btn">🌧 Mưa lớn (Hiện vùng ngập)</button>
+          </div>
+          <p id="time-advice" class="muted-small"></p>
+        </section>
+
+        <!-- 3. 2 TUYẾN ĐƯỜNG CỐT LÕI QUANH MỎ -->
+        <section class="card card-emerald">
+          <div class="card-head">
+            <strong>① Tuyến đi bộ mát nhất (Khu A → A1)</strong>
+            <label class="chk-inline"><input type="checkbox" id="toggle-cool" checked> Hiện</label>
+          </div>
+          <p class="muted-small">~460 m · ~6 phút đi bộ · 85% bóng cây &amp; mái che liên thông.</p>
+          <button type="button" id="btn-focus-cool" class="btn btn-emerald btn-sm btn-full">Xem trọn tuyến đi mát nhất</button>
+        </section>
+
+        <section class="card card-blue">
+          <div class="card-head">
+            <strong>② Đường tới Trạm Y tế / BV Phương Đông</strong>
+            <label class="chk-inline"><input type="checkbox" id="toggle-med" checked> Hiện</label>
+          </div>
+          <div class="origin-row">
+            <button type="button" class="origin-btn is-active" data-origin="A">Từ Khu A</button>
+            <button type="button" class="origin-btn" data-origin="A1">Từ Khu A1</button>
+            <button type="button" class="origin-btn" data-origin="B">Từ Khu B</button>
+          </div>
+          <div class="med-summary">
+            <div class="med-top">
+              <strong id="med-route-title">Khu A → Trạm Y tế HUMG</strong>
+              <span id="med-route-stat">~210 m · ~3 phút</span>
+            </div>
+            <p id="med-route-note" class="muted-small"></p>
+          </div>
+          <label class="chk-inline" style="margin-top:6px;">
+            <input type="checkbox" id="toggle-safe-ab"> Hiện tuyến vòng Khu A ↔ Khu B tránh xoáy cống
+          </label>
+        </section>
+
+        <!-- 4. LỚP HIỂN THỊ & DANH SÁCH ĐIỂM NGẬP QUANH MỎ -->
+        <section class="card">
+          <div class="card-head">
+            <strong>Lớp điểm &amp; Danh sách Cảnh báo quanh Mỏ</strong>
+          </div>
+          <div class="filter-chips">
+            <label class="filter-chip"><input type="checkbox" id="layer-zones" checked> 3 Khu A, A1, B</label>
+            <label class="filter-chip"><input type="checkbox" id="layer-flood" checked> Điểm &amp; Vùng ngập</label>
+            <label class="filter-chip"><input type="checkbox" id="layer-heat" checked> Nắng gắt</label>
+            <label class="filter-chip"><input type="checkbox" id="layer-med" checked> Y tế &amp; Nhà thuốc</label>
+          </div>
+          <div id="points-list" class="points-list"></div>
+        </section>
+      </aside>
+
+      <!-- BẢN ĐỒ LEAFLET -->
+      <div class="map-stage">
+        <div id="campus-map"></div>
+        <div class="basemap-bar" role="group" aria-label="Nền bản đồ">
+          <button type="button" class="bm-btn is-active" data-bm="street">Đường phố</button>
+          <button type="button" class="bm-btn" data-bm="satellite">Vệ tinh</button>
+          <button type="button" class="bm-btn" data-bm="topo">Địa hình</button>
+        </div>
+        <div class="map-legend">
+          <span><i class="lg-dot lg-zone">A</i> Khu A / A1 / B</span>
+          <span><i class="lg-dot lg-med">+</i> Y tế</span>
+          <span><i class="lg-dot lg-flood">!</i> Ngập / Nguy hiểm</span>
+          <span><i class="lg-dot lg-heat">☀</i> Nắng gắt</span>
+          <span><i class="lg-poly"></i> Vùng ngập quanh Mỏ</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- KHÔNG GIAN 2: BỘ QUIZ 15 CÂU AN TOÀN QUANH TRƯỜNG MỎ -->
+  <section id="view-quiz" class="page-wrap" hidden aria-label="Bộ Quiz 15 câu trắc nghiệm an toàn HUMG">
+    <div class="quiz-header-card">
+      <div>
+        <span class="badge badge-blue">KIỂM TRA KỸ NĂNG THỰC TẾ</span>
+        <h1>Bộ Quiz 15 Câu An toàn Nắng nóng &amp; Ngập lụt Quanh Trường Mỏ</h1>
+        <p>Thực hành nhận diện điểm ngập Khu A – A1 – B, quy tắc tránh xoáy cống cuối Phố Viên, xử trí say nắng/sốc nhiệt và an toàn điện phòng trọ.</p>
+      </div>
+      <div class="quiz-user-box">
+        <label for="quiz-student-name">Tên / Lớp của bạn (lưu bảng kết quả):</label>
+        <input type="text" id="quiz-student-name" class="input" placeholder="VD: Nguyễn An - MT68">
+      </div>
+    </div>
+
+    <div class="quiz-progress-bar">
+      <span id="quiz-progress-text">Đã chọn: <strong>0 / 15</strong> câu</span>
+      <div class="progress-track"><div id="quiz-progress-fill" class="progress-fill"></div></div>
+      <button type="button" id="btn-quiz-submit" class="btn btn-primary btn-sm">Nộp bài &amp; Chấm điểm</button>
+    </div>
+
+    <div id="quiz-result-banner" class="quiz-result-card" hidden></div>
+    <div id="quiz-questions-list" class="quiz-list"></div>
+
+    <div class="quiz-bottom-actions">
+      <button type="button" id="btn-quiz-submit-bottom" class="btn btn-primary">Nộp bài &amp; Chấm điểm 15 câu</button>
+      <button type="button" id="btn-quiz-reset" class="btn btn-outline">Làm lại từ đầu</button>
+    </div>
+  </section>
+
+  <!-- KHÔNG GIAN 3: SƠ CỨU NHANH, SƠ ĐỒ & GHI NHẬN TRẢI NGHIỆM -->
+  <section id="view-guide" class="page-wrap" hidden aria-label="Sơ cứu nhanh, Sơ đồ và Góp ý trải nghiệm">
+    <div class="guide-grid">
+      <div class="stack">
+        <article class="section-card card-rose">
+          <h2>Sơ cứu Nhanh khi Say nắng / Sốc nhiệt (Chuẩn Bộ Y tế)</h2>
+          <ol class="step-list">
+            <li><strong>Đưa khỏi nắng ngay:</strong> Chuyển người gặp nạn vào sảnh râm mát (Khu A, A1, Thư viện), nới lỏng cổ áo, thắt lưng.</li>
+            <li><strong>Hạ nhiệt tích cực từ từ:</strong> Lau/chườm khăn mát lên vùng <strong>Cổ – Nách – Bẹn</strong>; quạt thoáng gió và cho uống từng ngụm nước mát hoặc Oresol nếu còn tỉnh táo.</li>
+            <li><strong>Chuyển Trạm Y tế / BV Phương Đông ngay:</strong> Nếu lơ mơ, nôn ói, co giật hoặc sốt cao, gọi <strong>115</strong> hoặc đi ngay theo tuyến xanh dương. Tuyệt đối không đưa đột ngột vào phòng lạnh 16°C.</li>
+          </ol>
+        </article>
+
+        <article class="section-card">
+          <h2>Quy tắc Vàng Di chuyển &amp; Phòng trọ Mùa mưa</h2>
+          <ul class="bullet-list">
+            <li><strong>Tránh Cuối Phố Viên &amp; Cầu Noi khi mưa &gt; 40 mm:</strong> Dòng chảy tràn dốc ra sông Nhuệ có miệng cống hút xoáy rất nguy hiểm.</li>
+            <li><strong>Nguyên tắc 10 m Rò điện:</strong> Thấy dây điện sà thấp hoặc trụ đèn ngập nước, đứng xa ít nhất 10 m và gọi <strong>1900 1288</strong>.</li>
+            <li><strong>Tổng đài khẩn cấp:</strong> <strong>112</strong> (Cứu nạn thiên tai) · <strong>114</strong> (Cứu hộ) · <strong>115</strong> (Cấp cứu y tế).</li>
+          </ul>
+        </article>
+
+        <article class="section-card">
+          <h2>Sơ đồ Định hướng Nội khu (Khu A, A1, B)</h2>
+          <img src="./assets/humg_map_diagram.svg" alt="Sơ đồ định hướng an toàn Khu A, A1, B ĐH Mỏ" class="diagram-img">
+        </article>
+      </div>
+
+      <div class="stack">
+        <article class="section-card">
+          <h2>Gửi Trải nghiệm / Báo điểm Ngập mới quanh Mỏ</h2>
+          <p class="muted-small">Dữ liệu được tổng hợp ngay vào danh sách bên dưới và đồng bộ sang Trang Quản trị để đội khảo sát kiểm tra.</p>
+          <form id="feedback-form" class="form-stack">
+            <div>
+              <label for="fb-name" class="field-lbl">Họ tên / Lớp</label>
+              <input id="fb-name" type="text" class="input" placeholder="VD: Minh Anh - ĐC68">
+            </div>
+            <div>
+              <label for="fb-type" class="field-lbl">Nội dung</label>
+              <select id="fb-type" class="input">
+                <option value="Tuyến đi mát nhất (Khu A → A1)">Trải nghiệm: Tuyến đi mát nhất (11h00–14h30)</option>
+                <option value="Tuyến Khu A / A1 / B → Trạm Y tế">Trải nghiệm: Đường tới Trạm Y tế / BV Phương Đông</option>
+                <option value="Báo điểm ngập / nguy hiểm quanh trường">Báo điểm ngập / hố ga / nguy hiểm mới quanh Mỏ</option>
+              </select>
+            </div>
+            <div>
+              <label for="fb-note" class="field-lbl">Nhận xét / Mô tả vị trí *</label>
+              <textarea id="fb-note" rows="3" class="input" required placeholder="VD: Cuối ngõ 521 Cổ Nhuế đọng nước ~20 cm lúc 17h..."></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Gửi ghi nhận</button>
+              <button type="button" id="btn-export-csv" class="btn btn-outline">Xuất CSV</button>
+            </div>
+          </form>
+        </article>
+
+        <article class="section-card">
+          <div class="card-head">
+            <h2>Ghi nhận gần đây từ Cộng đồng Mỏ</h2>
+          </div>
+          <div id="feedback-list" class="feedback-list"></div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" hidden role="status" aria-live="polite"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
