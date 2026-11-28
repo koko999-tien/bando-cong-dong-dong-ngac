@@ -3353,7 +3353,7 @@ function bindEvents() {
     if (!strip) return;
     const compact = strip.classList.toggle('is-compact');
     ev.currentTarget.setAttribute('aria-expanded', String(!compact));
-    ev.currentTarget.textContent = compact ? 'Thanh trượt ▴' : 'Thu gọn ▾';
+    ev.currentTarget.textContent = compact ? 'Mức khác ▴' : 'Thu gọn ▾';
   });
 
   const chartsDisc = document.getElementById('telemetry-charts-disclosure');
