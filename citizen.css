@@ -754,6 +754,33 @@ a { color: var(--primary); }
   color: var(--ink-muted);
 }
 
+.cadastral-card {
+  border-color: #99F6E4;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F0FDFA 100%);
+}
+.cadastral-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.78rem;
+}
+.cadastral-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 8px;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(15, 118, 110, 0.18);
+}
+.cadastral-row span {
+  color: var(--ink-muted);
+}
+.cadastral-row strong {
+  color: var(--ink);
+  font-weight: 700;
+  text-align: right;
+}
+
 .discharge-meta-row {
   display: flex;
   flex-wrap: wrap;

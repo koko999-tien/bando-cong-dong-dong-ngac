@@ -32,6 +32,7 @@ import {
   createNationalHeatmapLayer,
   buildMapPictogramIcon
 } from './platform/gis/hydro-surface.js';
+import { lookupCentralMeridian, wgs84ToVn2000Local } from './platform/gis/vn2000.js';
 import { roundPrivacyCoord, analyzePolylineCorridor } from './gis-utils.js';
 import { synthesizeSituationalAnswer } from './knowledge-engine.js';
 import {
@@ -106,6 +107,7 @@ const state = {
   weather: null,
   hourlyForecast: null,
   riverDischarge: null,
+  vnZoneIntel: null,
   zoneElevationM: null,
   aqi: null,
   lastUpdatedAt: null,
@@ -431,6 +433,7 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
 
   const { lat, lng, radiusKm } = state.zone;
   state.riverDischarge = null;
+  state.vnZoneIntel = null;
 
   const baselineInZone = filterFeaturesInZone(ALL_STATIC_POINTS, lat, lng, radiusKm, 200);
   state.zoneCorridors = filterCorridorsInZone(ALL_STATIC_CORRIDORS, lat, lng, radiusKm);
@@ -452,7 +455,7 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
   const osmStatusEl = document.getElementById('osm-enrich-status');
   if (osmStatusEl) osmStatusEl.textContent = 'Đang tải OSM...';
 
-  const [weatherRes, aqiRes, floodRes, commRes, researchRes, osmRes] = await Promise.allSettled([
+  const [weatherRes, aqiRes, floodRes, vnGisRes, commRes, researchRes, osmRes] = await Promise.allSettled([
     fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,apparent_temperature,precipitation,rain,wind_speed_10m&hourly=precipitation,precipitation_probability,temperature_2m&forecast_hours=24&daily=precipitation_sum,temperature_2m_max&timezone=Asia%2FBangkok&forecast_days=2`
     ).then((r) => (r.ok ? r.json() : null)),
@@ -461,6 +464,9 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
     ).then((r) => (r.ok ? r.json() : null)),
     fetch(
       `https://flood-api.open-meteo.com/v1/flood?latitude=${lat}&longitude=${lng}&daily=river_discharge,river_discharge_mean&past_days=7&forecast_days=14`
+    ).then((r) => (r.ok ? r.json() : null)),
+    fetch(
+      `/api/vn-gis?action=zone_intel&lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`
     ).then((r) => (r.ok ? r.json() : null)),
     fetch(
       `${PROJECT_CONFIG.communityApiUrl || '/api/community'}?action=public_sync&lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`
@@ -515,6 +521,14 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
     state.riverDischarge = { dates, vals, means, todayIdx, todayVal, peak14d, ratioVsMean };
   } else {
     state.riverDischarge = null;
+  }
+
+  const vnGisOk = vnGisRes.status === 'fulfilled' && vnGisRes.value?.ok ? vnGisRes.value : null;
+  if (vnGisOk) {
+    state.vnZoneIntel = vnGisOk;
+    if (vnGisOk.admin?.elevationM != null && state.zoneElevationM == null) {
+      state.zoneElevationM = Math.round(Number(vnGisOk.admin.elevationM));
+    }
   }
 
   const commOk = commRes.status === 'fulfilled' && commRes.value?.ok ? commRes.value : null;
@@ -671,9 +685,39 @@ function renderPublicOverview({ flyMap = false } = {}) {
   document.getElementById('env-zone-points-val').textContent = `${state.zonePoints.length} điểm · ${state.zoneCorridors.length} tuyến`;
   document.getElementById('env-zone-points-desc').textContent = `${riskCount} rủi ro · ${safeCount} y tế/trú · ${state.osmWaterways.length} thủy hệ`;
 
+  renderVnCadastralCard();
   renderHourlyRainChart();
   renderRiverDischargeChart();
   renderZoneMapAndList({ flyMap });
+}
+
+function renderVnCadastralCard() {
+  const postEl = document.getElementById('vn-admin-post');
+  const preEl = document.getElementById('vn-admin-pre');
+  const popEl = document.getElementById('vn-zone-pop');
+  if (!postEl || !preEl || !popEl) return;
+
+  const intel = state.vnZoneIntel;
+  if (!intel || (!intel.admin && !intel.populationZone)) {
+    postEl.textContent = `${state.zone.name}`;
+    preEl.textContent = 'Đang đồng bộ địa giới...';
+    popEl.textContent = `Bán kính R=${state.zone.radiusKm} km`;
+    return;
+  }
+
+  const post = intel.admin?.postMerger;
+  const pre = intel.admin?.preMerger;
+  const pz = intel.populationZone;
+
+  postEl.textContent = post?.fullLabel || state.zone.name;
+  postEl.title = post?.mergedFrom ? `Sáp nhập từ: ${post.mergedFrom}` : '';
+  preEl.textContent = pre?.fullLabel || 'Không đổi';
+  popEl.textContent =
+    pz?.population != null
+      ? `~${Number(pz.population).toLocaleString('vi-VN')} người (${Math.round(Number(pz.densityKm2 || 0)).toLocaleString('vi-VN')} người/km²)`
+      : post?.population != null
+        ? `~${Number(post.population).toLocaleString('vi-VN')} cư dân cấp xã`
+        : `R=${state.zone.radiusKm} km`;
 }
 
 function renderRiverDischargeChart() {
@@ -905,7 +949,7 @@ async function inspectClickedCoordinate(lat, lng) {
   const grad = computeTerrainGradient(state.hydroSim.demGrid, lat, lng);
   const medianM = state.hydroSim.demGrid?.stats?.p50M ?? state.hydroSim.demGrid?.stats?.p45M ?? null;
 
-  const renderCard = (elevNum) => {
+  const renderCard = (elevNum, spotIntel = null) => {
     const r0 = nearRisks[0];
     const s0 = nearSafe[0];
     const relDiff = elevNum !== null && medianM !== null ? Math.round((elevNum - medianM) * 10) / 10 : null;
@@ -917,18 +961,30 @@ async function inspectClickedCoordinate(lat, lng) {
           : relDiff >= 1.5
             ? `Cao hơn mặt bằng +${relDiff} m (Thoát tốt)`
             : `Ngang mặt bằng vùng (${relDiff >= 0 ? '+' : ''}${relDiff} m)`;
-    const slopeTxt = grad ? `${grad.slopeDeg}° (${grad.slopeDeg >= 16 ? 'Sườn dốc cao' : 'Thoải / Bằng'})` : 'Đang tính...';
+    const slopeTxt = grad ? `${grad.slopeDeg}° (${grad.slopeDeg >= 14 ? 'Sườn dốc cao' : 'Thoải / Bằng'})` : 'Đang tính...';
+    const postAdmin = spotIntel?.admin?.postMerger?.fullLabel;
+    const preAdmin = spotIntel?.admin?.preMerger?.fullLabel;
+    const pop500 = spotIntel?.pop500m?.population;
+    const mapUrl = spotIntel?.cadastralMapUrl || `https://vn2000.vn/map?center=${lat.toFixed(6)},${lng.toFixed(6)}&zoom=17`;
 
     box.innerHTML = `
       <div class="section-head-row" style="margin-bottom:4px;">
         <strong>Chẩn đoán Vi mô Tọa độ Chạm</strong>
         <button type="button" id="btn-close-selected-pt" class="text-btn">Đóng</button>
       </div>
+      ${
+        postAdmin
+          ? `<div class="place-card-meta" style="margin-bottom:4px;">
+               <span class="source-tag tone-verified">${esc(postAdmin)}</span>
+               ${preAdmin ? `<span class="muted-meta">Trước sáp nhập: ${esc(preAdmin)}</span>` : ''}
+             </div>`
+          : ''
+      }
       <div class="spot-diag-grid">
         <div class="spot-diag-cell"><span>Tọa độ</span><strong>${lat.toFixed(4)}°N, ${lng.toFixed(4)}°E</strong></div>
         <div class="spot-diag-cell"><span>Cao độ mặt đất</span><strong>${elevNum !== null ? `~${elevNum.toFixed(1)} m` : 'Đang đo...'}</strong></div>
         <div class="spot-diag-cell"><span>Độ dốc bề mặt</span><strong>${esc(slopeTxt)}</strong></div>
-        <div class="spot-diag-cell"><span>Tương quan địa hình</span><strong>${esc(relText)}</strong></div>
+        <div class="spot-diag-cell"><span>${pop500 != null ? 'Dân cư quanh 500 m' : 'Tương quan địa hình'}</span><strong>${pop500 != null ? `~${Number(pop500).toLocaleString('vi-VN')} người` : esc(relText)}</strong></div>
       </div>
       <p class="place-card-desc">
         ${r0 ? `<strong>Điểm rủi ro gần nhất:</strong> ${esc(r0.name)} (${esc(formatDistancePlain(r0.d))})<br>` : ''}
@@ -938,8 +994,8 @@ async function inspectClickedCoordinate(lat, lng) {
       <div class="place-card-actions" style="margin-top:6px;">
         ${s0 ? `<button type="button" class="btn btn-sm btn-primary js-spot-evacuate" data-lat="${lat}" data-lng="${lng}" data-slat="${s0.lat}" data-slng="${s0.lng}" data-sname="${esc(s0.name)}">Dẫn đường tới Y tế/Trú</button>` : ''}
         <button type="button" class="btn btn-sm btn-secondary js-spot-profile" data-lat="${lat}" data-lng="${lng}">Mặt cắt 2 km</button>
-        <button type="button" class="btn btn-sm btn-secondary js-spot-rezone" data-lat="${lat}" data-lng="${lng}">Khoanh vùng</button>
-        <button type="button" class="btn btn-sm btn-secondary js-spot-report" data-lat="${lat}" data-lng="${lng}">Báo sự cố</button>
+        <a href="${esc(mapUrl)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">Thửa đất ↗</a>
+        <button type="button" class="btn btn-sm btn-secondary js-spot-report" data-lat="${lat}" data-lng="${lng}" data-addr="${esc(postAdmin || '')}">Báo sự cố</button>
       </div>
     `;
     document.getElementById('btn-close-selected-pt')?.addEventListener('click', () => {
@@ -947,16 +1003,16 @@ async function inspectClickedCoordinate(lat, lng) {
     });
   };
 
-  renderCard(localDem !== null ? localDem : null);
-  if (localDem === null) {
-    try {
-      const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat.toFixed(5)}&longitude=${lng.toFixed(5)}`);
-      const data = res.ok ? await res.json() : null;
-      const elev = Number(data?.elevation?.[0]);
-      if (Number.isFinite(elev)) renderCard(elev);
-    } catch {
-      // keep local card
+  renderCard(localDem !== null ? localDem : null, null);
+  try {
+    const spotRes = await fetch(`/api/vn-gis?action=spot_info&lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}`);
+    const spotJson = spotRes.ok ? await spotRes.json() : null;
+    if (spotJson?.ok) {
+      const finalElev = localDem !== null ? localDem : spotJson.admin?.elevationM != null ? Number(spotJson.admin.elevationM) : null;
+      renderCard(finalElev, spotJson);
     }
+  } catch {
+    // keep local card
   }
 }
 
@@ -1647,6 +1703,13 @@ function ensureStudyStudioMap() {
       const lng = Math.round(ev.latlng.lng * 1_000_000) / 1_000_000;
       const cat = document.getElementById('sub-hazard')?.value || 'flood';
       const prov = getSelectedStudyProvinceMeta().province;
+      const l0 = Number(document.getElementById('vn2k-l0')?.value) || lookupCentralMeridian(prov, lng);
+      const zw = Number(document.getElementById('vn2k-zone')?.value || 3);
+      const vn2k = wgs84ToVn2000Local(lat, lng, l0, zw);
+      const rd = document.getElementById('vn2k-readout');
+      if (rd) {
+        rd.textContent = `VN-2000 (${prov}, L0=${l0}°, Múi ${zw}°): X = ${vn2k.x.toFixed(3)} m · Y = ${vn2k.y.toFixed(3)} m`;
+      }
 
       if (state.studyDrawMode === 'point') {
         const idx = state.draftStudyPoints.length + 1;
@@ -2415,8 +2478,40 @@ function bindEvents() {
 
   document.getElementById('sub-province')?.addEventListener('change', () => {
     const meta = getSelectedStudyProvinceMeta();
+    const l0Input = document.getElementById('vn2k-l0');
+    if (l0Input) l0Input.value = String(lookupCentralMeridian(meta.province, meta.lng));
     studyMap?.setView([meta.lat, meta.lng], 12);
     renderStudyDraftOverlay();
+  });
+
+  document.getElementById('btn-vn2k-to-map')?.addEventListener('click', async () => {
+    const x = Number(document.getElementById('vn2k-x')?.value);
+    const y = Number(document.getElementById('vn2k-y')?.value);
+    const l0 = Number(document.getElementById('vn2k-l0')?.value || 105);
+    const zw = Number(document.getElementById('vn2k-zone')?.value || 3);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      showToast('Vui lòng nhập đầy đủ tọa độ X (Bắc) và Y (Đông) hệ VN-2000.');
+      return;
+    }
+    const res = await fetch(`/api/vn-gis?action=vn2000_to_wgs84&x=${x}&y=${y}&centralMeridian=${l0}&zoneWidth=${zw}`);
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      showToast(data?.error || 'Không thể quy đổi tọa độ VN-2000.');
+      return;
+    }
+    const meta = getSelectedStudyProvinceMeta();
+    state.draftStudyPoints.push({
+      name: `Điểm VN-2000 (${x.toFixed(1)}, ${y.toFixed(1)})`,
+      lat: Math.round(data.lat * 1_000_000) / 1_000_000,
+      lng: Math.round(data.lng * 1_000_000) / 1_000_000,
+      category: document.getElementById('sub-hazard')?.value || 'flood',
+      notes: `Quy đổi chuẩn từ VN-2000 (X=${x}, Y=${y}, L0=${l0}°, Múi ${zw}°).`
+    });
+    ensureStudyStudioMap();
+    studyMap?.setView([data.lat, data.lng], 15);
+    renderStudyDraftOverlay();
+    document.getElementById('vn2k-readout').textContent = `Đã ghim WGS84: ${data.lat.toFixed(6)}°N, ${data.lng.toFixed(6)}°E (từ X=${x}, Y=${y})`;
+    showToast('Đã quy đổi VN-2000 sang WGS84 và ghim lên Bản đồ Nghiên cứu!');
   });
   document.getElementById('sub-radius')?.addEventListener('change', renderStudyDraftOverlay);
   document.getElementById('btn-add-sample-study-pts')?.addEventListener('click', () => {
@@ -2630,7 +2725,12 @@ function bindEvents() {
     const spotReport = ev.target.closest('.js-spot-report');
     if (spotReport) {
       state.reportPin = { lat: Number(spotReport.dataset.lat), lng: Number(spotReport.dataset.lng) };
-      document.getElementById('rep-location-status').textContent = `Đã gắn tọa độ từ bản đồ (${state.reportPin.lat.toFixed(4)}°N, ${state.reportPin.lng.toFixed(4)}°E · tự làm tròn ~20 m).`;
+      const addr = spotReport.dataset.addr || '';
+      const nameInp = document.getElementById('rep-location-name');
+      if (addr && nameInp && !nameInp.value.trim()) {
+        nameInp.value = addr;
+      }
+      document.getElementById('rep-location-status').textContent = `Đã gắn tọa độ từ bản đồ (${state.reportPin.lat.toFixed(4)}°N, ${state.reportPin.lng.toFixed(4)}°E${addr ? ` · ${addr}` : ''} · tự làm tròn ~20 m).`;
       switchPublicTab('report');
       return;
     }

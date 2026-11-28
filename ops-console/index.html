@@ -232,6 +232,17 @@
             <p style="margin:0 0 8px;font-size:0.78rem;color:var(--ink-muted);">Nhấp vào bất kỳ vị trí nào trên bản đồ bên dưới để lấy tọa độ chính xác và tự động tra cao độ Copernicus 30m:</p>
             <div id="ops-picker-map" class="ops-minimap"></div>
 
+            <!-- BỘ QUY ĐỔI NHANH VN-2000 -> WGS84 CHO KỸ SƯ TRẮC ĐỊA / HỒ SƠ ĐỊA CHÍNH -->
+            <div class="item-card" style="margin-bottom:10px;">
+              <strong style="display:block;font-size:0.78rem;margin-bottom:6px;">Nhập Tọa độ Trắc địa VN-2000 (Múi 3° → Tự quy đổi sang WGS84)</strong>
+              <div class="btn-row">
+                <input type="number" id="ops-vn2k-x" class="input mono" style="width:130px;" step="0.001" placeholder="X Bắc (m)">
+                <input type="number" id="ops-vn2k-y" class="input mono" style="width:130px;" step="0.001" placeholder="Y Đông (m)">
+                <input type="number" id="ops-vn2k-l0" class="input mono" style="width:82px;" step="0.25" value="105" title="Kinh tuyến trục L0">
+                <button type="button" id="btn-ops-convert-vn2k" class="btn btn-sm">Đổi → WGS84</button>
+              </div>
+            </div>
+
             <form id="ops-upsert-form">
               <div class="field">
                 <label for="up-name">Tên điểm ngập / Sạt lở / Trạm y tế / Điểm sơ tán *</label>
@@ -444,6 +455,8 @@
                 <option value="GET|/api/research-portal?action=publications">GET /api/research-portal?action=publications</option>
                 <option value="GET|/api/research-portal?action=zone_osm&lat=16.4637&lng=107.5909&radiusKm=6">GET /api/research-portal?action=zone_osm (TP. Huế)</option>
                 <option value="GET|/api/research-portal?action=review_queue">GET /api/research-portal?action=review_queue (Yêu cầu Bearer)</option>
+                <option value="GET|/api/vn-gis?action=zone_intel&lat=21.072514&lng=105.77387&radiusKm=2">GET /api/vn-gis?action=zone_intel (Địa chính + Dân số + VN2000)</option>
+                <option value="GET|/api/vn-gis?action=wgs84_to_vn2000&lat=16.030263&lng=107.904724&centralMeridian=107.75&zoneWidth=3">GET /api/vn-gis?action=wgs84_to_vn2000</option>
                 <option value="GET|https://vn-resilience-api.vn-resilience-edge.workers.dev/health">GET Cloudflare Edge Worker (/health)</option>
               </select>
             </div>

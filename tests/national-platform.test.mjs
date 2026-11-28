@@ -24,6 +24,8 @@ import {
   computeTerrainGradient,
   sampleElevationProfile
 } from '../platform/gis/hydro-surface.js';
+import { lookupCentralMeridian, wgs84ToVn2000Local, vn2000ToWgs84Local } from '../platform/gis/vn2000.js';
+import { GET as vnGisGET } from '../api/vn-gis.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -145,6 +147,25 @@ try {
   assert.ok(grad && Number.isFinite(grad.slopeDeg) && grad.slopeDeg >= 0, 'Giải tích gradient độ dốc & hướng chảy hợp lệ');
   const prof = sampleElevationProfile(coreDem, 21.0725, 105.768, 21.0725, 105.779, 15);
   assert.equal(prof.length, 15, 'Lấy mẫu mặt cắt địa hình tức thì hợp lệ');
+
+  // 2C. KIỂM TRA HỆ QUY CHIẾU VN-2000 (SAI SỐ <= 0.01M SO VỚI VN2000.VN) & PROXY /api/vn-gis
+  assert.equal(lookupCentralMeridian('Đà Nẵng'), 107.75);
+  assert.equal(lookupCentralMeridian('Hà Nội'), 105.0);
+  const dnVn2k = wgs84ToVn2000Local(16.030263, 107.904724, 107.75, 3);
+  assert.ok(Math.abs(dnVn2k.x - 1772933.818) < 0.02, `Sai số X VN-2000 phải < 2cm (thực tế: ${dnVn2k.x})`);
+  assert.ok(Math.abs(dnVn2k.y - 516361.586) < 0.02, `Sai số Y VN-2000 phải < 2cm (thực tế: ${dnVn2k.y})`);
+  const backWgs = vn2000ToWgs84Local(dnVn2k.x, dnVn2k.y, 107.75, 3);
+  assert.ok(Math.abs(backWgs.lat - 16.030263) < 1e-6 && Math.abs(backWgs.lng - 107.904724) < 1e-6);
+
+  const badVnGis = await vnGisGET(new Request('http://localhost/api/vn-gis?action=spot_info&lat=35.67&lng=139.65'));
+  assert.equal(badVnGis.status, 400, '/api/vn-gis phải chặn tọa độ ngoài lãnh thổ Việt Nam');
+  const goodVnGis = await vnGisGET(new Request('http://localhost/api/vn-gis?action=wgs84_to_vn2000&lat=21.072514&lng=105.77387&province=H%C3%A0%20N%E1%BB%99i'));
+  assert.equal(goodVnGis.status, 200);
+  const goodVnGisJson = await goodVnGis.json();
+  assert.equal(goodVnGisJson.ok, true);
+  assert.equal(goodVnGisJson.centralMeridian, 105);
+  assert.ok(html.includes('id="vn-cadastral-card"'), 'Web Chính phải hiển thị thẻ Địa giới trước/sau sáp nhập & Dân cư');
+  assert.ok(html.includes('id="btn-vn2k-to-map"'), 'Cổng Nghiên cứu phải có bộ quy đổi VN-2000 <-> WGS84');
 
   const css = await fs.readFile(path.join(rootDir, 'citizen.css'), 'utf8');
   assert.ok(css.includes('::-webkit-scrollbar-button'), 'CSS phải ẩn nút mũi tên ▼ thanh cuộn mặc định Windows');

@@ -228,6 +228,18 @@ async function runClusterProbes() {
           detail: `HTTP ${r.status} · Lưu lượng Sông Hương: ${q0 ?? '--'} m³/s`
         };
       }
+    },
+    {
+      name: 'GIS.vn / VN-2000 Cadastral & Population Proxy (/api/vn-gis)',
+      run: async () => {
+        const { res, data } = await apiFetch('/api/vn-gis?action=zone_intel&lat=21.072514&lng=105.77387&radiusKm=2');
+        const post = data?.admin?.postMerger?.fullLabel || 'n/a';
+        const pop = data?.populationZone?.population;
+        return {
+          ok: res.ok && data?.ok && Boolean(data?.admin || data?.vn2000Center),
+          detail: `HTTP ${res.status} · ${post}${pop != null ? ` · Dân cư R=2km: ${Number(pop).toLocaleString('vi-VN')} người` : ''}`
+        };
+      }
     }
   ];
 
@@ -275,21 +287,28 @@ async function inspectSelectedZone() {
   box.textContent = `Đang truy vấn vùng ${label} (${lat.toFixed(4)}, ${lng.toFixed(4)} · R=${radiusKm}km)...`;
 
   try {
-    const [osmOut, studyOut, demRes] = await Promise.all([
+    const [osmOut, studyOut, vnGisOut, demRes] = await Promise.all([
       apiFetch(`/api/research-portal?action=zone_osm&lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`),
       apiFetch(`/api/research-portal?action=zone_data&lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`),
+      apiFetch(`/api/vn-gis?action=zone_intel&lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`),
       fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat},${(lat + 0.015).toFixed(4)},${(lat - 0.015).toFixed(4)}&longitude=${lng},${(lng + 0.015).toFixed(4)},${(lng - 0.015).toFixed(4)}`).then((r) => r.json())
     ]);
     const pois = osmOut.data?.pois || [];
     const waterways = osmOut.data?.waterways || [];
     const studyPts = studyOut.data?.features || [];
+    const vnAdmin = vnGisOut.data?.admin;
+    const vnPop = vnGisOut.data?.populationZone;
+    const vn2k = vnGisOut.data?.vn2000Center;
     const elevs = Array.isArray(demRes?.elevation) ? demRes.elevation.map(Number) : [];
     state.lastInspectedZone = { label, lat, lng, radiusKm, pois, waterways, studyPts };
 
     box.innerHTML = `
       <div><strong>Vùng kiểm tra:</strong> ${esc(label)} (R=${radiusKm} km)</div>
-      <div>• Hạ tầng Y tế / Tránh trú OSM: <strong>${pois.length}</strong> điểm (Nguồn: ${esc(osmOut.data?.source || 'n/a')})</div>
-      <div>• Tuyến sông / kênh OSM: <strong>${waterways.length}</strong> tuyến</div>
+      ${vnAdmin?.postMerger ? `<div>• Địa giới mới (Sau sáp nhập): <strong>${esc(vnAdmin.postMerger.fullLabel)}</strong> (Mã xã ${esc(vnAdmin.postMerger.communeCode)})</div>` : ''}
+      ${vnAdmin?.preMerger ? `<div>• Địa giới cũ (Trước sáp nhập): <strong>${esc(vnAdmin.preMerger.fullLabel)}</strong></div>` : ''}
+      ${vnPop?.population != null ? `<div>• Dân cư trong R=${radiusKm}km (GIS.vn): <strong>${Number(vnPop.population).toLocaleString('vi-VN')} người</strong> (${vnPop.densityKm2} người/km²)</div>` : ''}
+      ${vn2k ? `<div>• Tâm VN-2000 (L0=${vn2k.centralMeridian}°): <strong>X=${vn2k.x} · Y=${vn2k.y}</strong></div>` : ''}
+      <div>• Hạ tầng Y tế / Tránh trú OSM: <strong>${pois.length}</strong> điểm · Sông/kênh: <strong>${waterways.length}</strong></div>
       <div>• Điểm Nghiên cứu Đã Duyệt nội vùng: <strong>${studyPts.length}</strong> điểm</div>
       <div>• Mẫu cao độ Copernicus GLO-30: <strong>${elevs.length ? `${Math.min(...elevs)}m – ${Math.max(...elevs)}m` : '--'}</strong></div>
     `;
@@ -732,6 +751,27 @@ function bindEvents() {
     state.batchCandidates = [];
     document.getElementById('batch-geojson-status').textContent = `Hoàn tất đồng bộ ${okCnt} điểm mới lên Cloud.`;
     await syncAdminData();
+  });
+
+  document.getElementById('btn-ops-convert-vn2k')?.addEventListener('click', async () => {
+    const x = Number(document.getElementById('ops-vn2k-x')?.value);
+    const y = Number(document.getElementById('ops-vn2k-y')?.value);
+    const l0 = Number(document.getElementById('ops-vn2k-l0')?.value || 105);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+      toast('Vui lòng nhập đầy đủ tọa độ X Bắc (m) và Y Đông (m) hệ VN-2000.');
+      return;
+    }
+    const { res, data } = await apiFetch(`/api/vn-gis?action=vn2000_to_wgs84&x=${x}&y=${y}&centralMeridian=${l0}&zoneWidth=3`);
+    if (!res.ok || !data?.ok) {
+      toast(data?.error || 'Không thể quy đổi tọa độ VN-2000.');
+      return;
+    }
+    document.getElementById('up-lat').value = data.lat.toFixed(6);
+    document.getElementById('up-lng').value = data.lng.toFixed(6);
+    ensurePickerMap();
+    pickerMap?.setView([data.lat, data.lng], 16);
+    pickerMarker?.setLatLng([data.lat, data.lng]);
+    toast(`Đã quy đổi VN-2000 → WGS84 (${data.lat.toFixed(5)}°N, ${data.lng.toFixed(5)}°E · nguồn: ${data.source})`);
   });
 
   document.getElementById('ops-upsert-form').addEventListener('submit', async (ev) => {
