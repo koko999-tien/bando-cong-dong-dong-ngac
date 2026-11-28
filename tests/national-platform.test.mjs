@@ -570,6 +570,21 @@ try {
   assert.equal(aiPostJson.ok, true);
   assert.ok(aiPostJson.answer.includes('Huế'), 'Phản hồi /api/ai-copilot phải bám sát đúng vùng TP. Huế');
 
+  const aiProvinceFallbackRes = await aiPOST(
+    new Request('http://localhost/api/ai-copilot', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '198.51.100.78' },
+      body: JSON.stringify({
+        action: 'ask_copilot',
+        question: 'Khu vực này cần chú ý ngập lụt thế nào?',
+        provinceId: 'TP. Cần Thơ'
+      })
+    })
+  );
+  assert.equal(aiProvinceFallbackRes.status, 200);
+  const aiProvJson = await aiProvinceFallbackRes.json();
+  assert.ok(aiProvJson.answer.includes('Cần Thơ'), 'Phải tôn trọng provinceId fallback thay vì rơi nhầm về Đông Ngạc');
+
   // 6D. Gói SMS 112 Ngoại tuyến & Kiểm tra HTML v31
   const smsPkt = buildOfflineSosSmsPayload({
     category: 'stalled_vehicle',
@@ -582,7 +597,8 @@ try {
   assert.ok(smsPkt.smsHref.startsWith('sms:112?body='), 'Phải sinh đúng liên kết sms:112');
   assert.ok(smsPkt.smsText.includes('PIN: 4829') && smsPkt.smsText.includes('21.07251'), 'SMS khẩn cấp phải chứa tọa độ và PIN 4 số');
   assert.ok(html.includes('id="sos-live-map"') && html.includes('id="btn-export-zone-dossier"') && html.includes('id="route-hydro-profile-svg"'));
-  assert.ok(opsHtml.includes('id="btn-export-ops-snapshot"'));
+  assert.ok(opsHtml.includes('id="btn-export-ops-snapshot"') && opsHtml.includes('id="ops-gemini-key"'));
+  assert.ok(!opsHtml.includes('Đa nguồn 63 Tỉnh'), 'ops-console phải dùng danh mục 34 tỉnh/thành sau sáp nhập');
 
   // 7. GÓI 1 HARDENING: WORKER D1 SOS, PNG ICONS, PHÁP LÝ NĐ 13/2023, eKYC TNV & XÓA VĨNH VIỄN TÀI KHOẢN
   const workerSrc = await fs.readFile(path.join(rootDir, 'infra', 'cloudflare', 'worker.js'), 'utf8');

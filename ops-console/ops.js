@@ -148,6 +148,11 @@ function updateAuthUi(unlocked) {
     const el = document.getElementById(id);
     if (el) el.hidden = unlocked;
   });
+
+  const gemInput = document.getElementById('ops-gemini-key');
+  const gemSaveBtn = document.getElementById('btn-ops-save-gemini-key');
+  if (gemInput) gemInput.disabled = !unlocked;
+  if (gemSaveBtn) gemSaveBtn.disabled = !unlocked;
 }
 
 /* ================= 1. LIVE INFRASTRUCTURE TELEMETRY & ZONE INSPECTOR ================= */
@@ -1119,6 +1124,79 @@ function bindEvents() {
   });
 
   document.getElementById('btn-reload-sos-ops')?.addEventListener('click', syncSosAdminOverview);
+
+  document.getElementById('btn-ops-save-gemini-key')?.addEventListener('click', async () => {
+    if (!state.adminToken) {
+      toast('Mở khóa ADMIN_PASSCODE trước khi lưu khóa Gemini Cloud.');
+      return;
+    }
+    const keyInp = document.getElementById('ops-gemini-key');
+    const out = document.getElementById('ops-gemini-key-status');
+    const btn = document.getElementById('btn-ops-save-gemini-key');
+    const rawKey = (keyInp?.value || '').trim();
+    if (rawKey.length < 15) {
+      toast('Vui lòng dán khóa API Google AI Studio hợp lệ.');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Đang kiểm chứng live & mã hóa...';
+    if (out) out.textContent = 'Đang gửi thử 1 truy vấn kiểm chứng lên Google Gemini API trước khi mã hóa AES-256-GCM...';
+    try {
+      const { res, data } = await apiFetch('/api/ai-copilot', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'admin_set_ai_key', apiKey: rawKey })
+      });
+      if (!res.ok || !data?.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      keyInp.value = '';
+      if (out) {
+        out.textContent = data.overriddenByEnv
+          ? `Đã mã hóa vào Private Blob (modelVerified=${data.modelVerified}). Lưu ý: máy chủ đang ưu tiên biến môi trường GEMINI_API_KEY trên Vercel Env.`
+          : `ĐÃ KÍCH HOẠT THÀNH CÔNG — Model xác thực: ${data.modelVerified} · Nguồn đang chạy: encrypted_blob_vault.`;
+      }
+      toast(`Đã lưu & kích hoạt Gemini Cloud (${data.modelVerified})!`);
+      await runClusterProbes();
+    } catch (err) {
+      if (out) out.textContent = `Lỗi kiểm chứng khóa Gemini: ${err.message}`;
+      toast(`Lỗi lưu khóa Gemini: ${err.message}`);
+    } finally {
+      btn.disabled = !state.adminToken;
+      btn.textContent = 'Kiểm chứng & Lưu Khóa Cloud';
+    }
+  });
+
+  document.getElementById('btn-ops-test-gemini')?.addEventListener('click', async () => {
+    const out = document.getElementById('ops-gemini-key-status');
+    const btn = document.getElementById('btn-ops-test-gemini');
+    btn.disabled = true;
+    btn.textContent = 'Đang gọi AI Cloud...';
+    const t0 = performance.now();
+    try {
+      const { res, data } = await apiFetch('/api/ai-copilot', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'ask_copilot',
+          question: 'Kiểm tra nhanh khả năng tổng hợp dữ liệu khu vực TP. Huế (Đập Đá) hôm nay?',
+          zoneContext: {
+            zone: { id: 'hue', name: 'TP. Huế', province: 'TP. Huế', lat: 16.4637, lng: 107.5909, radiusKm: 8 },
+            weather: { rainMm: 0, dailyRainMm: 5, temp: 28, apparentTemp: 31 },
+            zonePoints: [{ id: 'HUE-1', name: 'Đập Đá — Vỹ Dạ', category: 'flood', distanceMeters: 800 }]
+          }
+        })
+      });
+      const ms = Math.round(performance.now() - t0);
+      if (!res.ok || !data?.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      if (out) {
+        out.textContent = `HTTP ${res.status} (${ms} ms) · Mode: ${data.mode} · Model: ${data.modelUsed} · Cache: ${data.cache || 'MISS'} · Trích đoạn: "${String(data.answer || '').slice(0, 140)}..."`;
+      }
+      toast(`AI phản hồi: ${data.mode} (${data.modelUsed})`);
+    } catch (err) {
+      if (out) out.textContent = `Lỗi gọi /api/ai-copilot: ${err.message}`;
+      toast(`Lỗi kiểm thử AI: ${err.message}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Thử AI Cloud Live';
+    }
+  });
 }
 
 async function syncSosAdminOverview() {

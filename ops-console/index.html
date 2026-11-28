@@ -173,6 +173,21 @@
             <span id="env-audit-summary" class="badge badge-info">Đang kiểm tra...</span>
           </div>
           <div id="ops-env-audit-grid" style="display:flex;flex-wrap:wrap;gap:8px;font-size:0.78rem;"></div>
+
+          <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+              <strong style="font-size:0.8rem;">Cấu hình &amp; Xoay vòng Khóa Gemini Cloud API (Mã hóa AES-256-GCM Private Blob)</strong>
+              <span class="mono" style="font-size:0.72rem;color:var(--ink-muted);">Ưu tiên Env <code>GEMINI_API_KEY</code> &gt; Encrypted Vault</span>
+            </div>
+            <div class="btn-row">
+              <input type="password" id="ops-gemini-key" class="input mono" autocomplete="off" style="flex:1;min-width:220px;" placeholder="Dán AIza... từ Google AI Studio (chỉ lưu mã hóa AES-256-GCM, không lưu trình duyệt)" disabled>
+              <button type="button" id="btn-ops-save-gemini-key" class="btn btn-primary" disabled>Kiểm chứng &amp; Lưu Khóa Cloud</button>
+              <button type="button" id="btn-ops-test-gemini" class="btn">Thử AI Cloud Live</button>
+            </div>
+            <div id="ops-gemini-key-status" class="mono" style="margin-top:6px;font-size:0.74rem;color:var(--ink-muted);">
+              Mở khóa ADMIN_PASSCODE ở thanh bên để cập nhật khóa mới; bấm "Thử AI Cloud Live" để kiểm tra model &amp; Cloudflare KV Cache bất cứ lúc nào.
+            </div>
+          </div>
         </article>
 
         <article class="card">
@@ -472,7 +487,7 @@
                 <option value="GET|/api/vn-gis?action=wgs84_to_vn2000&lat=16.030263&lng=107.904724&centralMeridian=107.75&zoneWidth=3">GET /api/vn-gis?action=wgs84_to_vn2000</option>
                 <option value="GET|/api/sos-dispatch?action=zone_shield_summary&lat=21.072514&lng=105.77387">GET /api/sos-dispatch?action=zone_shield_summary (Zero-Standing-Location)</option>
                 <option value="GET|/api/sos-dispatch?action=admin_overview">GET /api/sos-dispatch?action=admin_overview (Yêu cầu Bearer)</option>
-                <option value="GET|/api/ai-copilot">GET /api/ai-copilot (Trạng thái Trợ lý Đa nguồn 63 Tỉnh)</option>
+                <option value="GET|/api/ai-copilot">GET /api/ai-copilot (Trạng thái Trợ lý Đa nguồn 34 Tỉnh/Thành)</option>
                 <option value="GET|/api/sos-dispatch?action=health">GET /api/sos-dispatch?action=health</option>
                 <option value="GET|https://vn-resilience-api.vn-resilience-edge.workers.dev/health">GET Cloudflare Edge Worker (/health)</option>
               </select>

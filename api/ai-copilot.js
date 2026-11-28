@@ -19,8 +19,8 @@ import { checkDistributedRateLimit, readEdgeAiCache, writeEdgeAiCache } from '..
 import { buildNationalGroundedBrief, sanitizeCitizenJargon } from '../platform/ai/national-intelligence.js';
 
 const AI_CONFIG_PATH = 'config/ai-provider.enc.json';
-const FAST_MODELS = ['gemini-3.5-flash-lite', 'gemini-4-hydrogen', 'gemini-4-argon'];
-const DEEP_MODELS = ['gemini-4-hydrogen', 'gemini-3.5-flash-lite', 'gemini-4-argon'];
+const FAST_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.8-flash'];
+const DEEP_MODELS = ['gemini-3.8-flash', 'gemini-3.5-flash-lite'];
 
 // Chống lạm dụng tần suất gọi AI theo IP dùng Cloudflare KV / Upstash Redis phân tán + fallback RAM
 const aiRateLimiter = createBoundedRateLimiter({ maxRequests: 18, windowMs: 60_000, maxEntries: 2000 });
@@ -336,9 +336,28 @@ export async function POST(request) {
         input: 'Trả lời đúng 1 từ: OK'
       });
 
+      if (!process.env.BLOB_READ_WRITE_TOKEN) {
+        return Response.json(
+          {
+            ok: false,
+            error: 'Máy chủ chưa gắn BLOB_READ_WRITE_TOKEN để ghi Private Vault; hãy gắn trực tiếp biến GEMINI_API_KEY trên Vercel Env.'
+          },
+          { status: 503, headers: cors }
+        );
+      }
+
       const encryptedPayload = encryptSecret(candidateKey);
       await writePrivateJson(AI_CONFIG_PATH, encryptedPayload);
-      return Response.json({ ok: true, modelVerified: probe.modelUsed }, { headers: cors });
+      const envOverride = Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim().length > 10);
+      return Response.json(
+        {
+          ok: true,
+          modelVerified: probe.modelUsed,
+          overriddenByEnv: envOverride,
+          keySourceAfterSave: envOverride ? 'env' : 'encrypted_blob_vault'
+        },
+        { headers: cors }
+      );
     }
 
     const { key: apiKey } = await resolveGeminiApiKey();
@@ -351,10 +370,11 @@ export async function POST(request) {
       }
 
       const zCtx = body.zoneContext && typeof body.zoneContext === 'object' ? body.zoneContext : {};
-      const activeProv = cleanText(zCtx.zone?.province || 'VN', 40);
+      const activeProv = cleanText(zCtx.zone?.province || zCtx.province || body.provinceId || 'VN', 60);
+      const activeZoneKey = cleanText(zCtx.zone?.id || zCtx.zone?.name || activeProv, 80);
       const qHash = crypto
         .createHash('sha1')
-        .update(`${activeProv}|${question.toLowerCase()}|${Math.round(Number(zCtx.weather?.dailyRainMm || 0) / 10)}`)
+        .update(`${activeProv}|${activeZoneKey}|${question.toLowerCase()}|${Math.round(Number(zCtx.weather?.dailyRainMm || 0) / 10)}`)
         .digest('hex')
         .slice(0, 16);
       const edgeCacheKey = `copilot:${qHash}`;
@@ -368,7 +388,13 @@ export async function POST(request) {
 
       const brief = buildNationalGroundedBrief({
         question,
-        zone: zCtx.zone || { name: 'Phường Đông Ngạc, Hà Nội', province: 'Hà Nội', lat: HUMG_CENTER.lat, lng: HUMG_CENTER.lng, radiusKm: 2 },
+        zone: zCtx.zone || {
+          name: zCtx.province || body.provinceId || 'Phường Đông Ngạc, Hà Nội',
+          province: zCtx.province || body.provinceId || 'Hà Nội',
+          lat: HUMG_CENTER.lat,
+          lng: HUMG_CENTER.lng,
+          radiusKm: 2
+        },
         weather: zCtx.weather || body.liveWeather || null,
         hourlyForecast: zCtx.hourlyForecast || null,
         riverDischarge: zCtx.riverDischarge || null,
@@ -379,8 +405,10 @@ export async function POST(request) {
         zoneCorridors: Array.isArray(zCtx.zoneCorridors) ? zCtx.zoneCorridors : []
       });
 
-      const activeZoneName = cleanText(zCtx.zone?.name || 'Việt Nam', 120);
-      const isCoreDongNgac = !zCtx.zone?.province || /Đông Ngạc|Hà Nội/i.test(activeZoneName);
+      const activeZoneName = cleanText(zCtx.zone?.name || zCtx.province || body.provinceId || 'Việt Nam', 120);
+      const isCoreDongNgac =
+        /Đông Ngạc|HUMG|Mỏ - Địa chất/i.test(activeZoneName) ||
+        (!zCtx.zone?.province && !zCtx.province && !body.provinceId);
 
       if (apiKey) {
         try {
@@ -478,7 +506,7 @@ export async function POST(request) {
       const catHint = cleanText(body.category || 'flood', 30);
 
       const visionSys = [
-        'Bạn là Chuyên gia Kiểm định Ảnh Hiện trường Đô thị cho Bản đồ Cộng đồng Phường Đông Ngạc (Hà Nội).',
+        'Bạn là Chuyên gia Kiểm định Ảnh Hiện trường Thiên tai & Hạ tầng cho Bản đồ VN Resilience Atlas (34 tỉnh/thành Việt Nam).',
         'Nhiệm vụ: Quan sát bức ảnh người dân tải lên và trả về ĐÚNG 1 ĐỐI TƯỢNG JSON THUẦN TÚY (không bọc markdown ```json) theo cấu trúc:',
         '{"isValidScene": true/false, "sceneSummary": "mô tả ngắn gọn 1 câu tiếng Việt những gì thấy thực tế trong ảnh", "suggestedCategory": "flood|heat|traffic|shelter|medical", "suggestedWaterScale": "none|surface|ankle|half_wheel|knee_stall|enter_house", "suggestedHazards": ["open_drain_vortex","uneven_pothole","elec_leak_risk","lack_shade_heat"], "safetyNote": "1 lời khuyên ngắn hoặc lý do nếu ảnh không hợp lệ"}',
         'QUY TẮC CHỐNG ẢO GIÁC:',
