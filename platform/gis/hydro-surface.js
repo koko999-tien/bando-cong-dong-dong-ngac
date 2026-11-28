@@ -351,6 +351,12 @@ export function createNationalHydroSurfaceLayer(L, getContextFn) {
             navigator.maxTouchPoints > 0)) ||
         false;
 
+      // Ngày tạnh ráo (<= 4mm) ở đồng bằng/trên mobile: bỏ qua vòng lặp pixel để kéo/phóng 60fps
+      const hasSlopeOverlay = hasMountainousRelief && ctxState.showSlope && rainMm >= 35;
+      if (!showHydroWater && !hasSlopeOverlay && (isMobile || !hasRealDem || !hasMountainousRelief)) {
+        return;
+      }
+
       // Tối ưu CPU/GPU: Dùng bảng tra tọa độ 1D theo hàng + tích lũy O(R²) cục bộ thay vì O(W×H×N)
       const scale = isMobile ? 4 : 3;
       const wSmall = Math.max(1, Math.ceil(size.x / scale));

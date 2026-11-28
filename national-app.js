@@ -140,9 +140,9 @@ const state = {
   basemap: 'osm',
   layers: {
     hydroSurface: true,
-    flowVectors: true,
-    basins: true,
-    corridors: true,
+    flowVectors: false,
+    basins: false,
+    corridors: false,
     waterways: true,
     osmPoi: true,
     heatmap: false,
@@ -334,6 +334,7 @@ function switchPublicTab(tabName) {
   } else if (next === 'route') {
     setTimeout(() => routeMap?.invalidateSize(), 60);
   } else if (next === 'report') {
+    ensureTurnstileMounted();
     const locInp = document.getElementById('rep-location-name');
     if (locInp && !locInp.value.trim()) {
       locInp.value = resolveAutoLocationLabel(state.reportPin.lat, state.reportPin.lng);
@@ -1217,7 +1218,7 @@ function renderRiverDischargeChart() {
    ========================================================================= */
 function ensureNationalMap() {
   if (nationalMap || typeof window.L === 'undefined') return;
-  nationalMap = window.L.map('national-map', { zoomControl: false }).setView([state.zone.lat, state.zone.lng], 14);
+  nationalMap = window.L.map('national-map', { zoomControl: false, preferCanvas: true }).setView([state.zone.lat, state.zone.lng], 14);
   window.L.control.zoom({ position: 'bottomright' }).addTo(nationalMap);
   window.L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(nationalMap);
 
@@ -1635,13 +1636,14 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
   }
 
   if (state.layers.corridors && state.zoneCorridors.length > 0) {
+    const isRainActive = Number(state.hydroSim.rainMm || 0) >= 20;
     for (const cor of state.zoneCorridors) {
       const latLngs = (cor.coordinates || []).map(([lng, lat]) => [lat, lng]);
       if (latLngs.length < 2) continue;
       window.L.polyline(latLngs, {
         color: cor.severity === 'severe' ? '#DC2626' : '#D97706',
-        weight: 5,
-        opacity: 0.85
+        weight: isRainActive ? 4.2 : 2.6,
+        opacity: isRainActive ? 0.84 : 0.56
       })
         .bindPopup(`<strong>${esc(cor.name)}</strong><br><small>Ngưỡng mưa tham chiếu ~${cor.rainThresholdMm} mm · ${esc(cor.source)}</small><br>${esc(cor.note)}`)
         .addTo(corridorsLayer);
@@ -1650,7 +1652,8 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
 
   // Gom cụm thông minh theo ô lưới màn hình ở mức thu phóng rộng để tránh chồng lấn 60+ điểm
   const curZoom = nationalMap.getZoom() || 14;
-  const clusterCellPx = curZoom >= 16 ? 0 : curZoom === 15 ? 30 : curZoom === 14 ? 42 : 52;
+  const isCompactMob = typeof window !== 'undefined' && window.innerWidth < 768;
+  const clusterCellPx = curZoom >= 16 ? 0 : curZoom === 15 ? (isCompactMob ? 38 : 30) : curZoom === 14 ? (isCompactMob ? 54 : 42) : (isCompactMob ? 64 : 52);
   const liveByPt = state.livePulse?.byPoint || {};
   const enrichedPts = filtered.map((pt) => ({
     ...pt,
@@ -3313,6 +3316,17 @@ function bindEvents() {
       const lb = document.getElementById('hydro-rain-label');
       if (sl) sl.value = String(mm);
       if (lb) lb.textContent = `${mm} mm`;
+      // Tự động bật Hành lang rủi ro khi người dùng chủ động thử kịch bản mưa >= 40mm
+      if (mm >= 40 && !state.layers.corridors) {
+        state.layers.corridors = true;
+        const cBtn = document.querySelector('[data-map-layer="corridors"]');
+        if (cBtn) {
+          cBtn.classList.add('is-active');
+          cBtn.setAttribute('aria-pressed', 'true');
+        }
+        updateActiveLayersBadge();
+        renderZoneMapAndList({ flyMap: false });
+      }
       updateHydroSimModeBanner();
       hydroSurfaceLayer?.redraw();
       flowVectorsLayer?.redraw();
@@ -3353,7 +3367,7 @@ function bindEvents() {
     if (!strip) return;
     const compact = strip.classList.toggle('is-compact');
     ev.currentTarget.setAttribute('aria-expanded', String(!compact));
-    ev.currentTarget.textContent = compact ? 'Mức khác ▴' : 'Thu gọn ▾';
+    ev.currentTarget.textContent = compact ? 'Mức ▴' : 'Thu ▾';
   });
 
   const chartsDisc = document.getElementById('telemetry-charts-disclosure');
@@ -4699,17 +4713,25 @@ function getCurrentOfflineSosSmsPayload() {
 function renderSosLiveMap() {
   if (typeof window.L === 'undefined') return;
   const mount = document.getElementById('sos-live-map');
-  if (!mount) return;
+  if (!mount || mount.offsetParent === null) return;
   const coords = appSafetyState.sosCoords || state.zone;
+  const isTouchCompact = typeof window !== 'undefined' && window.innerWidth < 1024;
 
   if (!sosLiveMap) {
-    sosLiveMap = window.L.map('sos-live-map', { zoomControl: false }).setView([coords.lat, coords.lng], 15);
+    sosLiveMap = window.L.map('sos-live-map', {
+      zoomControl: false,
+      preferCanvas: true,
+      scrollWheelZoom: false,
+      dragging: !isTouchCompact,
+      touchZoom: !isTouchCompact,
+      doubleClickZoom: !isTouchCompact
+    }).setView([coords.lat, coords.lng], 15);
     window.L.tileLayer(BASEMAP_PROVIDERS.osm.url, { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(sosLiveMap);
     sosLiveLayer = window.L.layerGroup().addTo(sosLiveMap);
   }
   sosLiveLayer.clearLayers();
 
-  // Vòng tròn làm mờ quyền riêng tư 300 m (tương tự lá chắn server)
+  // Vòng tròn làm mờ quyền riêng tư 300 m (tooltip căn trên để không bị cắt lề trái)
   window.L.circle([coords.lat, coords.lng], {
     radius: 300,
     color: '#D97706',
@@ -4718,7 +4740,7 @@ function renderSosLiveMap() {
     fillColor: '#F59E0B',
     fillOpacity: 0.14
   })
-    .bindTooltip('Vùng làm mờ bảo vệ quyền riêng tư 300 m')
+    .bindTooltip('Vùng ẩn danh 300 m', { direction: 'top', offset: [0, -8], className: 'vn-map-tooltip' })
     .addTo(sosLiveLayer);
 
   window.L.circleMarker([coords.lat, coords.lng], {
@@ -4793,6 +4815,14 @@ async function refreshSosAndAiPillar() {
   }
 
   runProactiveAiEvaluation();
+  const sosDisc = document.getElementById('sos-privacy-map-disclosure');
+  if (sosDisc && window.innerWidth >= 1024 && !sosDisc.dataset.userToggled) {
+    sosDisc.open = true;
+  }
+  const sosOpt = document.querySelector('#pillar-sos .sos-optional-fields');
+  if (sosOpt && window.innerWidth >= 1024 && !sosOpt.dataset.userToggled) {
+    sosOpt.open = true;
+  }
   renderSosLiveMap();
   try {
     const shRes = await fetch(`/api/sos-dispatch?action=zone_shield_summary&lat=${coords.lat}&lng=${coords.lng}`);
@@ -4932,11 +4962,31 @@ function bindSosAndAppEvents() {
     }
     syncAuthModalProdMode();
     document.getElementById('citizen-auth-dialog')?.showModal();
+    ensureGoogleGsiRendered();
   };
   document.getElementById('btn-open-account')?.addEventListener('click', openAuthModal);
   document.getElementById('btn-sos-open-login')?.addEventListener('click', () => {
     syncAuthModalProdMode();
     document.getElementById('citizen-auth-dialog')?.showModal();
+    ensureGoogleGsiRendered();
+  });
+
+  // Chuyển nhanh chế độ SOS Khẩn vs AI Hộ tống & Quanh bạn trên điện thoại + lazy-mount bản đồ SOS
+  const sosPanelEl = document.getElementById('pillar-sos');
+  document.querySelectorAll('[data-sos-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const t = btn.dataset.sosTab === 'escort' ? 'escort' : 'dispatch';
+      if (sosPanelEl) sosPanelEl.dataset.sosTab = t;
+      document.querySelectorAll('[data-sos-tab]').forEach((b) => {
+        const act = b.dataset.sosTab === t;
+        b.classList.toggle('is-active', act);
+        b.setAttribute('aria-selected', String(act));
+      });
+    });
+  });
+  document.getElementById('sos-privacy-map-disclosure')?.addEventListener('toggle', (ev) => {
+    ev.currentTarget.dataset.userToggled = '1';
+    if (ev.currentTarget.open) renderSosLiveMap();
   });
 
   document.querySelectorAll('[data-czauth]').forEach((btn) => {
@@ -5687,6 +5737,69 @@ function loadExternalScriptOnce(src, id) {
   });
 }
 
+let _gsiInitialized = false;
+let _turnstileMounted = false;
+
+async function ensureTurnstileMounted() {
+  if (_turnstileMounted || !appSafetyState.turnstileEnabled) return;
+  const box = document.getElementById('rep-turnstile-box');
+  if (!box || box.offsetParent === null) return;
+  _turnstileMounted = true;
+  await loadExternalScriptOnce('https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit', 'cf-turnstile-sdk').catch(() => {});
+  if (window.turnstile?.render) {
+    box.hidden = false;
+    appSafetyState.repTurnstileWidgetId = window.turnstile.render(box, {
+      sitekey: appSafetyState.turnstileSiteKey,
+      theme: 'light',
+      size: 'flexible'
+    });
+  }
+}
+
+async function ensureGoogleGsiRendered() {
+  if (!appSafetyState.googleClientId) return;
+  const gsiMount = document.getElementById('google-gsi-mount');
+  if (!gsiMount || gsiMount.offsetParent === null) return;
+  if (_gsiInitialized && gsiMount.childElementCount > 0) return;
+
+  await loadExternalScriptOnce('https://accounts.google.com/gsi/client', 'google-gsi-sdk').catch(() => {});
+  if (window.google?.accounts?.id) {
+    if (!_gsiInitialized) {
+      window.google.accounts.id.initialize({
+        client_id: appSafetyState.googleClientId,
+        callback: async (resp) => {
+          if (!resp?.credential) return;
+          const authRes = await fetch('/api/sos-dispatch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'google_auth', idToken: resp.credential })
+          });
+          const data = await authRes.json();
+          if (authRes.ok && data?.ok) {
+            localStorage.setItem(CITIZEN_TOKEN_KEY, data.token);
+            appSafetyState.citizenToken = data.token;
+            document.getElementById('citizen-auth-dialog')?.close();
+            await syncCitizenSession();
+            showToast(`Đã đăng nhập Google: ${data.profile.fullName}`);
+            if (appSafetyState.pendingAutoSubmitSos) {
+              await submitSosNow();
+            }
+          }
+        }
+      });
+      _gsiInitialized = true;
+    }
+    const gsiW = Math.min(300, Math.max(220, Math.round(gsiMount.clientWidth || 280)));
+    gsiMount.innerHTML = '';
+    window.google.accounts.id.renderButton(gsiMount, {
+      theme: 'outline',
+      size: 'large',
+      width: gsiW,
+      text: 'continue_with'
+    });
+  }
+}
+
 async function initSecuritySdks() {
   if (!location.protocol.startsWith('http')) return;
   try {
@@ -5699,65 +5812,13 @@ async function initSecuritySdks() {
     appSafetyState.turnstileSiteKey = h?.turnstileSiteKey || '';
     appSafetyState.turnstileEnabled = Boolean(h?.turnstileEnabled && h?.turnstileSiteKey);
 
-    if (appSafetyState.turnstileEnabled) {
-      const box = document.getElementById('rep-turnstile-box');
-      if (box) {
-        await loadExternalScriptOnce('https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit', 'cf-turnstile-sdk').catch(() => {});
-        if (window.turnstile?.render) {
-          box.hidden = false;
-          appSafetyState.repTurnstileWidgetId = window.turnstile.render(box, {
-            sitekey: appSafetyState.turnstileSiteKey,
-            theme: 'light',
-            size: 'flexible'
-          });
-        }
-      }
-    }
-
     if (appSafetyState.googleClientId) {
-      const gsiMount = document.getElementById('google-gsi-mount');
       const quickBtn = document.getElementById('btn-google-quick-auth');
       const customToggle = document.getElementById('btn-google-custom-toggle');
       const quickFields = document.getElementById('google-quick-fields');
-
-      // Ngay khi có Google Client ID hợp lệ, ẩn ngay nút fallback giả lập để tránh trùng lặp giao diện
       if (quickBtn) quickBtn.style.display = 'none';
       if (customToggle) customToggle.style.display = 'none';
       if (quickFields) quickFields.style.display = 'none';
-
-      if (gsiMount) {
-        await loadExternalScriptOnce('https://accounts.google.com/gsi/client', 'google-gsi-sdk').catch(() => {});
-        if (window.google?.accounts?.id) {
-          window.google.accounts.id.initialize({
-            client_id: appSafetyState.googleClientId,
-            callback: async (resp) => {
-              if (!resp?.credential) return;
-              const authRes = await fetch('/api/sos-dispatch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'google_auth', idToken: resp.credential })
-              });
-              const data = await authRes.json();
-              if (authRes.ok && data?.ok) {
-                localStorage.setItem(CITIZEN_TOKEN_KEY, data.token);
-                appSafetyState.citizenToken = data.token;
-                document.getElementById('citizen-auth-dialog')?.close();
-                await syncCitizenSession();
-                showToast(`Đã đăng nhập Google: ${data.profile.fullName}`);
-                if (appSafetyState.pendingAutoSubmitSos) {
-                  await submitSosNow();
-                }
-              }
-            }
-          });
-          window.google.accounts.id.renderButton(gsiMount, {
-            theme: 'outline',
-            size: 'large',
-            width: 320,
-            text: 'continue_with'
-          });
-        }
-      }
     }
   } catch {
     // non-fatal offline / local

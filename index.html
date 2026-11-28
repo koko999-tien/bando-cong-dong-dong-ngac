@@ -120,7 +120,7 @@
                 <div class="zone-search-box">
                   <svg class="input-leading-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
             <label for="vn-zone-search" class="sr-only">Tìm tỉnh, thành phố, huyện, xã hoặc tuyến đường tại Việt Nam</label>
-            <input type="search" id="vn-zone-search" class="text-input has-leading-icon" autocomplete="off" placeholder="Tìm khu vực, tỉnh…">
+            <input type="search" id="vn-zone-search" class="text-input has-leading-icon" autocomplete="off" placeholder="Tìm địa điểm…">
                   <ul id="vn-zone-suggestions" class="zone-suggestions" hidden role="listbox" aria-label="Gợi ý khu vực tại Việt Nam"></ul>
                 </div>
 
@@ -575,7 +575,7 @@
                   <button type="button" id="btn-toggle-layers-menu" class="hud-glass-btn hud-layers-trigger" aria-expanded="false" aria-controls="map-layers-popover">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
                     <span>Lớp chuyên đề</span>
-                    <span id="active-layers-count" class="hud-count-pill mono-num">6/8</span>
+                    <span id="active-layers-count" class="hud-count-pill mono-num">3/8</span>
                   </button>
 
                 <div id="map-layers-popover" class="hud-layers-popover" hidden role="group" aria-label="Lớp chuyên đề thủy văn và hạ tầng">
@@ -589,17 +589,17 @@
                       <span class="layer-row-copy"><strong>Mặt phủ ngập nước</strong><small>Mô phỏng 3 tầng sâu &amp; sườn dốc</small></span>
                       <span class="layer-check" aria-hidden="true"></span>
                     </button>
-                    <button type="button" class="map-ctrl-btn layer-row-btn is-active" data-map-layer="flowVectors" aria-pressed="true">
+                    <button type="button" class="map-ctrl-btn layer-row-btn" data-map-layer="flowVectors" aria-pressed="false">
                       <span class="layer-swatch sw-flow">→</span>
                       <span class="layer-row-copy"><strong>Hướng chảy &amp; Độ dốc</strong><small>Vector dòng chảy tràn bề mặt</small></span>
                       <span class="layer-check" aria-hidden="true"></span>
                     </button>
-                    <button type="button" class="map-ctrl-btn layer-row-btn is-active" data-map-layer="basins" aria-pressed="true">
+                    <button type="button" class="map-ctrl-btn layer-row-btn" data-map-layer="basins" aria-pressed="false">
                       <span class="layer-swatch sw-basin"></span>
                       <span class="layer-row-copy"><strong>Rốn trũng &amp; Vành đai</strong><small>Đa giác tụ thủy &amp; cự ly đồng tâm</small></span>
                       <span class="layer-check" aria-hidden="true"></span>
                     </button>
-                    <button type="button" class="map-ctrl-btn layer-row-btn is-active" data-map-layer="corridors" aria-pressed="true">
+                    <button type="button" class="map-ctrl-btn layer-row-btn" data-map-layer="corridors" aria-pressed="false">
                       <span class="layer-swatch sw-corridor"></span>
                       <span class="layer-row-copy"><strong>Hành lang rủi ro</strong><small>Tuyến đường ngập &amp; sạt lở lịch sử</small></span>
                       <span class="layer-check" aria-hidden="true"></span>
@@ -680,7 +680,7 @@
                       <button type="button" class="rain-preset-btn" data-rain-preset="120">120mm</button>
                       <button type="button" class="rain-preset-btn" data-rain-preset="180">180mm</button>
                     </div>
-                    <button type="button" id="btn-toggle-hydro-drawer" class="rain-preset-btn" aria-expanded="false">Mức khác ▴</button>
+                    <button type="button" id="btn-toggle-hydro-drawer" class="rain-preset-btn" aria-expanded="false">Mức ▴</button>
                   </div>
 
                   <div class="hydro-sim-sliders">
@@ -1034,7 +1034,7 @@
       <!-- ======================================================================= -->
       <!-- PHÂN HỆ APP MỚI: HỘ TỐNG HÀNH TRÌNH AI THỰC CHỨNG & ĐIỀU PHỐI SOS ZERO-TRUST -->
       <!-- ======================================================================= -->
-      <section id="pillar-sos" class="pillar-section page-container" hidden aria-label="Hộ tống AI và Điều phối Hỗ trợ Khẩn cấp SOS">
+      <section id="pillar-sos" class="pillar-section page-container" data-sos-tab="dispatch" hidden aria-label="Hộ tống AI và Điều phối Hỗ trợ Khẩn cấp SOS">
         <div class="section-banner sos-hero-banner">
           <div>
             <h1>Hộ tống Hành trình &amp; Điều phối Hỗ trợ Khẩn cấp</h1>
@@ -1044,6 +1044,12 @@
             <span class="hud-count-pill mono-num">Ẩn danh 300 m · Tự hủy 30p</span>
             <span class="hud-count-pill mono-num">Giới hạn 2 người nhận / ca</span>
           </div>
+        </div>
+
+        <!-- THANH CHUYỂN NHANH 2 NHIỆM VỤ CHÍNH TRÊN ĐIỆN THOẠI (DESKTOP HIỂN THỊ SONG SONG 2 CỘT) -->
+        <div class="sos-mobile-subtabs" role="tablist" aria-label="Chuyển nhanh Gửi SOS hoặc AI Hộ tống">
+          <button type="button" class="sos-subtab-btn is-active" data-sos-tab="dispatch" role="tab" aria-selected="true">Gửi SOS khẩn</button>
+          <button type="button" class="sos-subtab-btn" data-sos-tab="escort" role="tab" aria-selected="false">AI Hộ tống &amp; Quanh bạn</button>
         </div>
 
         <!-- THANH ĐỊNH DANH NGƯỜI DÙNG / GOOGLE & LÁ CHẮN QUYỀN RIÊNG TƯ -->
@@ -1092,7 +1098,7 @@
 
         <div class="research-two-col">
           <!-- CỘT TRÁI: GỬI YÊU CẦU HỖ TRỢ KHẨN CẤP & TRẠNG THÁI MÃ PIN 2 CHIỀU -->
-          <div class="stack-panel">
+          <div class="stack-panel sos-col-dispatch">
             <form id="sos-request-form" class="card-panel" novalidate>
               <div class="section-head-row">
                 <h2 class="section-title">Gửi yêu cầu hỗ trợ khẩn cấp</h2>
@@ -1164,41 +1170,49 @@
                 </div>
               </div>
 
-              <div class="field-group">
-                <span class="field-label">3. Chạm thêm chi tiết hoàn cảnh (hoặc Nói 3 giây — Không bắt buộc)</span>
-                <div class="quick-context-chips" role="group" aria-label="Thẻ hoàn cảnh nhanh">
-                  <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Đi 1 mình">Đi 1 mình</button>
-                  <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Có trẻ nhỏ / Người lớn tuổi">Có trẻ nhỏ / Người lớn tuổi</button>
-                  <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Xe tay ga chết máy">Xe tay ga chết máy</button>
-                  <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Ô tô kẹt ngập">Ô tô kẹt ngập</button>
-                  <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Trời tối / Mưa to">Trời tối / Mưa to</button>
-                  <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Đang đứng sát lề cao">Đang đứng sát lề cao</button>
-                  <button type="button" id="btn-sos-voice" class="ctx-chip ctx-chip-mic" title="Nói 3 giây để chuyển giọng nói thành ghi chú">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
-                    <span id="sos-voice-label">Nói giọng nói (Rảnh tay)</span>
-                  </button>
-                </div>
-                <p id="sos-composed-preview" class="field-hint">Tình trạng gửi đi: Tự động theo thẻ bạn chạm (không bắt buộc chọn thêm).</p>
-                <details class="optional-note-details">
-                  <summary class="text-btn">Gõ thêm ghi chú (không bắt buộc)</summary>
-                  <input type="text" id="sos-note" class="text-input" maxlength="220" style="margin-top:6px;" placeholder="Chỉ nhập nếu muốn ghi thêm...">
-                </details>
-              </div>
+              <details class="clean-disclosure sos-optional-fields">
+                <summary><span>Tùy chọn: Chi tiết hoàn cảnh, giọng nói &amp; đối tượng nhận</span></summary>
+                <div class="disclosure-body sos-optional-body">
+                  <div class="field-group">
+                    <span class="field-label">3. Chạm thêm chi tiết hoàn cảnh (hoặc Nói 3 giây — Không bắt buộc)</span>
+                    <div class="quick-context-chips" role="group" aria-label="Thẻ hoàn cảnh nhanh">
+                      <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Đi 1 mình">Đi 1 mình</button>
+                      <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Có trẻ nhỏ / Người lớn tuổi">Có trẻ nhỏ / Người lớn tuổi</button>
+                      <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Xe tay ga chết máy">Xe tay ga chết máy</button>
+                      <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Ô tô kẹt ngập">Ô tô kẹt ngập</button>
+                      <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Trời tối / Mưa to">Trời tối / Mưa to</button>
+                      <button type="button" class="ctx-chip js-sos-chip" aria-pressed="false" data-text="Đang đứng sát lề cao">Đang đứng sát lề cao</button>
+                      <button type="button" id="btn-sos-voice" class="ctx-chip ctx-chip-mic" title="Nói 3 giây để chuyển giọng nói thành ghi chú">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                        <span id="sos-voice-label">Nói giọng nói (Rảnh tay)</span>
+                      </button>
+                    </div>
+                    <p id="sos-composed-preview" class="field-hint">Tình trạng gửi đi: Tự động theo thẻ bạn chạm (không bắt buộc chọn thêm).</p>
+                    <details class="optional-note-details">
+                      <summary class="text-btn">Gõ thêm ghi chú (không bắt buộc)</summary>
+                      <input type="text" id="sos-note" class="text-input" maxlength="220" style="margin-top:6px;" placeholder="Chỉ nhập nếu muốn ghi thêm...">
+                    </details>
+                  </div>
 
-              <div class="field-group">
-                <span class="field-label">4. Chế độ bảo vệ người gặp nạn</span>
-                <input type="hidden" id="sos-dispatch-scope" value="verified_peers">
-                <div class="scope-tap-grid" role="group" aria-label="Chọn đối tượng tiếp nhận hỗ trợ">
-                  <button type="button" class="scope-tap-btn js-sos-scope is-active" data-val="verified_peers" aria-pressed="true">Hệ thống + Tối đa 2 TNV gần nhất</button>
-                  <button type="button" class="scope-tap-btn js-sos-scope" data-val="official_only" aria-pressed="false">Chỉ Đội chính thức (Đi đêm / 1 mình)</button>
+                  <div class="field-group">
+                    <span class="field-label">4. Chế độ bảo vệ người gặp nạn</span>
+                    <input type="hidden" id="sos-dispatch-scope" value="verified_peers">
+                    <div class="scope-tap-grid" role="group" aria-label="Chọn đối tượng tiếp nhận hỗ trợ">
+                      <button type="button" class="scope-tap-btn js-sos-scope is-active" data-val="verified_peers" aria-pressed="true">Hệ thống + Tối đa 2 TNV gần nhất</button>
+                      <button type="button" class="scope-tap-btn js-sos-scope" data-val="official_only" aria-pressed="false">Chỉ Đội chính thức (Đi đêm / 1 mình)</button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </details>
 
               <div id="sos-form-feedback" class="form-feedback" hidden role="alert"></div>
-              <button type="submit" id="btn-submit-sos" class="btn sos-giant-cta">
-                <span class="sos-cta-main">Gửi tín hiệu cần hỗ trợ</span>
-                <span class="sos-cta-sub">Tự động đính kèm vị trí làm mờ 300 m &amp; mã PIN 4 số</span>
-              </button>
+              <div class="sos-cta-row">
+                <button type="submit" id="btn-submit-sos" class="btn sos-giant-cta">
+                  <span class="sos-cta-main">Gửi tín hiệu cần hỗ trợ</span>
+                  <span class="sos-cta-sub">Tự động đính kèm vị trí làm mờ 300 m &amp; mã PIN 4 số</span>
+                </button>
+                <a href="tel:112" class="btn btn-danger-outline sos-call-112-btn">Gọi 112</a>
+              </div>
             </form>
 
             <!-- PHIẾU THEO DÕI CA SOS ĐANG MỞ CỦA TÔI (MÃ PIN 4 SỐ + XÓA TRẮNG TỌA ĐỘ + BÁO KẺ XẤU) -->
@@ -1213,22 +1227,24 @@
             </div>
 
             <!-- BẢN ĐỒ LÁ CHẮN QUYỀN RIÊNG TƯ 300M + LỐI THOÁT Y TẾ + TIN NHẮN SMS KHI MẤT 4G -->
-            <div class="card-panel">
-              <div class="section-head-row">
+            <details id="sos-privacy-map-disclosure" class="card-panel clean-disclosure sos-map-drawer">
+              <summary class="sos-drawer-summary">
                 <h2 class="section-title">Vùng ẩn danh 300 m &amp; SMS khẩn 112</h2>
                 <span class="source-tag tone-verified">Zero-Trust Live</span>
+              </summary>
+              <div class="disclosure-body" style="padding-top:10px;">
+                <div id="sos-live-map" class="mini-map-mount" style="height:228px;"></div>
+                <p id="sos-map-caption" class="field-hint" style="margin:6px 0 8px;">Vòng tròn vàng thể hiện vùng làm mờ 300 m bảo vệ riêng tư; đường xanh lá dẫn tới cơ sở y tế/tránh trú gần nhất.</p>
+                <div class="form-actions-row">
+                  <button type="button" id="btn-copy-sos-sms" class="btn btn-sm btn-secondary">Sao chép Tin nhắn SOS Khẩn</button>
+                  <a id="btn-send-sos-sms-link" href="sms:112" class="btn btn-sm btn-primary">Gửi SMS 112 (Khi mất 4G)</a>
+                </div>
               </div>
-              <div id="sos-live-map" class="mini-map-mount" style="height:228px;"></div>
-              <p id="sos-map-caption" class="field-hint" style="margin:6px 0 8px;">Vòng tròn vàng thể hiện vùng làm mờ 300 m bảo vệ riêng tư; đường xanh lá dẫn tới cơ sở y tế/tránh trú gần nhất.</p>
-              <div class="form-actions-row">
-                <button type="button" id="btn-copy-sos-sms" class="btn btn-sm btn-secondary">Sao chép Tin nhắn SOS Khẩn</button>
-                <a id="btn-send-sos-sms-link" href="sms:112" class="btn btn-sm btn-primary">Gửi SMS 112 (Khi mất 4G)</a>
-              </div>
-            </div>
+            </details>
           </div>
 
           <!-- CỘT PHẢI: CẢNH BÁO HỖ TRỢ GẦN BẠN LÊN ĐẦU + AI HỘ TỐNG HÀNH TRÌNH -->
-          <div class="stack-panel">
+          <div class="stack-panel sos-col-escort">
             <!-- CẢNH BÁO HỖ TRỢ GẦN ĐÂY DÀNH CHO NGƯỜI DÙNG QUANH KHU VỰC -->
             <article class="card-panel">
               <div class="section-head-row">
