@@ -2722,8 +2722,11 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     position: relative;
     flex: 1 1 auto;
     min-height: 0;
-    height: calc(100dvh - var(--topbar-h) - 42px - var(--nav-bottom-h));
+    height: calc(100dvh - var(--topbar-h) - var(--nav-bottom-h));
     overflow: hidden;
+  }
+  .mobile-view-switch-bar {
+    display: none !important;
   }
   .workbench-map-stage {
     position: absolute !important;
@@ -2743,7 +2746,7 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     right: 0;
     bottom: 0;
     z-index: 436;
-    height: 132px;
+    height: 114px;
     max-height: calc(100% - 8px);
     background: var(--bg-glass-strong);
     backdrop-filter: saturate(180%) blur(22px);
@@ -2755,13 +2758,13 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     transition: height 260ms cubic-bezier(0.22, 1, 0.36, 1);
   }
   .workbench-split[data-sheet="peek"] .workbench-left-dock {
-    height: 132px;
+    height: 114px;
   }
   .workbench-split[data-sheet="peek"] .workbench-left-dock > :not(.mobile-sheet-grabber):not(.dock-zone-header) {
     display: none;
   }
   .workbench-split[data-sheet="half"] .workbench-left-dock {
-    height: 58%;
+    height: 52%;
   }
   .workbench-split[data-sheet="full"] .workbench-left-dock {
     height: calc(100% - 6px);
@@ -2775,12 +2778,16 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     position: absolute;
     left: 8px;
     right: 8px;
-    bottom: 140px;
+    bottom: 122px;
     z-index: 428;
     padding: 0;
     background: transparent;
     border: 0;
     pointer-events: none;
+    transition: bottom 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .workbench-split:is([data-sheet="half"], [data-sheet="full"]) .map-hud-bottom {
+    display: none;
   }
   .workbench-split .map-hud-bottom .hydro-sim-strip {
     pointer-events: auto;
@@ -2791,7 +2798,7 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     border-radius: var(--radius-pill);
   }
   .workbench-split .leaflet-bottom {
-    bottom: 184px !important;
+    bottom: 160px !important;
   }
 }
 
@@ -3409,25 +3416,25 @@ button, a, summary, input, select, textarea, label {
   .mobile-sheet-grabber {
     display: block;
     flex-shrink: 0;
-    padding: 6px 12px 2px;
+    padding: 5px 12px 1px;
   }
   .sheet-handle-btn {
     width: 100%;
     border: 0;
     background: transparent;
-    padding: 2px 0 4px;
+    padding: 1px 0 2px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
     cursor: pointer;
     color: var(--ink-secondary);
   }
   .sheet-handle-pill {
-    width: 36px;
-    height: 4px;
+    width: 38px;
+    height: 4.5px;
     border-radius: 999px;
-    background: rgba(15, 23, 42, 0.22);
+    background: rgba(15, 23, 42, 0.28);
   }
   .sheet-peek-summary {
     font-size: 0.72rem;

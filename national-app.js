@@ -4680,6 +4680,7 @@ function bindSosAndAppEvents() {
       try {
         const h = await fetch('/api/sos-dispatch?action=health').then((r) => (r.ok ? r.json() : null));
         appSafetyState.googleClientIdConfigured = Boolean(h?.googleClientIdConfigured);
+        appSafetyState.googleClientId = h?.googleClientId || '';
       } catch {
         appSafetyState.googleClientIdConfigured = false;
       }
@@ -4689,6 +4690,15 @@ function bindSosAndAppEvents() {
     const hasClientId = Boolean(appSafetyState.googleClientIdConfigured);
     if (ggBox) ggBox.hidden = !hasClientId;
     if (ggNote) ggNote.hidden = hasClientId;
+
+    if (hasClientId) {
+      const quickBtn = document.getElementById('btn-google-quick-auth');
+      const customToggle = document.getElementById('btn-google-custom-toggle');
+      const quickFields = document.getElementById('google-quick-fields');
+      if (quickBtn) quickBtn.style.display = 'none';
+      if (customToggle) customToggle.style.display = 'none';
+      if (quickFields) quickFields.style.display = 'none';
+    }
   };
 
   let regProofDataUrl = '';
@@ -5482,6 +5492,15 @@ async function initSecuritySdks() {
 
     if (appSafetyState.googleClientId) {
       const gsiMount = document.getElementById('google-gsi-mount');
+      const quickBtn = document.getElementById('btn-google-quick-auth');
+      const customToggle = document.getElementById('btn-google-custom-toggle');
+      const quickFields = document.getElementById('google-quick-fields');
+
+      // Ngay khi có Google Client ID hợp lệ, ẩn ngay nút fallback giả lập để tránh trùng lặp giao diện
+      if (quickBtn) quickBtn.style.display = 'none';
+      if (customToggle) customToggle.style.display = 'none';
+      if (quickFields) quickFields.style.display = 'none';
+
       if (gsiMount) {
         await loadExternalScriptOnce('https://accounts.google.com/gsi/client', 'google-gsi-sdk').catch(() => {});
         if (window.google?.accounts?.id) {
@@ -5510,15 +5529,9 @@ async function initSecuritySdks() {
           window.google.accounts.id.renderButton(gsiMount, {
             theme: 'outline',
             size: 'large',
-            width: 340,
+            width: 320,
             text: 'continue_with'
           });
-          const quickBtn = document.getElementById('btn-google-quick-auth');
-          const customToggle = document.getElementById('btn-google-custom-toggle');
-          const quickFields = document.getElementById('google-quick-fields');
-          if (quickBtn) quickBtn.hidden = true;
-          if (customToggle) customToggle.hidden = true;
-          if (quickFields) quickFields.hidden = true;
         }
       }
     }

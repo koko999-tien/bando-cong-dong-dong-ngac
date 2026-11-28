@@ -343,7 +343,15 @@ export function createNationalHydroSurfaceLayer(L, getContextFn) {
       const waterSurfaceThreshold = stats.minM + relief * (0.26 + 0.68 * rainFrac);
       const hasMountainousRelief = (stats.maxSlopeDeg || 0) >= 8;
 
-      const scale = 3;
+      const isMobile =
+        (typeof window !== 'undefined' &&
+          (window.innerWidth < 1024 ||
+            ('ontouchstart' in window) ||
+            navigator.maxTouchPoints > 0)) ||
+        false;
+
+      // Trên điện thoại: Tăng hệ số downscale lên 5 để giảm 65% tải pixel CPU/GPU, giữ mượt 60fps
+      const scale = isMobile ? 5 : 3;
       const wSmall = Math.max(1, Math.ceil(size.x / scale));
       const hSmall = Math.max(1, Math.ceil(size.y / scale));
       const off = document.createElement('canvas');
@@ -815,7 +823,14 @@ export function createHydroFlowVectorsLayer(L, getContextFn) {
       }
 
       this._drawStaticOnly();
-      this._particles = Array.from({ length: 120 }, () => this._spawnParticle(size.x, size.y));
+      const isMobile =
+        (typeof window !== 'undefined' &&
+          (window.innerWidth < 1024 ||
+            ('ontouchstart' in window) ||
+            navigator.maxTouchPoints > 0)) ||
+        false;
+      const particleCount = isMobile ? 32 : 120;
+      this._particles = Array.from({ length: particleCount }, () => this._spawnParticle(size.x, size.y));
       this._maybeStartAnim();
     }
   });
