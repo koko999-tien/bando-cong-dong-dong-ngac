@@ -1,9 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "cleanUrls": true,
   "rewrites": [
+    { "source": "/admin", "destination": "/admin.html" },
     { "source": "/quan-tri", "destination": "/admin.html" },
-    { "source": "/quan-tri/:path*", "destination": "/admin.html" }
+    { "source": "/quan-tri/(.*)", "destination": "/admin.html" }
   ],
   "headers": [
     {
