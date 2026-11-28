@@ -2892,11 +2892,6 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     font-size: 0.67rem;
     gap: 4px;
   }
-  .search-area-pill {
-    top: 88px;
-    font-size: 0.72rem;
-    padding: 5px 11px;
-  }
   .vn-cluster-pill {
     width: 26px;
     height: 26px;
@@ -3583,6 +3578,17 @@ button, a, summary, input, select, textarea, label {
     left: calc(50% + 202px);
   }
 }
+@media (max-width: 639px) {
+  .search-area-pill {
+    top: 92px;
+    font-size: 0.72rem;
+    padding: 5px 11px;
+  }
+}
+#btn-sos-use-gps {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 /* Phẳng hóa các biểu mẫu Lộ trình / Nơi ở / Báo sự cố bên trong Tấm kính (không hộp lồng hộp) */
 .workbench-left-dock .dock-scroll > .card-panel,
@@ -3737,7 +3743,7 @@ body[data-basemap="satellite"] .ring-dist-label {
   .mobile-pillar-nav {
     background: rgba(255, 255, 255, 0.97);
   }
-  .hud-glass-btn,
+  .hud-glass-btn:not(.search-area-pill),
   .hud-basemap-seg,
   .hud-layers-trigger,
   .hud-layers-popover,
@@ -3745,6 +3751,11 @@ body[data-basemap="satellite"] .ring-dist-label {
   .radar-timeline-bar,
   .map-detail-card {
     background: rgba(255, 255, 255, 0.96);
+  }
+  .search-area-pill {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #FFFFFF;
   }
   .citizen-toast {
     background: rgba(15, 23, 42, 0.94);
