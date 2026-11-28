@@ -514,11 +514,17 @@ html, body {
 
 @media (max-width: 900px) {
   .hide-sm, .brand-sub { display: none; }
-  .map-workspace { height: auto; min-height: calc(100dvh - var(--nav-h)); overflow: visible; }
+  .top-nav { height: auto; min-height: var(--nav-h); }
+  .top-nav-inner { flex-wrap: wrap; padding: 8px 12px; gap: 8px; }
+  .brand { order: 1; }
+  .nav-right { order: 2; }
+  .main-tabs { order: 3; width: 100%; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 6px; overflow: visible; }
+  .tab-btn { flex: 1; justify-content: center; padding: 6px 6px; font-size: 0.76rem; }
+  .map-workspace { height: auto; min-height: calc(100dvh - 102px); overflow: visible; }
   .mobile-switch { display: flex; }
   .split-layout { grid-template-columns: 1fr; }
   .split-layout[data-mob="map"] .sidebar { display: none; }
   .split-layout[data-mob="panel"] .map-stage { display: none; }
-  .map-stage { height: calc(100dvh - 108px); min-height: 440px; }
+  .map-stage { height: calc(100dvh - 150px); min-height: 430px; }
   .quiz-header-card, .guide-grid { grid-template-columns: 1fr; }
 }
