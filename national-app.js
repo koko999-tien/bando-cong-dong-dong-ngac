@@ -70,7 +70,7 @@ const BASEMAP_PROVIDERS = {
   osm: {
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     maxZoom: 19,
-    className: '',
+    className: 'tiles-clean-atlas',
     attribution: '&copy; OpenStreetMap contributors'
   },
   satellite: {
@@ -80,10 +80,10 @@ const BASEMAP_PROVIDERS = {
     attribution: 'Tiles &copy; Esri World Imagery'
   },
   topo: {
-    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-    maxZoom: 17,
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    maxZoom: 18,
     className: '',
-    attribution: '&copy; OpenTopoMap (CC-BY-SA)'
+    attribution: 'Tiles &copy; Esri World Topo'
   },
   dark: {
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -352,10 +352,10 @@ function selectZone(zoneObj, { radiusKm, flyMap = true } = {}) {
   }
   const pill = document.getElementById('active-zone-pill');
   if (pill) {
-    pill.textContent = `${state.zone.lat.toFixed(2)}°N, ${state.zone.lng.toFixed(2)}°E · R=${state.zone.radiusKm}km`;
+    pill.textContent = `${state.zone.lat.toFixed(2)}°N, ${state.zone.lng.toFixed(2)}°E · ${state.zone.radiusKm}km`;
   }
   const elevPill = document.getElementById('env-elev-pill');
-  if (elevPill) elevPill.textContent = 'Cao độ -- m';
+  if (elevPill) elevPill.textContent = 'Nền -- m';
 
   document.querySelectorAll('.js-quick-zone').forEach((btn) => {
     btn.classList.toggle('is-active-zone', btn.dataset.zoneid === state.zone.id);
@@ -655,7 +655,7 @@ function renderPublicOverview({ flyMap = false } = {}) {
 
   const elevPill = document.getElementById('env-elev-pill');
   if (elevPill && state.zoneElevationM != null) {
-    elevPill.textContent = `Cao độ tâm ~${state.zoneElevationM} m`;
+    elevPill.textContent = `Nền ~${state.zoneElevationM} m`;
   }
 
   if (state.weather) {
@@ -784,7 +784,8 @@ function renderRiverDischargeChart() {
    ========================================================================= */
 function ensureNationalMap() {
   if (nationalMap || typeof window.L === 'undefined') return;
-  nationalMap = window.L.map('national-map', { zoomControl: true }).setView([state.zone.lat, state.zone.lng], 14);
+  nationalMap = window.L.map('national-map', { zoomControl: false }).setView([state.zone.lat, state.zone.lng], 14);
+  window.L.control.zoom({ position: 'bottomright' }).addTo(nationalMap);
   window.L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(nationalMap);
 
   const cfg = BASEMAP_PROVIDERS[state.basemap] || BASEMAP_PROVIDERS.osm;
@@ -827,9 +828,21 @@ function ensureNationalMap() {
   zoneMarkersLayer = window.L.layerGroup().addTo(nationalMap);
   mainRouteLayer = window.L.layerGroup().addTo(nationalMap);
 
+  let lastZoomTier = '';
+  nationalMap.on('zoomend', () => {
+    const z = nationalMap.getZoom();
+    const tier = z <= 13 ? 'sm' : z === 14 ? 'md' : 'lg';
+    if (tier !== lastZoomTier) {
+      lastZoomTier = tier;
+      zoneMarkersLayer?.eachLayer((m) => {
+        if (m._vnPt) m.setIcon(buildMapPictogramIcon(window.L, m._vnPt, z));
+      });
+    }
+  });
+
   nationalMap.on('mousemove', (ev) => {
     const c = document.getElementById('map-cursor-coords');
-    if (c) c.textContent = `${ev.latlng.lat.toFixed(4)}°N, ${ev.latlng.lng.toFixed(4)}°E · Bấm để tra cao độ & y tế gần nhất`;
+    if (c) c.textContent = `${ev.latlng.lat.toFixed(4)}°N, ${ev.latlng.lng.toFixed(4)}°E · Bấm để tra cao độ & địa giới`;
   });
 
   nationalMap.on('click', (ev) => {
@@ -1169,17 +1182,23 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
     }
   }
 
-  // Ký hiệu bản đồ trực quan bằng SVG Pictograms
+  // Ký hiệu bản đồ trực quan theo cấp thu phóng (Zoom-Adaptive SVG Pictograms)
+  const curZoom = nationalMap.getZoom() || 14;
   for (const pt of filtered) {
-    window.L.marker([Number(pt.lat), Number(pt.lng)], {
-      icon: buildMapPictogramIcon(window.L, pt),
-      title: pt.name
+    const marker = window.L.marker([Number(pt.lat), Number(pt.lng)], {
+      icon: buildMapPictogramIcon(window.L, pt, curZoom)
     })
+      .bindTooltip(`<strong>${esc(pt.name)}</strong><br><span class="mono-num">${esc(formatDistancePlain(pt.distanceMeters))}</span>`, {
+        direction: 'top',
+        offset: [0, -8],
+        className: 'vn-map-tooltip'
+      })
       .on('click', (ev) => {
         window.L.DomEvent.stopPropagation(ev);
         showSelectedPointCard(pt);
-      })
-      .addTo(zoneMarkersLayer);
+      });
+    marker._vnPt = pt;
+    marker.addTo(zoneMarkersLayer);
   }
 
   hydroSurfaceLayer?.redraw();
@@ -1187,7 +1206,7 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
   if (state.layers.heatmap) heatmapLayer?.redraw();
 
   if (flyMap && ring.getBounds().isValid()) {
-    nationalMap.fitBounds(ring.getBounds(), { padding: [24, 24], maxZoom: 15 });
+    nationalMap.fitBounds(ring.getBounds(), { padding: [54, 54], maxZoom: 15 });
   }
 }
 
@@ -1205,35 +1224,53 @@ function renderPointCardHtml(pt) {
     shelter: 'Trụ sở / Điểm trú',
     medical: 'Cơ sở y tế'
   };
+
+  let iconSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M2 16c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 20c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M12 4v8"/></svg>`;
+  if (pt.layerGroup === 'safe') {
+    iconSvg =
+      pt.category === 'medical'
+        ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>`
+        : `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>`;
+  } else if (pt.category === 'landslide') {
+    iconSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>`;
+  } else if (pt.category === 'heat' || pt.category === 'air_quality') {
+    iconSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2"/></svg>`;
+  }
+
   const pulseTag = pulse
-    ? `<span class="source-tag ${pulse.status === 'flooding' ? 'tone-community' : 'tone-verified'}">Trực tiếp: ${
+    ? `<span class="source-tag ${pulse.status === 'flooding' ? 'tone-community' : 'tone-verified'}">${
         pulse.status === 'flooding' ? 'Đang ngập' : pulse.status === 'receding' ? 'Đang rút' : 'Khô ráo'
       }</span>`
     : '';
-  const researchTag = pt.submissionId ? `<span class="source-tag tone-verified">Nghiên cứu đã duyệt</span>` : '';
-  const osmTag = pt.isOsmLive ? `<span class="source-tag tone-model">OSM Vùng khoanh</span>` : '';
+  const researchTag = pt.submissionId ? `<span class="source-tag tone-verified">Nghiên cứu</span>` : '';
+  const osmTag = pt.isOsmLive ? `<span class="source-tag tone-model">OSM thực tế</span>` : '';
 
   return `
     <article class="place-card ${cardType}">
-      <div class="place-card-top">
-        <h3 class="place-card-title">${esc(pt.name)}</h3>
-        <span class="place-card-dist">${esc(formatDistancePlain(pt.distanceMeters))}</span>
-      </div>
-      <div class="place-card-meta">
-        <span class="source-tag ${pt.layerGroup === 'safe' ? 'tone-verified' : 'tone-community'}">${esc(catNames[pt.category] || 'Điểm ghi nhận')}</span>
-        ${osmTag || `<span class="source-tag tone-${ver.badgeTone}">${esc(ver.label)}</span>`}
-        ${researchTag}
-        ${pulseTag}
-      </div>
-      <p class="place-card-desc">${esc((pt.notes || '').slice(0, 175))}</p>
-      <div class="place-card-actions">
-        <button type="button" class="btn btn-sm btn-secondary js-focus-map-pt" data-lat="${pt.lat}" data-lng="${pt.lng}" data-ptid="${esc(pt.id)}">Định vị</button>
-        ${
-          pt.layerGroup === 'risk'
-            ? `<button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="flooding">Đang ngập</button>
-               <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="clear">Khô ráo</button>`
-            : ''
-        }
+      <div class="place-card-row">
+        <span class="place-leading-badge ${cardType}" aria-hidden="true">${iconSvg}</span>
+        <div class="place-card-main">
+          <div class="place-card-top">
+            <h3 class="place-card-title">${esc(pt.name)}</h3>
+            <span class="place-card-dist">${esc(formatDistancePlain(pt.distanceMeters))}</span>
+          </div>
+          <div class="place-card-meta">
+            <span class="source-tag ${pt.layerGroup === 'safe' ? 'tone-verified' : 'tone-community'}">${esc(catNames[pt.category] || 'Điểm ghi nhận')}</span>
+            ${osmTag || `<span class="source-tag tone-${ver.badgeTone}">${esc(ver.label)}</span>`}
+            ${researchTag}
+            ${pulseTag}
+          </div>
+          <p class="place-card-desc">${esc((pt.notes || '').slice(0, 165))}</p>
+          <div class="place-card-actions">
+            <button type="button" class="checkin-btn is-locate js-focus-map-pt" data-lat="${pt.lat}" data-lng="${pt.lng}" data-ptid="${esc(pt.id)}">Định vị</button>
+            ${
+              pt.layerGroup === 'risk'
+                ? `<button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="flooding">Đang ngập</button>
+                   <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="clear">Khô ráo</button>`
+                : ''
+            }
+          </div>
+        </div>
       </div>
     </article>`;
 }
@@ -2227,6 +2264,42 @@ function bindEvents() {
     );
   });
 
+  // Thu gọn / mở rộng ngăn dữ liệu bên trái (Chế độ Toàn màn hình Bản đồ)
+  document.getElementById('btn-toggle-dock')?.addEventListener('click', () => {
+    const layout = document.getElementById('map-split-layout');
+    const btn = document.getElementById('btn-toggle-dock');
+    const lbl = document.getElementById('dock-toggle-label');
+    if (!layout) return;
+    const collapsed = layout.classList.toggle('is-dock-collapsed');
+    btn?.setAttribute('aria-expanded', String(!collapsed));
+    if (lbl) lbl.textContent = collapsed ? 'Mở bảng dữ liệu' : 'Thu gọn';
+    setTimeout(() => {
+      nationalMap?.invalidateSize();
+      hydroSurfaceLayer?.redraw();
+      flowVectorsLayer?.redraw();
+    }, 220);
+  });
+
+  // Trình đơn Lớp chuyên đề nổi (Popover)
+  const updateActiveLayersBadge = () => {
+    const badge = document.getElementById('active-layers-count');
+    if (!badge) return;
+    const keys = Object.keys(state.layers);
+    const activeCnt = keys.filter((k) => state.layers[k]).length;
+    badge.textContent = `${activeCnt}/${keys.length}`;
+  };
+  updateActiveLayersBadge();
+
+  document.getElementById('btn-toggle-layers-menu')?.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const pop = document.getElementById('map-layers-popover');
+    const btn = document.getElementById('btn-toggle-layers-menu');
+    if (!pop) return;
+    const nextOpen = pop.hidden;
+    pop.hidden = !nextOpen;
+    btn?.setAttribute('aria-expanded', String(nextOpen));
+  });
+
   // Bộ chuyển nền bản đồ & lớp chuyên đề
   document.querySelectorAll('[data-basemap]').forEach((btn) => {
     btn.addEventListener('click', () => setBasemap(btn.dataset.basemap));
@@ -2238,6 +2311,7 @@ function bindEvents() {
       state.layers[layer] = next;
       btn.classList.toggle('is-active', next);
       btn.setAttribute('aria-pressed', String(next));
+      updateActiveLayersBadge();
 
       if (layer === 'radar') {
         toggleRadarOverlay(next);
@@ -2599,6 +2673,14 @@ function bindEvents() {
     if (!ev.target.closest('.zone-search-box')) {
       const sug = document.getElementById('vn-zone-suggestions');
       if (sug) sug.hidden = true;
+    }
+    if (!ev.target.closest('.hud-layers-dropdown')) {
+      const pop = document.getElementById('map-layers-popover');
+      const trig = document.getElementById('btn-toggle-layers-menu');
+      if (pop && !pop.hidden) {
+        pop.hidden = true;
+        trig?.setAttribute('aria-expanded', 'false');
+      }
     }
 
     const suggestion = ev.target.closest('.js-pick-suggestion');

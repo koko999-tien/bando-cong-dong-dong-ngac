@@ -1,30 +1,30 @@
 :root {
-  --bg-navy: #0B1220;
-  --bg-navy-elev: #111C30;
-  --border-navy: #1E293B;
-  --bg-page: #F1F5F9;
+  --bg-navy: #090F1E;
+  --bg-navy-elev: #121C32;
+  --border-navy: #1D2A44;
+  --bg-page: #F3F6FA;
   --bg-surface: #FFFFFF;
-  --bg-subtle: #F8FAFC;
-  --border: #E2E8F0;
-  --border-strong: #CBD5E1;
-  --ink: #0F172A;
+  --bg-subtle: #EDF2F7;
+  --border: #E5EAF2;
+  --border-strong: #CFD8E6;
+  --ink: #0B1324;
   --ink-secondary: #334155;
-  --ink-muted: #64748B;
+  --ink-muted: #5B6B82;
   --primary: #0F766E;
   --primary-hover: #115E59;
   --primary-soft: #F0FDFA;
   --primary-border: #99F6E4;
-  --ok-bg: #DCFCE7;
-  --ok-ink: #166534;
-  --warn-bg: #FEF3C7;
-  --warn-ink: #92400E;
-  --danger-bg: #FEE2E2;
-  --danger-ink: #991B1B;
+  --ok-bg: #ECFDF5;
+  --ok-ink: #065F46;
+  --warn-bg: #FFF7ED;
+  --warn-ink: #9A3412;
+  --danger-bg: #FFF1F2;
+  --danger-ink: #BE123C;
   --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
 }
 
 *, *::before, *::after {

@@ -624,42 +624,70 @@ export function createNationalHeatmapLayer(L, getPointsFn) {
 
 const MARKER_SVG_CACHE = new Map();
 
-export function buildMapPictogramIcon(L, pt) {
-  const size = pt.isOsmLive ? 22 : 26;
-  const key = `${pt.confidenceTier}|${pt.layerGroup}|${pt.category}|${size}`;
+export function buildMapPictogramIcon(L, pt, zoom = 14) {
+  const isOsm = Boolean(pt.isOsmLive);
+  const tier = zoom <= 13 ? 'sm' : zoom === 14 ? 'md' : 'lg';
+  const size =
+    tier === 'sm'
+      ? isOsm
+        ? 9
+        : 12
+      : tier === 'md'
+        ? isOsm
+          ? 14
+          : 18
+        : isOsm
+          ? 18
+          : 23;
+
+  const key = `${pt.confidenceTier}|${pt.layerGroup}|${pt.category}|${tier}|${size}`;
   let html = MARKER_SVG_CACHE.get(key);
   if (!html) {
+    let fill = '#E11D48';
+    let ring = 'rgba(225, 29, 72, 0.22)';
     if (pt.confidenceTier === 'C') {
-      html = `<svg width="${size}" height="${size}" viewBox="0 0 28 28" aria-hidden="true">
-        <circle cx="14" cy="14" r="11" fill="#D97706" stroke="#FFFFFF" stroke-width="2.4" stroke-dasharray="3 2"/>
-        <text x="14" y="18" text-anchor="middle" fill="#FFFFFF" font-size="12" font-weight="800" font-family="sans-serif">?</text>
-      </svg>`;
+      fill = '#D97706';
+      ring = 'rgba(217, 119, 6, 0.22)';
     } else if (pt.layerGroup === 'safe') {
       if (pt.category === 'medical') {
-        html = `<svg width="${size}" height="${size}" viewBox="0 0 28 28" aria-hidden="true">
-          <circle cx="14" cy="14" r="11.2" fill="#15803D" stroke="#FFFFFF" stroke-width="2.4"/>
-          <path d="M14 8.8v10.4M8.8 14h10.4" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/>
-        </svg>`;
+        fill = '#059669';
+        ring = 'rgba(5, 150, 105, 0.2)';
       } else {
-        html = `<svg width="${size}" height="${size}" viewBox="0 0 28 28" aria-hidden="true">
-          <circle cx="14" cy="14" r="11.2" fill="#0F766E" stroke="#FFFFFF" stroke-width="2.4"/>
-          <path d="M9.4 14.4l3 3 6.2-6.4" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>`;
+        fill = '#0D9488';
+        ring = 'rgba(13, 148, 136, 0.2)';
       }
     } else if (pt.category === 'landslide') {
-      html = `<svg width="${size}" height="${size}" viewBox="0 0 28 28" aria-hidden="true">
-        <circle cx="14" cy="14" r="11.2" fill="#C2410C" stroke="#FFFFFF" stroke-width="2.4"/>
-        <path d="M14 8.2L20 18.8H8L14 8.2z" fill="#FFFFFF"/>
-      </svg>`;
+      fill = '#C2410C';
+      ring = 'rgba(194, 65, 12, 0.24)';
     } else if (pt.category === 'heat' || pt.category === 'salinity') {
-      html = `<svg width="${size}" height="${size}" viewBox="0 0 28 28" aria-hidden="true">
-        <circle cx="14" cy="14" r="11.2" fill="#EA580C" stroke="#FFFFFF" stroke-width="2.4"/>
-        <circle cx="14" cy="14" r="4" fill="#FFFFFF"/>
+      fill = '#EA580C';
+      ring = 'rgba(234, 88, 12, 0.22)';
+    }
+
+    if (tier === 'sm' || (tier === 'md' && isOsm)) {
+      html = `<svg width="${size}" height="${size}" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="8" cy="8" r="6.2" fill="${fill}" stroke="#FFFFFF" stroke-width="2"/>
       </svg>`;
     } else {
+      let glyph = '';
+      if (pt.confidenceTier === 'C') {
+        glyph = `<text x="14" y="18" text-anchor="middle" fill="#FFFFFF" font-size="11.5" font-weight="800" font-family="sans-serif">?</text>`;
+      } else if (pt.layerGroup === 'safe') {
+        glyph =
+          pt.category === 'medical'
+            ? `<path d="M14 9.2v9.6M9.2 14h9.6" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>`
+            : `<path d="M9.6 14.3l2.8 2.8 6-6.1" fill="none" stroke="#FFFFFF" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>`;
+      } else if (pt.category === 'landslide') {
+        glyph = `<path d="M14 8.6L19.6 18.4H8.4L14 8.6z" fill="#FFFFFF"/>`;
+      } else if (pt.category === 'heat' || pt.category === 'salinity') {
+        glyph = `<circle cx="14" cy="14" r="3.6" fill="#FFFFFF"/>`;
+      } else {
+        glyph = `<path d="M8.8 15.4c1.4-1.5 2.8-1.5 4.2 0s2.8 1.5 4.2 0M14 9v3.8" fill="none" stroke="#FFFFFF" stroke-width="2.1" stroke-linecap="round"/>`;
+      }
       html = `<svg width="${size}" height="${size}" viewBox="0 0 28 28" aria-hidden="true">
-        <circle cx="14" cy="14" r="11.2" fill="#DC2626" stroke="#FFFFFF" stroke-width="2.4"/>
-        <path d="M8.5 15.6c1.5-1.6 3-1.6 4.5 0s3 1.6 4.5 0M14 8.6v4.2" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
+        <circle cx="14" cy="14" r="13" fill="${ring}"/>
+        <circle cx="14" cy="14" r="10.4" fill="${fill}" stroke="#FFFFFF" stroke-width="2.1"${pt.confidenceTier === 'C' ? ' stroke-dasharray="3 2"' : ''}/>
+        ${glyph}
       </svg>`;
     }
     MARKER_SVG_CACHE.set(key, html);
