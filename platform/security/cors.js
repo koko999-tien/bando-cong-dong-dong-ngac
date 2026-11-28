@@ -5,11 +5,13 @@
 
 const EXACT_ALLOWED_ORIGINS = new Set([
   'https://vn-resilience-ops.vercel.app',
+  'https://bando-antoan-vn.vercel.app',
   'https://bando-cong-dong-dong-ngac.vercel.app'
 ]);
 
 const REGEX_ALLOWED_ORIGINS = [
   /^https:\/\/vn-resilience-ops-[a-z0-9-]+\.vercel\.app$/i,
+  /^https:\/\/bando-antoan-vn-[a-z0-9-]+\.vercel\.app$/i,
   /^https:\/\/bando-cong-dong-dong-ngac-[a-z0-9-]+\.vercel\.app$/i,
   /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i
 ];

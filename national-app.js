@@ -4111,7 +4111,7 @@ function bindSosAndAppEvents() {
   }
 
   const isProdPublicDomain =
-    location.hostname === 'bando-cong-dong-dong-ngac.vercel.app' &&
+    ['bando-antoan-vn.vercel.app', 'bando-cong-dong-dong-ngac.vercel.app'].includes(location.hostname) &&
     !new URLSearchParams(location.search).has('demo');
   if (isProdPublicDomain) {
     const sqBtn = document.getElementById('btn-sos-switch-squad');

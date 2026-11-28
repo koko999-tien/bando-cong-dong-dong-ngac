@@ -4,7 +4,7 @@
  * Giao tiếp qua CORS bảo mật + chữ ký HMAC-SHA256 Bearer Token tới nền tảng chính.
  */
 
-const DEFAULT_PROD_API = 'https://bando-cong-dong-dong-ngac.vercel.app';
+const DEFAULT_PROD_API = 'https://bando-antoan-vn.vercel.app';
 const CF_WORKER_HEALTH = 'https://vn-resilience-api.vn-resilience-edge.workers.dev/health';
 const STORAGE_API_BASE_KEY = 'vn_resilience_ops_api_base_v1';
 const STORAGE_ADMIN_TOKEN_KEY = 'vn_resilience_ops_bearer_v1';

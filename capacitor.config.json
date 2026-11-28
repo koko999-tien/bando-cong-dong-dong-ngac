@@ -6,6 +6,7 @@
   "server": {
     "androidScheme": "https",
     "allowNavigation": [
+      "bando-antoan-vn.vercel.app",
       "bando-cong-dong-dong-ngac.vercel.app",
       "*.open-meteo.com",
       "*.tile.openstreetmap.org",

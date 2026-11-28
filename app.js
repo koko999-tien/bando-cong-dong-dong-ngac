@@ -4629,7 +4629,7 @@ function initApp() {
     ctx.fillText('KHẨN CẤP:  Y tế 115  ·  Cứu nạn 114  ·  Điện lực EVN 1900 1288  ·  Thoát nước HN 024 3976 2245', 56, H - 96);
     ctx.fillStyle = '#5eead4';
     ctx.font = '600 23px "JetBrains Mono", monospace';
-    ctx.fillText('Xem trực tiếp: https://bando-cong-dong-dong-ngac.vercel.app', 56, H - 44);
+    ctx.fillText('Xem trực tiếp: https://bando-antoan-vn.vercel.app', 56, H - 44);
 
     canvas.toBlob(async (blob) => {
       if (!blob) return;
@@ -4638,7 +4638,7 @@ function initApp() {
         try {
           await navigator.share({
             title: `Thẩm định an toàn: ${sc.label}`,
-            text: `${sc.label} — ${sc.gradeTitle} (${sc.overallScore}/100đ). Xem bản đồ: https://bando-cong-dong-dong-ngac.vercel.app`,
+            text: `${sc.label} — ${sc.gradeTitle} (${sc.overallScore}/100đ). Xem bản đồ: https://bando-antoan-vn.vercel.app`,
             files: [safeFile]
           });
           return;

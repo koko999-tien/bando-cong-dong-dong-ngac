@@ -25,7 +25,7 @@ export const PROJECT_CONFIG = {
   /**
    * 3. Link công khai chính thức (Vercel HTTPS hoặc link rút gọn Bitly sau khi nhóm tạo trên bitly.com)
    */
-  bitlyMapUrl: 'https://bando-cong-dong-dong-ngac.vercel.app',
+  bitlyMapUrl: 'https://bando-antoan-vn.vercel.app',
 
   /**
    * 4. Cấu hình vùng khảo sát & ngưỡng tin cậy cộng đồng
