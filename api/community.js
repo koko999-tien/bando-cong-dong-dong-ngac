@@ -12,6 +12,8 @@ import {
 } from '../platform/security/validators.js';
 import { withCors, handleCorsPreflight } from '../platform/security/cors.js';
 import { checkDistributedRateLimit, verifyTurnstileChallenge } from '../platform/security/edge-guard.js';
+import { dispatchPartnerWebhooks } from '../platform/alerts/official-alert-webhook.js';
+import { dispatchWebPushToCell } from '../platform/alerts/web-push-vapid.js';
 
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const LIVE_PULSE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -654,6 +656,29 @@ async function handleCommunityPost(request) {
         };
         await writePrivateJson('config/broadcast.json', bc);
         await appendServerAudit('Phát thanh cảnh báo', `[${bc.level.toUpperCase()}] ${bc.message}`);
+        const tasks = [
+          dispatchPartnerWebhooks({
+            event: 'admin_broadcast',
+            severity: bc.level === 'red' ? 'emergency' : bc.level === 'yellow' ? 'warning' : 'watch',
+            province: 'Toàn quốc',
+            areaHint: 'Phát thanh Điều hành Khẩn cấp',
+            categoryLabel: 'Bản tin Điều hành',
+            message: bc.message
+          })
+        ];
+        if (bc.level === 'red') {
+          tasks.push(
+            dispatchWebPushToCell({
+              broadcastAll: true,
+              payload: {
+                title: 'CẢNH BÁO KHẨN CẤP — VN RESILIENCE ATLAS',
+                body: bc.message,
+                url: './index.html'
+              }
+            })
+          );
+        }
+        await Promise.allSettled(tasks);
       }
       return Response.json({ ok: true });
     }

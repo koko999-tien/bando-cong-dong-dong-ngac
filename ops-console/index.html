@@ -438,7 +438,7 @@
                 <option value="">-- Tự nhập nội dung tùy chỉnh --</option>
                 <option value="red|CẢNH BÁO MƯA LỚN NGẬP SÂU: Nhiều tuyến ngõ trũng có nguy cơ ngập trên 30–50 cm trong 2 giờ tới. Hạn chế đi qua hầm chui và ngõ thấp.">[CẤP ĐỎ] Cảnh báo mưa lớn &amp; ngập sâu đô thị</option>
                 <option value="yellow|KHUYẾN CÁO THỜI TIẾT: Theo dõi mưa dông cục bộ và chất lượng không khí chiều tối nay; chủ động kiểm tra lộ trình trước khi di chuyển.">[CẤP VÀNG] Khuyến cáo mưa dông &amp; không khí</option>
-                <option value="info|THÔNG BÁO HỆ THỐNG: Đã cập nhật lớp mặt phủ ngập nước vệ tinh 30 m mới nhất cho 63 tỉnh/thành.">[THÔNG TIN] Cập nhật dữ liệu hệ thống</option>
+                <option value="info|THÔNG BÁO HỆ THỐNG: Đã cập nhật lớp mặt phủ ngập nước vệ tinh 30 m mới nhất cho 34 tỉnh/thành (NQ 202/2025).">[THÔNG TIN] Cập nhật dữ liệu hệ thống</option>
               </select>
             </div>
             <div class="field">
@@ -459,6 +459,44 @@
             <button type="button" id="btn-bc-clear" class="btn btn-danger">Gỡ Thanh Cảnh báo Ngay</button>
           </div>
         </article>
+
+        <div class="two-col-equal" style="margin-top:14px;">
+          <article class="card">
+            <div class="card-head">
+              <h2 class="card-title">Giám sát Tự động 7 Lưu vực &amp; GDACS (P5.2)</h2>
+              <button type="button" id="btn-ops-refresh-basins" class="btn btn-sm">Quét Lưu vực Live</button>
+            </div>
+            <div id="ops-basin-monitor-box" style="max-height:360px;overflow-y:auto;font-size:0.78rem;">
+              Bấm "Quét Lưu vực Live" để đồng bộ mưa, gió giật và lưu lượng sông Copernicus GloFAS cho 7 lưu vực trọng điểm.
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2 class="card-title">Webhook Đối tác PCTT / Telegram (HMAC-SHA256)</h2>
+            </div>
+            <div class="field-row-2">
+              <div class="field">
+                <label for="ops-wh-name">Tên kênh nhận cảnh báo *</label>
+                <input type="text" id="ops-wh-name" class="input" placeholder="VD: Nhóm Trực ban Phường / Telegram">
+              </div>
+              <div class="field">
+                <label for="ops-wh-province">Lọc tỉnh/thành</label>
+                <input type="text" id="ops-wh-province" class="input" value="ALL" placeholder="ALL hoặc TP. Hà Nội, TP. Huế...">
+              </div>
+            </div>
+            <div class="field">
+              <label for="ops-wh-url">HTTPS Webhook URL * (Chặn SSRF nội bộ)</label>
+              <input type="url" id="ops-wh-url" class="input mono" placeholder="https://api.telegram.org/bot.../sendMessage?chat_id=...">
+            </div>
+            <div class="field">
+              <label for="ops-wh-secret">Khóa ký HMAC-SHA256 (tùy chọn cho JSON webhook)</label>
+              <input type="password" id="ops-wh-secret" class="input mono" autocomplete="off" placeholder="Để trống nếu dùng Telegram/Discord">
+            </div>
+            <button type="button" id="btn-ops-add-webhook" class="btn btn-primary" disabled>Lưu Kênh Webhook (Mã hóa Vault)</button>
+            <div id="ops-webhooks-list" style="margin-top:10px;"></div>
+          </article>
+        </div>
       </section>
 
       <!-- ================= VIEW 5: API SANDBOX & SERVER AUDIT LOG ================= -->
@@ -488,6 +526,7 @@
                 <option value="GET|/api/sos-dispatch?action=zone_shield_summary&lat=21.072514&lng=105.77387">GET /api/sos-dispatch?action=zone_shield_summary (Zero-Standing-Location)</option>
                 <option value="GET|/api/sos-dispatch?action=admin_overview">GET /api/sos-dispatch?action=admin_overview (Yêu cầu Bearer)</option>
                 <option value="GET|/api/ai-copilot">GET /api/ai-copilot (Trạng thái Trợ lý Đa nguồn 34 Tỉnh/Thành)</option>
+                <option value="GET|/api/alert-hub?action=live_bulletins">GET /api/alert-hub?action=live_bulletins (7 Lưu vực + GDACS)</option>
                 <option value="GET|/api/sos-dispatch?action=health">GET /api/sos-dispatch?action=health</option>
                 <option value="GET|https://vn-resilience-api.vn-resilience-edge.workers.dev/health">GET Cloudflare Edge Worker (/health)</option>
               </select>

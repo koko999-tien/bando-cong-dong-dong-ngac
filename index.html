@@ -950,6 +950,19 @@
           </div>
         </div>
 
+        <div class="card-panel" style="margin-bottom:12px;">
+          <div class="section-head-row">
+            <div>
+              <h2 class="section-title">Theo dõi Tự động 7 Lưu vực Trọng điểm &amp; GDACS Quốc tế</h2>
+              <span id="live-basin-sync-meta" class="muted-meta">Tổng hợp tự động mưa, gió giật (Open-Meteo), lưu lượng sông (Copernicus GloFAS) &amp; cảnh báo khu vực</span>
+            </div>
+            <button type="button" id="btn-refresh-basin-feed" class="btn btn-sm btn-secondary">Làm mới Lưu vực</button>
+          </div>
+          <div id="live-basin-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:8px;margin-top:8px;">
+            <p class="muted-body">Đang tải số liệu 7 lưu vực...</p>
+          </div>
+        </div>
+
         <div class="map-toolbar-card">
           <div class="filter-pills" role="group" aria-label="Lọc loại công bố">
             <button type="button" class="filter-pill is-active" data-news-kind="all">Tất cả</button>
@@ -1231,8 +1244,12 @@
                   <h2 class="section-title">Cảnh báo Hỗ trợ Gần Bạn (Phát thẳng Quanh khu vực)</h2>
                   <span class="muted-meta">Người dùng đã đăng nhập bật nhận cảnh báo sẽ thấy ngay ca ngập nông quanh đây (tối đa 2 người nhận)</span>
                 </div>
-                <button type="button" id="btn-responder-heartbeat" class="btn btn-sm btn-secondary">Nhận cảnh báo gần đây (30p)</button>
+                <div class="form-actions-row">
+                  <button type="button" id="btn-responder-heartbeat" class="btn btn-sm btn-secondary">Nhận cảnh báo gần đây (30p)</button>
+                  <button type="button" id="btn-enable-web-push" class="btn btn-sm btn-primary">Bật Chuông Đẩy Nền</button>
+                </div>
               </div>
+              <p id="web-push-status-note" class="field-hint" style="margin:4px 0 6px;">Nhấn "Bật Chuông Đẩy Nền" để nhận cảnh báo ngay cả khi tắt màn hình hoặc thu nhỏ trình duyệt.</p>
               <div id="responder-inbox-box" class="place-list">
                 <p class="muted-body">Đăng nhập để tự động nhận cảnh báo khi có người gặp sự cố xe chết máy hoặc cần hỗ trợ ở gần khu vực của bạn.</p>
               </div>

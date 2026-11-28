@@ -28,6 +28,14 @@ import {
   projectSosTicketForViewer,
   SEED_VERIFIED_SQUADS
 } from '../platform/safety/sos-dispatch-engine.js';
+import {
+  getOrCreateVapidKeys,
+  savePushSubscription,
+  removePushSubscriptionsForUser,
+  dispatchWebPushToCell,
+  getPushStats
+} from '../platform/alerts/web-push-vapid.js';
+import { dispatchPartnerWebhooks } from '../platform/alerts/official-alert-webhook.js';
 
 const authLimiter = createBoundedRateLimiter({ maxRequests: 15, windowMs: 15 * 60 * 1000, maxEntries: 2000 });
 const sosLimiter = createBoundedRateLimiter({ maxRequests: 12, windowMs: 15 * 60 * 1000, maxEntries: 2000 });
@@ -141,7 +149,11 @@ export async function GET(request) {
   const action = url.searchParams.get('action') || 'health';
 
   if (action === 'health') {
-    const edgeCfg = await fetchEdgeSecurityConfig();
+    const [edgeCfg, vapid, pushStats] = await Promise.all([
+      fetchEdgeSecurityConfig(),
+      getOrCreateVapidKeys().catch(() => ({ publicKey: '' })),
+      getPushStats().catch(() => ({ activeCount: 0 }))
+    ]);
     const rateLimitEngine =
       process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
         ? 'upstash_redis'
@@ -158,6 +170,9 @@ export async function GET(request) {
       turnstileSiteKey: edgeCfg.turnstileSiteKey,
       googleClientIdConfigured: Boolean(process.env.GOOGLE_CLIENT_ID),
       googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+      webPushEnabled: Boolean(vapid?.publicKey),
+      vapidPublicKey: vapid?.publicKey || '',
+      activePushSubscriptions: pushStats.activeCount,
       antiCongestionMaxSlots: 2,
       locationPrivacy: 'ephemeral_geohash6_30m_ttl_with_auto_shred'
     });
@@ -547,6 +562,45 @@ export async function POST(request) {
     });
   }
 
+  // 5b. ĐĂNG KÝ / HỦY WEB PUSH V3C VAPID CHẠY NỀN THEO Ô LƯỚI ẨN DANH (ZERO-STANDING-LOCATION)
+  if (action === 'subscribe_push') {
+    const claims = verifyCitizenToken(request);
+    if (!claims) return jsonRes(request, { ok: false, error: 'Vui lòng đăng nhập để bật chuông đẩy nền.' }, 401);
+    const acc = allAccounts.find((a) => a.id === claims.id);
+    if (!acc || acc.status === 'suspended' || acc.trustTier === 'revoked') {
+      return jsonRes(request, { ok: false, error: 'Tài khoản không đủ điều kiện nhận thông báo hỗ trợ.' }, 403);
+    }
+    const lat = Number(body.lat);
+    const lng = Number(body.lng);
+    if (!isInsideVietnam(lat, lng)) {
+      return jsonRes(request, { ok: false, error: 'Tọa độ vùng trực nằm ngoài lãnh thổ Việt Nam.' }, 400);
+    }
+    const gh5 = encodeCoarseGeohash(lat, lng, 5);
+    try {
+      await savePushSubscription({
+        responderId: acc.id,
+        trustTier: acc.trustTier || 'citizen',
+        geohash5: gh5,
+        subscription: body.subscription
+      });
+      return jsonRes(request, {
+        ok: true,
+        coarseGeohash5: gh5,
+        storedExactGps: false,
+        ttlHours: 24
+      });
+    } catch {
+      return jsonRes(request, { ok: false, error: 'Gói đăng ký Web Push không hợp lệ.' }, 400);
+    }
+  }
+
+  if (action === 'unsubscribe_push') {
+    const claims = verifyCitizenToken(request);
+    if (!claims) return jsonRes(request, { ok: false, error: 'Vui lòng đăng nhập.' }, 401);
+    const removed = await removePushSubscriptionsForUser(claims.id);
+    return jsonRes(request, { ok: true, removed });
+  }
+
   // 6. GỬI YÊU CẦU CẦN HỖ TRỢ KHẨN CẤP (SOS CÓ HẠN NGẠCH CHỐNG TẮC ĐƯỜNG & BẢO VỆ VỊ TRÍ)
   if (action === 'create_sos') {
     const claims = verifyCitizenToken(request);
@@ -619,6 +673,28 @@ export async function POST(request) {
 
     tickets.unshift(newTicket);
     await writeGenericCollection(TICKETS_KEY, tickets.slice(0, 200));
+
+    await Promise.allSettled([
+      dispatchWebPushToCell({
+        geohash5: encodeCoarseGeohash(lat, lng, 5),
+        officialOnly: newTicket.dispatchScope === 'official_only',
+        payload: {
+          title: `SOS Gần Bạn: ${newTicket.categoryLabel}`,
+          body: `${areaHint} · Mực nước ~${Math.round(waterDepthM * 100)} cm. Chạm để mở bản đồ hỗ trợ 0đ.`,
+          url: './index.html#sos',
+          ticketId: newTicket.id
+        }
+      }),
+      dispatchPartnerWebhooks({
+        event: newTicket.escalate112 ? 'sos_critical_112' : 'sos_nearby',
+        severity: newTicket.escalate112 ? 'emergency' : 'warning',
+        province: nearZone?.province || 'Việt Nam',
+        areaHint,
+        categoryLabel: newTicket.categoryLabel,
+        waterDepthM,
+        message: `Ca ${newTicket.id}: ${newTicket.categoryLabel} tại ${areaHint} (~${Math.round(waterDepthM * 100)} cm).`
+      })
+    ]);
 
     return jsonRes(request, {
       ok: true,
@@ -894,7 +970,8 @@ export async function POST(request) {
     await Promise.all([
       writeGenericCollection(ACCOUNTS_KEY, remainingAccounts),
       writeGenericCollection(TICKETS_KEY, scrubbedTickets),
-      writeGenericCollection(HEARTBEATS_KEY, remainingCells)
+      writeGenericCollection(HEARTBEATS_KEY, remainingCells),
+      removePushSubscriptionsForUser(claims.id)
     ]);
 
     return jsonRes(request, {

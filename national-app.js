@@ -295,6 +295,7 @@ function switchPillar(pillarName) {
   } else if (next === 'research') {
     renderResearchPillar();
   } else if (next === 'news') {
+    loadLiveBasinBulletins();
     loadPublicationsFeed();
   }
   window.scrollTo({ top: 0, behavior: 'instant' });
@@ -2440,6 +2441,51 @@ async function loadReviewerQueue() {
   const pendCnt = document.getElementById('dev-pending-studies-cnt');
   if (pendCnt) pendCnt.textContent = String(state.devReviewQueue.filter((x) => x.status === 'pending_review').length);
 }
+
+async function loadLiveBasinBulletins(forceRefresh = false) {
+  const grid = document.getElementById('live-basin-cards-grid');
+  const meta = document.getElementById('live-basin-sync-meta');
+  if (!grid) return;
+  try {
+    const res = await fetch(`/api/alert-hub?action=live_bulletins${forceRefresh ? '&refresh=1' : ''}`);
+    const data = await res.json();
+    if (!res.ok || !data?.ok || !Array.isArray(data.basins)) throw new Error('FEED_ERR');
+    if (meta) {
+      const warnCnt = Number(data.activeWarningsCount || 0);
+      meta.textContent = `Cập nhật lúc ${formatTimeHm(data.syncedAt)} · ${warnCnt > 0 ? `${warnCnt} lưu vực/khu vực đang ở ngưỡng theo dõi cao` : '7 lưu vực ổn định'} (${data.cache || 'LIVE'})`;
+    }
+    const basinCards = data.basins
+      .map((b) => {
+        const toneCls = b.alertLevel === 'emergency' ? 'tone-danger' : b.alertLevel === 'warning' || b.alertLevel === 'watch' ? 'tone-community' : 'tone-verified';
+        return `<div class="item-card" style="padding:10px;border:1px solid var(--border-subtle,#E2E8F0);border-radius:10px;background:var(--surface,#fff);">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
+            <strong style="font-size:0.84rem;">${esc(b.basinName)}</strong>
+            <span class="source-tag ${toneCls}">${esc(b.alertLabel)}</span>
+          </div>
+          <div class="muted-meta" style="margin-bottom:6px;">${esc(b.province)} · Mưa 24h: <strong class="mono-num">${b.rain24hMm} mm</strong> · Gió giật: <strong class="mono-num">${b.windGustKmh} km/h</strong>${b.riverDischargeMs != null ? ` · Lưu lượng: <strong class="mono-num">${b.riverDischargeMs} m³/s</strong>` : ''}</div>
+          <button type="button" class="btn btn-sm btn-secondary js-open-pub-zone" data-lat="${b.lat}" data-lng="${b.lng}" data-radius="8" data-name="${esc(b.province)}">Xem trên Bản đồ</button>
+        </div>`;
+      })
+      .join('');
+    const gdacsCards = (data.gdacsAlerts || [])
+      .map(
+        (g) => `<div class="item-card" style="padding:10px;border:1px solid #FCA5A5;border-radius:10px;background:#FFF1F2;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
+            <strong style="font-size:0.84rem;color:#9F1239;">GDACS: ${esc(g.eventType)}</strong>
+            <span class="source-tag tone-danger">${esc(g.alertLevel)}</span>
+          </div>
+          <div class="muted-meta" style="margin-bottom:6px;">${esc(g.name)}</div>
+          <button type="button" class="btn btn-sm btn-secondary js-open-pub-zone" data-lat="${g.lat}" data-lng="${g.lng}" data-radius="12" data-name="Cảnh báo GDACS">Mở vị trí</button>
+        </div>`
+      )
+      .join('');
+    grid.innerHTML = basinCards + gdacsCards;
+  } catch {
+    grid.innerHTML = `<p class="muted-body">Chưa đồng bộ được số liệu trực tuyến lúc này. Vui lòng thử bấm Làm mới lại sau.</p>`;
+  }
+}
+
+document.getElementById('btn-refresh-basin-feed')?.addEventListener('click', () => loadLiveBasinBulletins(true));
 
 /* =========================================================================
    7. PHÂN HỆ 3: BẢN TIN THIÊN TAI & CÔNG BỐ KHOA HỌC MỞ
@@ -4587,6 +4633,77 @@ function bindSosAndAppEvents() {
     }
   });
 
+  const urlBase64ToUint8Array = (base64String) => {
+    const pad = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const b64 = (base64String + pad).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(b64);
+    const arr = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i += 1) arr[i] = raw.charCodeAt(i);
+    return arr;
+  };
+
+  document.getElementById('btn-enable-web-push')?.addEventListener('click', async () => {
+    const pushBtn = document.getElementById('btn-enable-web-push');
+    const noteEl = document.getElementById('web-push-status-note');
+    if (!appSafetyState.citizenToken) {
+      document.getElementById('citizen-auth-dialog')?.showModal();
+      showToast('Vui lòng đăng nhập tài khoản hoặc Google trước khi bật Chuông Đẩy Nền.');
+      return;
+    }
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      showToast('Trình duyệt hiện tại chưa hỗ trợ Web Push nền.');
+      return;
+    }
+    if (!appSafetyState.vapidPublicKey) {
+      try {
+        const h = await fetch('/api/sos-dispatch?action=health').then((r) => (r.ok ? r.json() : null));
+        appSafetyState.vapidPublicKey = h?.vapidPublicKey || '';
+      } catch {
+        // ignore
+      }
+    }
+    if (!appSafetyState.vapidPublicKey) {
+      showToast('Máy chủ chưa sẵn sàng khóa VAPID Push.');
+      return;
+    }
+    try {
+      if (pushBtn) pushBtn.disabled = true;
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') {
+        showToast('Bạn chưa cấp quyền Thông báo cho trình duyệt.');
+        return;
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(appSafetyState.vapidPublicKey)
+      });
+      const coords = appSafetyState.sosCoords || state.zone;
+      const res = await fetch('/api/sos-dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${appSafetyState.citizenToken}`
+        },
+        body: JSON.stringify({
+          action: 'subscribe_push',
+          lat: coords.lat,
+          lng: coords.lng,
+          subscription: sub.toJSON()
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) throw new Error(data?.error || 'Không đăng ký được Web Push.');
+      if (pushBtn) pushBtn.textContent = 'Đã Bật Chuông Đẩy Nền (24h)';
+      if (noteEl) noteEl.textContent = `Đã gắn chuông nền W3C VAPID quanh ô lưới ${data.coarseGeohash5} (tự xóa sau 24 giờ, không lưu tọa độ chính xác).`;
+      showToast('Đã bật Chuông Đẩy Nền thành công!');
+    } catch (err) {
+      showToast(err?.message || 'Chưa kích hoạt được Chuông Đẩy Nền.');
+    } finally {
+      if (pushBtn) pushBtn.disabled = false;
+    }
+  });
+
   if (!window.__vnSosPollerSet) {
     window.__vnSosPollerSet = true;
     setInterval(() => {
@@ -4834,6 +4951,7 @@ async function initSecuritySdks() {
     const h = await res.json();
     appSafetyState.googleClientIdConfigured = Boolean(h?.googleClientIdConfigured);
     appSafetyState.googleClientId = h?.googleClientId || '';
+    appSafetyState.vapidPublicKey = h?.vapidPublicKey || '';
     appSafetyState.turnstileSiteKey = h?.turnstileSiteKey || '';
     appSafetyState.turnstileEnabled = Boolean(h?.turnstileEnabled && h?.turnstileSiteKey);
 

@@ -1,7 +1,19 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  getOrCreateVapidKeys,
+  buildVapidAuthHeader,
+  encryptWebPushPayload,
+  getPushStats
+} from '../platform/alerts/web-push-vapid.js';
+import {
+  validateSafeWebhookUrl,
+  classifyBasinAlert
+} from '../platform/alerts/official-alert-webhook.js';
+import { GET as alertHubGET, OPTIONS as alertHubOPTIONS } from '../api/alert-hub.js';
 import {
   VIETNAM_ZONES,
   LEGACY_63_TO_34_PROVINCES,
@@ -720,7 +732,96 @@ try {
   const swRaw = await fs.readFile(path.join(rootDir, 'sw.js'), 'utf8');
   assert.ok(swRaw.includes("addEventListener('push'") && swRaw.includes("addEventListener('notificationclick'"), 'Service Worker phải sẵn sàng nhận Push Notification');
 
-  console.log('VERIFIED VIETNAM NATIONAL 34-PROVINCE + NEARBY PEER SOS + EDGE KV + CAPACITOR DEEP TESTS PASSED:', {
+  // 9. P1.3 WEB PUSH VAPID (RFC 8291 aes128gcm) + P5.2 ALERT HUB & WEBHOOK CHỐNG SSRF
+  const vapidKeys = await getOrCreateVapidKeys();
+  assert.equal(Buffer.from(vapidKeys.publicKey, 'base64url').length, 65, 'Public Key VAPID P-256 phải đúng 65 byte uncompressed');
+  const vapidAuthHdr = buildVapidAuthHeader('https://fcm.googleapis.com/fcm/send/demo-sub-1', 'mailto:ops@bando-antoan-vn.vercel.app', vapidKeys);
+  assert.ok(vapidAuthHdr.startsWith('vapid t=') && vapidAuthHdr.includes(', k='));
+
+  const uaEcdh = crypto.createECDH('prime256v1');
+  uaEcdh.generateKeys();
+  const uaPubB64 = uaEcdh.getPublicKey().toString('base64url');
+  const uaAuth = crypto.randomBytes(16);
+  const originalPushMsg = { title: 'SOS Thủy văn', body: 'Ngập Cầu Noi 25cm', url: './index.html#sos' };
+  const encPacket = encryptWebPushPayload(originalPushMsg, { p256dh: uaPubB64, auth: uaAuth.toString('base64url') });
+
+  // Phía trình duyệt giải mã đối chiếu RFC 8291
+  const pktSalt = encPacket.bodyBuffer.subarray(0, 16);
+  const pktAsPub = encPacket.bodyBuffer.subarray(21, 86);
+  const pktCipher = encPacket.bodyBuffer.subarray(86);
+  const uaShared = uaEcdh.computeSecret(pktAsPub);
+  const uaIkm = Buffer.from(
+    crypto.hkdfSync('sha256', uaShared, uaAuth, Buffer.concat([Buffer.from('WebPush: info\0', 'ascii'), uaEcdh.getPublicKey(), pktAsPub]), 32)
+  );
+  const uaCek = Buffer.from(crypto.hkdfSync('sha256', uaIkm, pktSalt, Buffer.from('Content-Encoding: aes128gcm\0', 'ascii'), 16));
+  const uaNonce = Buffer.from(crypto.hkdfSync('sha256', uaIkm, pktSalt, Buffer.from('Content-Encoding: nonce\0', 'ascii'), 12));
+  const decipher = crypto.createDecipheriv('aes-128-gcm', uaCek, uaNonce);
+  decipher.setAuthTag(pktCipher.subarray(pktCipher.length - 16));
+  const decryptedRaw = Buffer.concat([decipher.update(pktCipher.subarray(0, pktCipher.length - 16)), decipher.final()]);
+  assert.deepEqual(JSON.parse(decryptedRaw.subarray(0, decryptedRaw.length - 1).toString('utf8')), originalPushMsg, 'Phải giải mã đúng RFC 8291 aes128gcm');
+
+  // Kiểm chứng subscribe_push lưu ô lưới ẨN TỌA ĐỘ và tự xóa khi delete_my_account
+  const pushUser = await (
+    await sosPOST(
+      mkSosPost({
+        action: 'register_citizen',
+        fullName: 'Người Dùng Push',
+        email: 'push.citizen@vn.org',
+        password: 'Password#12345'
+      })
+    )
+  ).json();
+  const pushSubRes = await sosPOST(
+    mkSosPost(
+      {
+        action: 'subscribe_push',
+        lat: 21.0725,
+        lng: 105.7738,
+        subscription: {
+          endpoint: 'https://fcm.googleapis.com/fcm/send/test-sub-node',
+          keys: { p256dh: uaPubB64, auth: uaAuth.toString('base64url') }
+        }
+      },
+      { Authorization: `Bearer ${pushUser.token}` }
+    )
+  );
+  assert.equal(pushSubRes.status, 200);
+  const pushSubJson = await pushSubRes.json();
+  assert.equal(pushSubJson.storedExactGps, false);
+  const statsBeforeDel = await getPushStats();
+  assert.ok(statsBeforeDel.activeCount >= 1);
+
+  await sosPOST(mkSosPost({ action: 'delete_my_account' }, { Authorization: `Bearer ${pushUser.token}` }));
+  const statsAfterDel = await getPushStats();
+  assert.equal(statsAfterDel.activeCount, statsBeforeDel.activeCount - 1, 'Xóa tài khoản phải xóa luôn thuê bao Web Push');
+
+  // Kiểm chứng chống SSRF Webhook & phân ngưỡng cảnh báo lưu vực
+  assert.equal(validateSafeWebhookUrl('http://example.com/hook').valid, false, 'Phải chặn HTTP không mã hóa');
+  assert.equal(validateSafeWebhookUrl('https://localhost/hook').valid, false, 'Phải chặn localhost');
+  assert.equal(validateSafeWebhookUrl('https://127.0.0.1/hook').valid, false, 'Phải chặn loopback 127.0.0.1');
+  assert.equal(validateSafeWebhookUrl('https://169.254.169.254/latest/meta-data').valid, false, 'Phải chặn AWS/cloud metadata');
+  assert.equal(validateSafeWebhookUrl('https://192.168.1.10/hook').valid, false, 'Phải chặn mạng LAN 192.168.x');
+  assert.equal(validateSafeWebhookUrl('https://api.telegram.org/bot12345/sendMessage?chat_id=99').valid, true);
+  assert.equal(validateSafeWebhookUrl('https://pctt-phuong.gov.vn/webhook').valid, true);
+
+  assert.equal(classifyBasinAlert({ rainNowMm: 0, rain24hMm: 5, windGustKmh: 12, dischargeRatio: 0.9 }).level, 'normal');
+  assert.equal(classifyBasinAlert({ rainNowMm: 8, rain24hMm: 22, windGustKmh: 20, dischargeRatio: 1.0 }).level, 'watch');
+  assert.equal(classifyBasinAlert({ rainNowMm: 16, rain24hMm: 55, windGustKmh: 40, dischargeRatio: 1.3 }).level, 'warning');
+  assert.equal(classifyBasinAlert({ rainNowMm: 35, rain24hMm: 110, windGustKmh: 95, dischargeRatio: 2.4 }).level, 'emergency');
+
+  const hubOpt = await alertHubOPTIONS(new Request('http://localhost/api/alert-hub', { method: 'OPTIONS', headers: { Origin: 'https://vn-resilience-ops.vercel.app' } }));
+  assert.equal(hubOpt.status, 204);
+  assert.equal(hubOpt.headers.get('access-control-allow-origin'), 'https://vn-resilience-ops.vercel.app');
+  const hubHealth = await (await alertHubGET(new Request('http://localhost/api/alert-hub?action=health'))).json();
+  assert.equal(hubHealth.ok, true);
+  assert.equal(hubHealth.basinsMonitored, 7);
+  assert.equal(hubHealth.provincesCovered, 34);
+  assert.equal(hubHealth.vapidReady, true);
+
+  assert.ok(html.includes('id="btn-enable-web-push"') && html.includes('id="live-basin-cards-grid"'));
+  assert.ok(opsHtml.includes('id="ops-wh-url"') && !opsHtml.includes('63 tỉnh'));
+
+  console.log('VERIFIED VIETNAM NATIONAL 34-PROVINCE + WEB PUSH VAPID + OFFICIAL BASIN ALERT HUB TESTS PASSED:', {
     provincesPostMerger2025: uniqueProvinces.size,
     legacyProvincesMapped: Object.keys(LEGACY_63_TO_34_PROVINCES).length,
     dongNgacPointsInZone: inDongNgac.length,
@@ -730,8 +831,13 @@ try {
     antiCongestionSlotCap2: claim3Res.status === 409,
     proactiveAiDistressPct: stallAnomaly.probabilityPct,
     vn2000SquareAreaM2: metricPoly.areaM2,
-    aiCopilot34Provinces: aiHealthJson.nationalCoverageProvinces
+    aiCopilot34Provinces: aiHealthJson.nationalCoverageProvinces,
+    webPushVapidRfc8291: true,
+    officialBasinsMonitored: hubHealth.basinsMonitored
   });
 } finally {
   await fs.rm(localSimPath, { force: true }).catch(() => {});
+  await fs.rm(path.join(rootDir, '.local-data', 'push-subs.json'), { force: true }).catch(() => {});
+  await fs.rm(path.join(rootDir, '.local-data', 'vapid-keys.json'), { force: true }).catch(() => {});
+  await fs.rm(path.join(rootDir, '.local-data', 'partner-webhooks.json'), { force: true }).catch(() => {});
 }

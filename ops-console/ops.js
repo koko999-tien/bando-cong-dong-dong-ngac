@@ -125,6 +125,9 @@ function switchView(viewName) {
   } else if (viewName === 'moderation') {
     ensurePickerMap();
     setTimeout(() => pickerMap?.invalidateSize(), 80);
+  } else if (viewName === 'broadcast') {
+    syncOfficialBasinsForOps();
+    if (state.adminToken) syncWebhooksListForOps();
   }
 }
 
@@ -151,8 +154,10 @@ function updateAuthUi(unlocked) {
 
   const gemInput = document.getElementById('ops-gemini-key');
   const gemSaveBtn = document.getElementById('btn-ops-save-gemini-key');
+  const whAddBtn = document.getElementById('btn-ops-add-webhook');
   if (gemInput) gemInput.disabled = !unlocked;
   if (gemSaveBtn) gemSaveBtn.disabled = !unlocked;
+  if (whAddBtn) whAddBtn.disabled = !unlocked;
 }
 
 /* ================= 1. LIVE INFRASTRUCTURE TELEMETRY & ZONE INSPECTOR ================= */
@@ -268,6 +273,17 @@ async function runClusterProbes() {
           detail: `HTTP ${res.status} · Phủ ${data?.nationalCoverageProvinces || 34} tỉnh (sau NQ 202/2025) · ${data?.engine || 'ok'}`
         };
       }
+    },
+    {
+      name: 'Official Alert & Webhook Hub (/api/alert-hub)',
+      run: async () => {
+        const { res, data } = await apiFetch('/api/alert-hub?action=health');
+        state.lastAlertHubHealth = data || null;
+        return {
+          ok: res.ok && data?.ok,
+          detail: `HTTP ${res.status} · ${data?.basinsMonitored || 7} lưu vực · VAPID=${data?.vapidReady ? 'READY' : 'OFF'} · PushSubs=${data?.pushSubscribersCount ?? 0} · Webhooks=${data?.webhooksConfiguredCount ?? 0}`
+        };
+      }
     }
   ];
 
@@ -309,6 +325,7 @@ async function runClusterProbes() {
   if (auditBox) {
     const sh = state.lastSosHealth || {};
     const ah = state.lastAiHealth || {};
+    const wh = state.lastAlertHubHealth || {};
     const items = [
       { lbl: 'CSDL Chính (D1 / Supabase)', ok: sh.storageBackend && sh.storageBackend !== 'local_file_dev', val: sh.storageBackend || 'local' },
       { lbl: 'Bảng chuẩn hóa D1 SQL', ok: Boolean(sh.d1NormalizedTables), val: sh.d1NormalizedTables ? 'Sẵn sàng' : 'Chưa bật' },
@@ -316,11 +333,12 @@ async function runClusterProbes() {
       { lbl: 'Cloudflare Turnstile Chống Bot', ok: Boolean(sh.turnstileEnabled), val: sh.turnstileEnabled ? 'Đang bật (Production)' : 'Tạm tắt' },
       { lbl: 'Google Sign-In (GOOGLE_CLIENT_ID)', ok: Boolean(sh.googleClientIdConfigured), val: sh.googleClientIdConfigured ? 'Đã gắn Client ID' : 'Chưa gắn (Chờ OAuth Client ID)' },
       { lbl: 'Gemini Cloud Key (GEMINI_API_KEY)', ok: Boolean(ah.llmVaultConfigured), val: ah.llmVaultConfigured ? `Đã gắn (${ah.keySource || 'vault'})` : 'Chế độ Tổng hợp Cục bộ' },
+      { lbl: 'Web Push VAPID & Alert Hub', ok: Boolean(sh.webPushEnabled && wh.vapidReady), val: sh.webPushEnabled ? `VAPID Ready · ${wh.pushSubscribersCount ?? 0} Push / ${wh.webhooksConfiguredCount ?? 0} WH` : 'Chưa sẵn sàng' },
       { lbl: 'Độ phủ Hành chính', ok: true, val: `${ah.nationalCoverageProvinces || 34} tỉnh/thành (NQ 202/2025)` }
     ];
     const readyCnt = items.filter((i) => i.ok).length;
     if (auditSum) {
-      auditSum.className = `badge ${readyCnt >= 5 ? 'badge-ok' : 'badge-warn'}`;
+      auditSum.className = `badge ${readyCnt >= 6 ? 'badge-ok' : 'badge-warn'}`;
       auditSum.textContent = `${readyCnt}/${items.length} hạng mục sẵn sàng`;
     }
     auditBox.innerHTML = items
@@ -516,6 +534,8 @@ async function syncAdminData() {
   state.moderationMap = commRes.data.moderationMap || {};
   state.auditLog = commRes.data.auditLog || [];
   syncSosAdminOverview();
+  syncWebhooksListForOps();
+  syncOfficialBasinsForOps();
   state.studies = rqRes.data?.submissions || [];
 
   if (commRes.data.broadcast?.active && commRes.data.broadcast.message) {
@@ -1164,6 +1184,62 @@ function bindEvents() {
     }
   });
 
+  document.getElementById('btn-ops-refresh-basins')?.addEventListener('click', () => syncOfficialBasinsForOps(true));
+
+  document.getElementById('btn-ops-add-webhook')?.addEventListener('click', async () => {
+    if (!state.adminToken) {
+      toast('Mở khóa ADMIN_PASSCODE trước khi lưu Webhook.');
+      return;
+    }
+    const name = document.getElementById('ops-wh-name')?.value.trim();
+    const url = document.getElementById('ops-wh-url')?.value.trim();
+    const provinceFilter = document.getElementById('ops-wh-province')?.value.trim() || 'ALL';
+    const secret = document.getElementById('ops-wh-secret')?.value.trim() || '';
+    const { res, data } = await apiFetch('/api/alert-hub', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'admin_add_webhook', name, url, provinceFilter, secret })
+    });
+    if (res.ok && data?.ok) {
+      document.getElementById('ops-wh-url').value = '';
+      document.getElementById('ops-wh-secret').value = '';
+      toast(`Đã mã hóa & lưu kênh Webhook "${data.webhook.name}"!`);
+      syncWebhooksListForOps();
+    } else {
+      toast(data?.error || 'Không thêm được Webhook.');
+    }
+  });
+
+  document.addEventListener('click', async (ev) => {
+    const fillBcBtn = ev.target.closest('.js-fill-basin-bc');
+    if (fillBcBtn) {
+      document.getElementById('bc-level').value = fillBcBtn.dataset.level === 'emergency' ? 'red' : 'yellow';
+      document.getElementById('bc-message').value = fillBcBtn.dataset.msg || '';
+      toast('Đã điền nội dung cảnh báo từ lưu vực lên khung phát thanh.');
+      return;
+    }
+    const testWhBtn = ev.target.closest('.js-wh-test');
+    if (testWhBtn) {
+      const { res, data } = await apiFetch('/api/alert-hub', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'admin_test_webhook', id: testWhBtn.dataset.id })
+      });
+      toast(res.ok && data?.ok ? 'Đã bắn gói tin diễn tập Webhook thành công!' : `Webhook không phản hồi HTTP 2xx (${data?.results?.[0]?.error || 'kiểm tra URL'}).`);
+      return;
+    }
+    const delWhBtn = ev.target.closest('.js-wh-del');
+    if (delWhBtn) {
+      const { res } = await apiFetch('/api/alert-hub', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'admin_delete_webhook', id: delWhBtn.dataset.id })
+      });
+      if (res.ok) {
+        toast('Đã xóa kênh Webhook.');
+        syncWebhooksListForOps();
+      }
+      return;
+    }
+  });
+
   document.getElementById('btn-ops-test-gemini')?.addEventListener('click', async () => {
     const out = document.getElementById('ops-gemini-key-status');
     const btn = document.getElementById('btn-ops-test-gemini');
@@ -1272,6 +1348,59 @@ async function syncSosAdminOverview() {
       })
       .join('');
   }
+}
+
+async function syncOfficialBasinsForOps(forceRefresh = false) {
+  const box = document.getElementById('ops-basin-monitor-box');
+  if (!box) return;
+  box.textContent = 'Đang đồng bộ 7 lưu vực quốc gia & GDACS...';
+  try {
+    const { res, data } = await apiFetch(`/api/alert-hub?action=live_bulletins${forceRefresh ? '&refresh=1' : ''}`);
+    if (!res.ok || !data?.ok || !Array.isArray(data.basins)) throw new Error('ERR');
+    box.innerHTML = data.basins
+      .map((b) => {
+        const badgeCls = b.alertLevel === 'emergency' ? 'badge-err' : b.alertLevel === 'normal' ? 'badge-ok' : 'badge-warn';
+        const draftMsg = `CẢNH BÁO ${b.basinName.toUpperCase()} (${b.province}): Mưa 24h ${b.rain24hMm}mm, gió giật ${b.windGustKmh} km/h${b.riverDischargeMs != null ? `, lưu lượng ${b.riverDischargeMs} m³/s` : ''}. Người dân vùng trũng chủ động phòng tránh.`;
+        return `<div class="item-card" style="padding:8px 10px;margin-bottom:6px;">
+          <div class="item-card-top">
+            <strong>${esc(b.basinName)} (${esc(b.province)})</strong>
+            <span class="badge ${badgeCls}">${esc(b.alertLabel)}</span>
+          </div>
+          <div style="font-size:0.75rem;color:#475569;margin:4px 0;">Mưa 24h: ${b.rain24hMm} mm · Gió: ${b.windGustKmh} km/h${b.riverDischargeMs != null ? ` · Sông: ${b.riverDischargeMs} m³/s` : ''}</div>
+          <button type="button" class="btn btn-sm js-fill-basin-bc" data-level="${esc(b.alertLevel)}" data-msg="${esc(draftMsg)}">Nạp lên Băng rôn Cảnh báo</button>
+        </div>`;
+      })
+      .join('');
+  } catch {
+    box.textContent = 'Không tải được dữ liệu 7 lưu vực lúc này.';
+  }
+}
+
+async function syncWebhooksListForOps() {
+  const listEl = document.getElementById('ops-webhooks-list');
+  if (!listEl || !state.adminToken) return;
+  const { res, data } = await apiFetch('/api/alert-hub?action=admin_webhooks');
+  if (!res.ok || !data?.ok) return;
+  const rows = data.webhooks || [];
+  if (rows.length === 0) {
+    listEl.innerHTML = `<p style="font-size:0.76rem;color:#64748B;margin:6px 0 0;">Chưa gắn kênh Webhook đối tác nào.</p>`;
+    return;
+  }
+  listEl.innerHTML = rows
+    .map(
+      (w) => `<div class="item-card" style="padding:8px 10px;margin-bottom:6px;">
+        <div class="item-card-top">
+          <strong>${esc(w.name)}</strong>
+          <span class="badge badge-info">${esc(w.channelType)} · ${esc(w.provinceFilter)}</span>
+        </div>
+        <div class="mono" style="font-size:0.72rem;color:#475569;word-break:break-all;margin:4px 0;">${esc(w.maskedUrl)}</div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-sm js-wh-test" data-id="${esc(w.id)}">Thử kết nối</button>
+          <button type="button" class="btn btn-sm btn-danger js-wh-del" data-id="${esc(w.id)}">Xóa</button>
+        </div>
+      </div>`
+    )
+    .join('');
 }
 
 function boot() {
