@@ -443,10 +443,10 @@ export function createNationalHydroSurfaceLayer(L, getContextFn) {
             let alpha = 40;
             if (depthScore >= 1.32) {
               const t = Math.min(1, (depthScore - 1.32) / 0.85);
-              rCol = Math.round(29 - t * 4);
-              gCol = Math.round(78 - t * 24);
-              bCol = Math.round(216 - t * 68);
-              alpha = Math.min(182, 118 + t * 58);
+              rCol = Math.round(24 - t * 6);
+              gCol = Math.round(58 - t * 14);
+              bCol = Math.round(170 - t * 32);
+              alpha = Math.min(192, 128 + t * 62);
             } else if (depthScore >= 0.65) {
               const t = (depthScore - 0.65) / (1.32 - 0.65);
               rCol = Math.round(2 + t * 27);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vn-resilience-gis-v43';
+const CACHE_NAME = 'vn-resilience-gis-v44';
 const CORE_ASSETS = [
   './',
   './index.html',

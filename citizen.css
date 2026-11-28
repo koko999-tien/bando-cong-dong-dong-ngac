@@ -402,15 +402,6 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   min-width: 0;
 }
 
-@media (max-width: 1023px) {
-  .workbench-split[data-mobile-mode="map"] .workbench-left-dock > :not(.dock-zone-header) {
-    display: none;
-  }
-  .workbench-split[data-mobile-mode="list"] .workbench-map-stage {
-    display: none;
-  }
-}
-
 .workbench-left-dock {
   position: relative;
   background: var(--bg-dock);
@@ -1042,7 +1033,7 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
 .dot-amber { background: #F59E0B; }
 .dot-water-shallow { background: #38BDF8; border-radius: 2px; width: 9px; height: 7px; }
 .dot-water-mid { background: #0284C7; border-radius: 2px; width: 9px; height: 7px; }
-.dot-water-deep { background: #1D4ED8; border-radius: 2px; width: 9px; height: 7px; }
+.dot-water-deep { background: #142E8C; border-radius: 2px; width: 9px; height: 7px; }
 .flow-arrow-glyph {
   font-family: var(--font-mono);
   font-weight: 700;
@@ -2682,6 +2673,15 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     padding: 4px 9px;
     font-size: 0.76rem;
   }
+  .text-input {
+    font-size: 1rem;
+  }
+  .zone-radius-wrap {
+    flex: 0 0 76px;
+  }
+  .zone-radius-wrap .text-input {
+    font-size: 0.88rem;
+  }
   .hydro-sim-left {
     gap: 4px;
     flex-wrap: nowrap;
@@ -2699,42 +2699,99 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     font-size: 0.68rem;
     flex-shrink: 0;
   }
+  #btn-toggle-hydro-drawer {
+    margin-left: 4px;
+  }
 }
 
 @media (max-width: 1023px) {
-  body:has(#pillar-public:not([hidden])):has(.workbench-split[data-mobile-mode="map"]) .vn-shell {
+  body:has(#pillar-public:not([hidden])) .vn-shell {
     height: 100dvh;
     min-height: 0;
     overflow: hidden;
     padding-bottom: calc(var(--nav-bottom-h) + env(safe-area-inset-bottom, 0px));
   }
-  body:has(#pillar-public:not([hidden])):has(.workbench-split[data-mobile-mode="map"]) .vn-workspace,
-  body:has(#pillar-public:not([hidden])):has(.workbench-split[data-mobile-mode="map"]) #pillar-public,
-  .workbench-split[data-mobile-mode="map"] {
+  body:has(#pillar-public:not([hidden])) .vn-workspace,
+  body:has(#pillar-public:not([hidden])) #pillar-public {
     flex: 1 1 auto;
     min-height: 0;
     height: auto;
     overflow: hidden;
   }
-  .workbench-split[data-mobile-mode="map"] .workbench-map-stage {
+  .workbench-split {
+    position: relative;
     flex: 1 1 auto;
     min-height: 0;
+    height: calc(100dvh - var(--topbar-h) - 42px - var(--nav-bottom-h));
+    overflow: hidden;
   }
-  .workbench-split[data-mobile-mode="map"] .leaflet-mount {
+  .workbench-map-stage {
+    position: absolute !important;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: flex !important;
+  }
+  .workbench-map-stage .leaflet-mount {
     flex: 1 1 auto;
-    height: auto;
-    min-height: 200px;
+    height: 100%;
+    min-height: 240px;
   }
-  .workbench-split[data-mobile-mode="map"] .map-hud-bottom {
-    padding: 5px 8px;
-    background: rgba(255, 255, 255, 0.94);
-    border-top: 1px solid var(--border);
-    flex-shrink: 0;
+  .workbench-left-dock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 436;
+    height: 132px;
+    max-height: calc(100% - 8px);
+    background: var(--bg-glass-strong);
+    backdrop-filter: saturate(180%) blur(22px);
+    -webkit-backdrop-filter: saturate(180%) blur(22px);
+    border-top: 1px solid var(--border-strong);
+    border-radius: 20px 20px 0 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 -10px 30px rgba(15, 23, 42, 0.14);
+    overflow: hidden;
+    transition: height 260ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .workbench-split[data-mobile-mode="map"] .hydro-sim-strip.is-compact {
+  .workbench-split[data-sheet="peek"] .workbench-left-dock {
+    height: 132px;
+  }
+  .workbench-split[data-sheet="peek"] .workbench-left-dock > :not(.mobile-sheet-grabber):not(.dock-zone-header) {
+    display: none;
+  }
+  .workbench-split[data-sheet="half"] .workbench-left-dock {
+    height: 58%;
+  }
+  .workbench-split[data-sheet="full"] .workbench-left-dock {
+    height: calc(100% - 6px);
+  }
+  .workbench-split:is([data-sheet="half"], [data-sheet="full"]) .workbench-left-dock .dock-scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .workbench-split .map-hud-bottom {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 140px;
+    z-index: 428;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    pointer-events: none;
+  }
+  .workbench-split .map-hud-bottom .hydro-sim-strip {
+    pointer-events: auto;
+    box-shadow: var(--shadow-hud);
+  }
+  .workbench-split .hydro-sim-strip.is-compact {
     padding: 4px 8px;
     border-radius: var(--radius-pill);
-    box-shadow: none;
+  }
+  .workbench-split .leaflet-bottom {
+    bottom: 184px !important;
   }
 }
 
@@ -3328,5 +3385,141 @@ html.is-large-text .subtab-bar {
 @media (max-width: 767px) {
   .map-compass-rose {
     display: none;
+  }
+}
+
+/* ================= PHASE 2 SPATIAL UX POLISH (BOTTOM SHEET, MOTION, A11Y, PERF) ================= */
+button, a, summary, input, select, textarea, label {
+  touch-action: manipulation;
+}
+.dock-scroll, .dialog-body, .zone-suggestions, .hud-layers-popover {
+  overscroll-behavior: contain;
+}
+.zone-quick-strip {
+  scroll-snap-type: x proximity;
+}
+.zone-chip {
+  scroll-snap-align: start;
+}
+
+.mobile-sheet-grabber {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .mobile-sheet-grabber {
+    display: block;
+    flex-shrink: 0;
+    padding: 6px 12px 2px;
+  }
+  .sheet-handle-btn {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 2px 0 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    color: var(--ink-secondary);
+  }
+  .sheet-handle-pill {
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.22);
+  }
+  .sheet-peek-summary {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--ink-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+}
+
+/* Nút nổi "Tìm tại vùng bản đồ này" */
+.search-area-pill {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 442;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #FFFFFF;
+}
+.search-area-pill:hover {
+  background: #1E293B;
+  border-color: #1E293B;
+  color: #FFFFFF;
+}
+@media (min-width: 1024px) {
+  .workbench-split:not(.is-dock-collapsed) .search-area-pill {
+    left: calc(50% + 202px);
+  }
+}
+
+/* Phẳng hóa các biểu mẫu Lộ trình / Nơi ở / Báo sự cố bên trong Tấm kính (không hộp lồng hộp) */
+.workbench-left-dock .dock-scroll > .card-panel,
+.workbench-left-dock .route-output-area > .card-panel {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 14px 0 0;
+}
+.workbench-left-dock .dock-scroll > .pane-header + .card-panel,
+.workbench-left-dock .dock-scroll > .card-panel:first-child {
+  border-top: 0;
+  padding-top: 2px;
+}
+.workbench-left-dock .checklist-group-box {
+  background: rgba(15, 23, 42, 0.025);
+  border-color: var(--border);
+}
+
+/* Thích nghi nhãn vòng cự ly trên nền Tối / Vệ tinh */
+body[data-basemap="dark"] .ring-dist-label,
+body[data-basemap="satellite"] .ring-dist-label {
+  background: rgba(15, 23, 42, 0.84);
+  color: #F8FAFC;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Specular rim highlights trên bề mặt kính nổi */
+@media (min-width: 1024px) {
+  .workbench-left-dock {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), var(--shadow-sheet);
+  }
+}
+.hud-layers-popover,
+.citizen-dialog {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), var(--shadow-sheet);
+}
+
+/* Tối ưu render danh sách dài ngoài màn hình */
+#publications-feed-list .pub-card:nth-child(n+5),
+#zone-places-list .place-card:nth-child(n+12) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 96px;
+}
+
+/* Vi chuyển động tự nhiên có tôn trọng prefers-reduced-motion */
+@media (prefers-reduced-motion: no-preference) {
+  .action-popover[open] .action-popover-menu,
+  .hud-layers-popover:not([hidden]) {
+    transform-origin: top right;
+    animation: vn-pop-in 150ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .citizen-dialog[open] {
+    animation: vn-pop-in 170ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @keyframes vn-pop-in {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
   }
 }

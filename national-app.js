@@ -318,7 +318,10 @@ function switchPublicTab(tabName) {
   if (next !== 'overview' && window.innerWidth < 1024) {
     state.mapMobileMode = 'list';
     const layout = document.getElementById('map-split-layout');
-    if (layout) layout.dataset.mobileMode = 'list';
+    if (layout) {
+      layout.dataset.mobileMode = 'list';
+      layout.dataset.sheet = 'full';
+    }
     document.querySelectorAll('[data-map-mode]').forEach((b) => b.classList.toggle('is-active', b.dataset.mapMode === 'list'));
   }
 
@@ -480,6 +483,8 @@ function updateHydroSummaryBar() {
 async function refreshActiveZoneData({ flyMap = true } = {}) {
   state.isOffline = !navigator.onLine;
   updateOfflineStrip();
+  const searchHereBtn = document.getElementById('btn-search-this-area');
+  if (searchHereBtn) searchHereBtn.hidden = true;
 
   const { lat, lng, radiusKm } = state.zone;
   state.riverDischarge = null;
@@ -920,6 +925,10 @@ function renderPublicOverview({ flyMap = false } = {}) {
     pill.className = `status-pill is-${advisory.level}`;
     pill.textContent = advisory.levelLabel;
   }
+  const sheetSummaryEl = document.getElementById('mobile-sheet-summary');
+  if (sheetSummaryEl) {
+    sheetSummaryEl.textContent = `${advisory.levelLabel} · ${state.zonePoints.length} điểm trong vùng`;
+  }
   document.getElementById('advisory-updated-time').textContent = updatedStr;
   document.getElementById('advisory-headline').textContent = advisory.headline;
   document.getElementById('advisory-area').textContent = advisory.area;
@@ -1258,6 +1267,16 @@ function ensureNationalMap() {
     if (c) c.textContent = `${ev.latlng.lat.toFixed(4)}°N, ${ev.latlng.lng.toFixed(4)}°E · Bấm để tra cao độ & địa giới`;
   });
 
+  nationalMap.on('moveend', () => {
+    const btn = document.getElementById('btn-search-this-area');
+    if (!btn || !nationalMap) return;
+    const center = nationalMap.getCenter();
+    const driftM = haversineMeters(center.lat, center.lng, Number(state.zone?.lat || 0), Number(state.zone?.lng || 0));
+    btn.hidden = !(driftM > 700 && isInsideVietnam(center.lat, center.lng));
+  });
+
+  document.body.dataset.basemap = state.basemap;
+
   nationalMap.on('click', (ev) => {
     inspectClickedCoordinate(ev.latlng.lat, ev.latlng.lng);
   });
@@ -1266,6 +1285,7 @@ function ensureNationalMap() {
 function setBasemap(key) {
   if (!BASEMAP_PROVIDERS[key]) return;
   state.basemap = key;
+  document.body.dataset.basemap = key;
   document.querySelectorAll('[data-basemap]').forEach((b) => {
     const active = b.dataset.basemap === key;
     b.classList.toggle('is-active', active);
@@ -3196,16 +3216,107 @@ function bindEvents() {
   document.querySelectorAll('[data-map-mode]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.mapMobileMode = btn.dataset.mapMode;
-      document.getElementById('map-split-layout').dataset.mobileMode = state.mapMobileMode;
-      document.querySelectorAll('[data-map-mode]').forEach((b) => b.classList.toggle('is-active', b === btn));
-      if (state.mapMobileMode === 'map') {
-        setTimeout(() => {
-          nationalMap?.invalidateSize();
-          hydroSurfaceLayer?.redraw();
-        }, 60);
+      const layout = document.getElementById('map-split-layout');
+      if (layout) {
+        layout.dataset.mobileMode = state.mapMobileMode;
+        layout.dataset.sheet = state.mapMobileMode === 'list' ? 'half' : 'peek';
       }
+      document.querySelectorAll('[data-map-mode]').forEach((b) => b.classList.toggle('is-active', b === btn));
+      setTimeout(() => {
+        nationalMap?.invalidateSize();
+        hydroSurfaceLayer?.redraw();
+      }, 240);
     });
   });
+
+  // Bottom Sheet 3 trạng thái (peek / half / full) trên Mobile — bấm hoặc vuốt dọc
+  const setMobileSheetState = (nextSheet) => {
+    const layout = document.getElementById('map-split-layout');
+    if (!layout) return;
+    const clamped = ['peek', 'half', 'full'].includes(nextSheet) ? nextSheet : 'peek';
+    layout.dataset.sheet = clamped;
+    const isList = clamped !== 'peek';
+    state.mapMobileMode = isList ? 'list' : 'map';
+    layout.dataset.mobileMode = state.mapMobileMode;
+    document.querySelectorAll('[data-map-mode]').forEach((b) => b.classList.toggle('is-active', b.dataset.mapMode === state.mapMobileMode));
+    setTimeout(() => {
+      nationalMap?.invalidateSize();
+      hydroSurfaceLayer?.redraw();
+    }, 240);
+  };
+
+  document.getElementById('btn-cycle-mobile-sheet')?.addEventListener('click', () => {
+    const cur = document.getElementById('map-split-layout')?.dataset.sheet || 'peek';
+    const next = cur === 'peek' ? 'half' : cur === 'half' ? 'full' : 'peek';
+    setMobileSheetState(next);
+  });
+
+  const grabberEl = document.getElementById('mobile-sheet-grabber');
+  let sheetTouchStartY = null;
+  grabberEl?.addEventListener(
+    'touchstart',
+    (ev) => {
+      sheetTouchStartY = ev.changedTouches?.[0]?.clientY ?? null;
+    },
+    { passive: true }
+  );
+  grabberEl?.addEventListener(
+    'touchend',
+    (ev) => {
+      if (sheetTouchStartY === null) return;
+      const endY = ev.changedTouches?.[0]?.clientY ?? sheetTouchStartY;
+      const dy = endY - sheetTouchStartY;
+      sheetTouchStartY = null;
+      const cur = document.getElementById('map-split-layout')?.dataset.sheet || 'peek';
+      if (dy < -28) {
+        setMobileSheetState(cur === 'peek' ? 'half' : 'full');
+      } else if (dy > 28) {
+        setMobileSheetState(cur === 'full' ? 'half' : 'peek');
+      }
+    },
+    { passive: true }
+  );
+
+  // Nút nổi "Tìm tại vùng bản đồ này" (kiểu Google Maps / Felt khi kéo bản đồ)
+  document.getElementById('btn-search-this-area')?.addEventListener('click', () => {
+    if (!nationalMap) return;
+    const center = nationalMap.getCenter();
+    if (!isInsideVietnam(center.lat, center.lng)) {
+      showToast('Tâm bản đồ hiện nằm ngoài lãnh thổ Việt Nam.');
+      return;
+    }
+    const near = findNearestVietnamZone(center.lat, center.lng);
+    const radiusKm = Number(document.getElementById('vn-zone-radius')?.value || state.zone?.radiusKm || 2);
+    selectZone(
+      {
+        id: 'pan-vn',
+        name: near ? `Quanh ${near.name}` : 'Vùng bản đồ đang xem',
+        province: near?.province || 'Việt Nam',
+        macroRegion: near?.macroRegion || 'bac',
+        lat: Number(center.lat.toFixed(5)),
+        lng: Number(center.lng.toFixed(5)),
+        hazards: near?.hazards || []
+      },
+      { radiusKm, flyMap: false }
+    );
+    showToast('Đã cập nhật dữ liệu tại vùng bản đồ đang xem.');
+  });
+
+  // Fallback đóng <dialog closedby="any"> khi bấm backdrop trên trình duyệt chưa hỗ trợ thuộc tính closedby
+  if (typeof HTMLDialogElement !== 'undefined' && !('closedBy' in HTMLDialogElement.prototype)) {
+    document.querySelectorAll('dialog[closedby="any"]').forEach((dialog) => {
+      dialog.addEventListener('click', (event) => {
+        if (event.target !== dialog) return;
+        const rect = dialog.getBoundingClientRect();
+        const isInside =
+          rect.top <= event.clientY &&
+          event.clientY <= rect.top + rect.height &&
+          rect.left <= event.clientX &&
+          event.clientX <= rect.left + rect.width;
+        if (!isInside) dialog.close();
+      });
+    });
+  }
   document.getElementById('zone-local-filter')?.addEventListener('input', (ev) => {
     state.localFilterText = ev.target.value;
     renderZoneMapAndList({ flyMap: false });

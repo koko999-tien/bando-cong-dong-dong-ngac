@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0B1220">
+  <meta name="theme-color" content="#FFFFFF">
   <meta name="description" content="Hệ thống Thông tin Địa không gian & Cảnh báo Thiên tai Mở Việt Nam: Khoanh vùng dữ liệu rủi ro toàn quốc không lag, tích hợp hạ tầng y tế & thủy hệ thời gian thực, cổng nghiên cứu khoa học và bản tin thiên tai.">
   <title>Hệ thống Địa không gian &amp; An toàn Thiên tai Việt Nam</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
@@ -104,17 +104,23 @@
           </div>
         </div>
 
-        <!-- KHÔNG GIAN ĐỊA KHÔNG GIAN TRÀN VIỀN: NGĂN DỮ LIỆU TRÁI + BẢN ĐỒ HUD PHẢI -->
-        <div class="workbench-split" id="map-split-layout" data-mobile-mode="map">
-          <!-- CỘT TRÁI: TRạm ĐIỀU HÀNH DỮ LIỆU & TRA CỨU ĐỊA PHƯƠNG -->
+        <!-- KHÔNG GIAN ĐỊA KHÔNG GIAN TRÀN VIỀN: BẢN ĐỒ NỀN + TẤM KÍNH NỔI (BOTTOM SHEET TRÊN MOBILE) -->
+        <div class="workbench-split" id="map-split-layout" data-mobile-mode="map" data-sheet="peek">
+          <!-- CỘT TRÁI: TRẠM ĐIỀU HÀNH DỮ LIỆU & TRA CỨU ĐỊA PHƯƠNG -->
           <aside class="workbench-left-dock" id="workbench-left-dock" aria-label="Tra cứu khu vực và thông số quan trắc nội vùng">
+            <div class="mobile-sheet-grabber" id="mobile-sheet-grabber">
+              <button type="button" id="btn-cycle-mobile-sheet" class="sheet-handle-btn" aria-label="Mở rộng hoặc thu gọn bảng dữ liệu vùng">
+                <span class="sheet-handle-pill" aria-hidden="true"></span>
+                <span id="mobile-sheet-summary" class="sheet-peek-summary">Chạm hoặc vuốt để xem chi tiết vùng</span>
+              </button>
+            </div>
             <!-- KHỐI TÌM KIẾM & KHOANH VÙNG TÍCH HỢP GỌN TRONG NGĂN TRÁI -->
             <div class="dock-zone-header">
               <div class="zone-search-cluster">
                 <div class="zone-search-box">
                   <svg class="input-leading-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
                   <label for="vn-zone-search" class="sr-only">Tìm tỉnh, thành phố, huyện, xã hoặc tuyến đường tại Việt Nam</label>
-                  <input type="search" id="vn-zone-search" class="text-input has-leading-icon" autocomplete="off" placeholder="Tìm tỉnh, quận/huyện, phường/xã...">
+                  <input type="search" id="vn-zone-search" class="text-input has-leading-icon" autocomplete="off" placeholder="Tìm tỉnh, quận/huyện, phường/xã…">
                   <ul id="vn-zone-suggestions" class="zone-suggestions" hidden role="listbox" aria-label="Gợi ý khu vực tại Việt Nam"></ul>
                 </div>
 
@@ -357,11 +363,11 @@
               </div>
               <form id="national-route-form" class="card-panel">
                 <div class="travel-switch" role="group" aria-label="Phương tiện di chuyển">
-                  <button type="button" class="seg-btn is-active" data-travel="motorbike">Xe số (&lt;30cm)</button>
-                  <button type="button" class="seg-btn" data-travel="scooter">Xe tay ga (&lt;20cm)</button>
-                  <button type="button" class="seg-btn" data-travel="sedan">Ô tô con (&lt;25cm)</button>
-                  <button type="button" class="seg-btn" data-travel="suv">Gầm cao (&lt;45cm)</button>
-                  <button type="button" class="seg-btn" data-travel="foot">Đi bộ</button>
+                  <button type="button" class="seg-btn is-active" data-travel="motorbike" title="Ngưỡng ngập an toàn tham chiếu < 30 cm">Xe số</button>
+                  <button type="button" class="seg-btn" data-travel="scooter" title="Ngưỡng ngập < 20 cm — ống gió thấp">Tay ga</button>
+                  <button type="button" class="seg-btn" data-travel="sedan" title="Ô tô con gầm thấp < 25 cm">Sedan</button>
+                  <button type="button" class="seg-btn" data-travel="suv" title="Gầm cao / Bán tải < 45 cm">Gầm cao</button>
+                  <button type="button" class="seg-btn" data-travel="foot" title="Đi bộ theo vỉa hè cao">Đi bộ</button>
                 </div>
                 <div class="field-group">
                   <div class="field-label-row">
@@ -619,6 +625,12 @@
                 </div>
               </div>
             </div>
+
+            <!-- NÚT NỔI TÌM LẠI TẠI VÙNG BẢN ĐỒ ĐANG XEM KHI KÉO BẢN ĐỒ -->
+            <button type="button" id="btn-search-this-area" class="hud-glass-btn search-area-pill" hidden>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+              <span>Tìm tại vùng bản đồ này</span>
+            </button>
 
             <!-- LA BÀN BẮC ĐỊA HÌNH CARTOGRAPHIC -->
             <div id="map-compass-rose" class="map-compass-rose" aria-hidden="true" title="Hướng Bắc Địa lý">
@@ -1318,7 +1330,7 @@
   </div>
 
   <!-- ================= HỘP THOẠI TRỢ LÝ DỮ LIỆU ================= -->
-  <dialog id="assistant-dialog" class="citizen-dialog dialog-lg" aria-labelledby="ai-dialog-title">
+  <dialog id="assistant-dialog" closedby="any" class="citizen-dialog dialog-lg" aria-labelledby="ai-dialog-title">
     <div class="dialog-head">
       <div>
         <h2 id="ai-dialog-title">Trợ lý Diễn giải Dữ liệu Vùng</h2>
@@ -1338,7 +1350,7 @@
       </div>
       <form id="assistant-form" class="search-row">
         <label for="assistant-input" class="sr-only">Nhập câu hỏi</label>
-        <input type="text" id="assistant-input" class="text-input" placeholder="Đặt câu hỏi về khu vực đang khoanh...">
+        <input type="text" id="assistant-input" class="text-input" placeholder="Đặt câu hỏi về khu vực đang khoanh…">
         <button type="submit" class="btn btn-primary">Phân tích</button>
       </form>
       <div id="assistant-answer-box" class="assistant-answer" hidden aria-live="polite"></div>
@@ -1346,7 +1358,7 @@
   </dialog>
 
   <!-- ================= HỘP THOẠI KHẨN CẤP QUỐC GIA ================= -->
-  <dialog id="emergency-dialog" class="citizen-dialog" aria-labelledby="emerg-dialog-title">
+  <dialog id="emergency-dialog" closedby="any" class="citizen-dialog" aria-labelledby="emerg-dialog-title">
     <div class="dialog-head">
       <h2 id="emerg-dialog-title">Đường dây nóng Khẩn cấp Toàn quốc</h2>
       <button type="button" class="icon-close" data-close-dialog="emergency-dialog" aria-label="Đóng">×</button>
@@ -1363,7 +1375,7 @@
   </dialog>
 
   <!-- ================= HỘP THOẠI ĐĂNG NHẬP TÀI KHOẢN CÁ NHÂN HOẶC GOOGLE ================= -->
-  <dialog id="citizen-auth-dialog" class="citizen-dialog" aria-labelledby="cz-auth-title">
+  <dialog id="citizen-auth-dialog" closedby="any" class="citizen-dialog" aria-labelledby="cz-auth-title">
     <div class="dialog-head">
       <div>
         <h2 id="cz-auth-title">Đăng nhập Ứng dụng An toàn Cá nhân</h2>
@@ -1464,7 +1476,7 @@
   </dialog>
 
   <!-- ================= HỘP THOẠI NÂNG CẤP TÌNH NGUYỆN VIÊN (eKYC) ================= -->
-  <dialog id="volunteer-ekyc-dialog" class="citizen-dialog" aria-labelledby="ekyc-dlg-title">
+  <dialog id="volunteer-ekyc-dialog" closedby="any" class="citizen-dialog" aria-labelledby="ekyc-dlg-title">
     <div class="dialog-head">
       <div>
         <h2 id="ekyc-dlg-title">Đăng ký Hồ sơ Tình nguyện viên (eKYC)</h2>
