@@ -1,7 +1,8 @@
-const CACHE_NAME = 'vn-resilience-gis-v32';
+const CACHE_NAME = 'vn-resilience-gis-v33';
 const CORE_ASSETS = [
   './',
   './index.html',
+  './phap-ly.html',
   './citizen.css',
   './citizen-logic.js',
   './national-app.js',
@@ -31,6 +32,10 @@ const CORE_ASSETS = [
   './admin.html',
   './manifest.webmanifest',
   './icon.svg',
+  './icon-96.png',
+  './icon-192.png',
+  './icon-512.png',
+  './apple-touch-icon.png',
   './vendor/leaflet/leaflet.css',
   './vendor/leaflet/leaflet.js',
   './vendor/turf/turf.min.js',

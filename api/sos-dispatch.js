@@ -7,7 +7,7 @@
 
 import crypto from 'node:crypto';
 import { isInsideVietnam, findNearestVietnamZone } from '../platform/regions/vietnam-directory.js';
-import { cleanText, hasSpamContent, createBoundedRateLimiter } from '../platform/security/validators.js';
+import { cleanText, hasSpamContent, createBoundedRateLimiter, validateImageDataUrl } from '../platform/security/validators.js';
 import { buildCorsHeaders, handleCorsPreflight } from '../platform/security/cors.js';
 import {
   detectStorageBackend,
@@ -157,7 +157,8 @@ export async function GET(request) {
   if (action === 'me') {
     const claims = verifyCitizenToken(request);
     if (!claims) return jsonRes(request, { ok: false, error: 'Chưa đăng nhập tài khoản công dân.' }, 401);
-    const acc = allAccounts.find((a) => a.id === claims.id) || claims;
+    const acc = allAccounts.find((a) => a.id === claims.id);
+    if (!acc) return jsonRes(request, { ok: false, error: 'Tài khoản không còn tồn tại hoặc đã bị xóa.' }, 401);
     const myTickets = tickets
       .filter((t) => t.requesterId === acc.id)
       .slice(0, 10)
@@ -172,7 +173,17 @@ export async function GET(request) {
         authProvider: acc.authProvider || 'local',
         trustTier: acc.trustTier || 'citizen',
         status: acc.status || 'active',
-        completedHelps: acc.completedHelps || 0
+        completedHelps: acc.completedHelps || 0,
+        ekyc: acc.ekyc
+          ? {
+              phone: acc.ekyc.phone || '',
+              idLast4: acc.ekyc.idLast4 || '',
+              roleNote: acc.ekyc.roleNote || '',
+              pledgedZeroFee: Boolean(acc.ekyc.pledgedZeroFee),
+              hasProofImage: Boolean(acc.ekyc.proofDataUrl || acc.ekyc.hasProofImage),
+              submittedAt: acc.ekyc.submittedAt || null
+            }
+          : null
       },
       myTickets
     });
@@ -254,7 +265,8 @@ export async function GET(request) {
         trustTier: a.trustTier,
         status: a.status || 'active',
         completedHelps: a.completedHelps || 0,
-        abuseFlags: a.abuseFlags || 0
+        abuseFlags: a.abuseFlags || 0,
+        ekyc: a.ekyc || null
       })),
       tickets: tickets.slice(0, 40).map((t) => projectSosTicketForViewer(t, null, true)),
       ephemeralActiveResponders: activeCells.length
@@ -262,6 +274,42 @@ export async function GET(request) {
   }
 
   return jsonRes(request, { ok: false, error: 'Action không hợp lệ.' }, 400);
+}
+
+function parseVolunteerEkycPayload(raw, fallbackOrg = '') {
+  const phone = cleanText(raw?.phone || '', 24);
+  const organization = cleanText(raw?.organization || fallbackOrg || '', 120);
+  const idLast4 = String(raw?.idLast4 || '')
+    .replace(/[^0-9]/g, '')
+    .slice(-4);
+  const roleNote = cleanText(raw?.roleNote || '', 200);
+  const pledgedZeroFee = Boolean(raw?.pledgedZeroFee);
+  let proofDataUrl = '';
+
+  const rawProof = String(raw?.proofDataUrl || '').trim();
+  if (rawProof) {
+    const chk = validateImageDataUrl(rawProof, {
+      maxDataUrlLength: 68000,
+      allowedMimes: ['image/jpeg', 'image/png']
+    });
+    if (!chk.valid) {
+      return { error: chk.reason || 'Ảnh minh chứng eKYC không hợp lệ.' };
+    }
+    proofDataUrl = rawProof;
+  }
+
+  return {
+    ekyc: {
+      phone,
+      organization,
+      idLast4,
+      roleNote,
+      pledgedZeroFee,
+      hasProofImage: Boolean(proofDataUrl),
+      proofDataUrl,
+      submittedAt: new Date().toISOString()
+    }
+  };
 }
 
 export async function POST(request) {
@@ -295,11 +343,20 @@ export async function POST(request) {
       return jsonRes(request, { ok: false, error: 'Email này đã được đăng ký. Vui lòng chuyển sang Đăng nhập.' }, 409);
     }
 
+    let ekycData = null;
+    if (requestResponderVetting) {
+      const parsed = parseVolunteerEkycPayload(body, organization);
+      if (parsed.error) return jsonRes(request, { ok: false, error: parsed.error }, 400);
+      if (parsed.ekyc.phone || parsed.ekyc.idLast4 || parsed.ekyc.roleNote || parsed.ekyc.proofDataUrl || parsed.ekyc.pledgedZeroFee) {
+        ekycData = parsed.ekyc;
+      }
+    }
+
     const newAcc = {
       id: `CZ-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`,
       email,
       fullName,
-      organization,
+      organization: ekycData?.organization || organization,
       passwordHash: hashPassword(password),
       authProvider: 'local',
       // Mặc định CHỈ là `citizen` (hoặc `pending_responder` chờ Ops duyệt), tuyệt đối không tự cấp quyền xem SOS của người khác!
@@ -307,6 +364,7 @@ export async function POST(request) {
       status: 'active',
       completedHelps: 0,
       abuseFlags: 0,
+      ekyc: ekycData,
       createdAt: new Date().toISOString()
     };
     accounts.push(newAcc);
@@ -371,7 +429,14 @@ export async function POST(request) {
         return jsonRes(request, { ok: false, error: 'Token xác thực Google không hợp lệ hoặc đã hết hạn.' }, 401);
       }
     } else if (body.quickGoogleProfile) {
-      // Cho phép trải nghiệm luồng Đăng nhập Google 1 chạm ngay khi chưa gắn Client ID riêng của miền
+      if (process.env.VERCEL_ENV === 'production' && process.env.ALLOW_DEMO_SQUAD !== 'true') {
+        return jsonRes(
+          request,
+          { ok: false, error: 'Vui lòng dùng Google Sign-In chính thức hoặc đăng nhập Email/Mật khẩu trên môi trường vận hành.' },
+          403
+        );
+      }
+      // Cho phép trải nghiệm luồng Đăng nhập Google 1 chạm trên local dev / preview khi chưa gắn Client ID riêng của miền
       const rawEmail = String(body.quickGoogleProfile.email || '').toLowerCase().trim();
       const rawName = cleanText(body.quickGoogleProfile.fullName || 'Người dùng Google', 80);
       if (!/^[^\s@]+@gmail\.com$/.test(rawEmail)) {
@@ -426,6 +491,9 @@ export async function POST(request) {
 
   // 4. ĐĂNG NHẬP CHẾ ĐỘ ĐỘI XUNG KÍCH MẪU ĐỂ KIỂM THỬ LUỒNG NHẬN HỖ TRỢ 2 CHIỀU
   if (action === 'demo_squad_session') {
+    if (process.env.VERCEL_ENV === 'production' && process.env.ALLOW_DEMO_SQUAD !== 'true') {
+      return jsonRes(request, { ok: false, error: 'Chế độ Đội Xung kích kiểm thử đã tắt trên môi trường Vận hành thực tế (Production).' }, 403);
+    }
     const squadId = String(body.squadId || 'SQUAD-HN-DONGNGAC');
     const sq = SEED_VERIFIED_SQUADS.find((s) => s.id === squadId) || SEED_VERIFIED_SQUADS[0];
     const liveSq = allAccounts.find((a) => a.id === sq.id) || sq;
@@ -718,6 +786,104 @@ export async function POST(request) {
     await writeGenericCollection(ACCOUNTS_KEY, accounts);
 
     return jsonRes(request, { ok: true, account: target });
+  }
+
+  // 12. CÔNG DÂN NỘP / CẬP NHẬT HỒ SƠ eKYC ĐĂNG KÝ TÌNH NGUYỆN VIÊN (0 ĐỒNG)
+  if (action === 'submit_volunteer_ekyc') {
+    const claims = verifyCitizenToken(request);
+    if (!claims) return jsonRes(request, { ok: false, error: 'Vui lòng đăng nhập tài khoản cá nhân trước khi nộp hồ sơ Tình nguyện viên.' }, 401);
+    const acc = accounts.find((a) => a.id === claims.id);
+    if (!acc) {
+      return jsonRes(request, { ok: false, error: 'Không tìm thấy hồ sơ tài khoản cá nhân để cập nhật eKYC.' }, 404);
+    }
+    if (acc.status === 'suspended') {
+      return jsonRes(request, { ok: false, error: 'Tài khoản đang bị khóa do vi phạm quy chuẩn an toàn.' }, 403);
+    }
+
+    const parsed = parseVolunteerEkycPayload(body, acc.organization);
+    if (parsed.error) {
+      return jsonRes(request, { ok: false, error: parsed.error }, 400);
+    }
+    if (parsed.ekyc.phone.replace(/\D/g, '').length < 8 || parsed.ekyc.idLast4.length !== 4 || !parsed.ekyc.pledgedZeroFee) {
+      return jsonRes(
+        request,
+        { ok: false, error: 'Vui lòng nhập đầy đủ số điện thoại, 4 số cuối CCCD và xác nhận cam kết thiện nguyện 0 đồng.' },
+        400
+      );
+    }
+
+    acc.organization = parsed.ekyc.organization || acc.organization;
+    acc.ekyc = parsed.ekyc;
+    if (acc.trustTier === 'citizen') {
+      acc.trustTier = 'pending_responder';
+    }
+    await writeGenericCollection(ACCOUNTS_KEY, accounts);
+
+    return jsonRes(request, {
+      ok: true,
+      message: 'Đã gửi hồ sơ eKYC Tình nguyện viên về Cổng Quản trị thẩm định.',
+      profile: {
+        id: acc.id,
+        email: acc.email,
+        fullName: acc.fullName,
+        organization: acc.organization || '',
+        authProvider: acc.authProvider,
+        trustTier: acc.trustTier,
+        status: acc.status
+      }
+    });
+  }
+
+  // 13. QUYỀN CHỦ THỂ DỮ LIỆU (ĐIỀU 9 NĐ 13/2023): TỰ XÓA VĨNH VIỄN TÀI KHOẢN & XÓA TRẮNG TỌA ĐỘ SOS
+  if (action === 'delete_my_account') {
+    const claims = verifyCitizenToken(request);
+    if (!claims) return jsonRes(request, { ok: false, error: 'Vui lòng đăng nhập để thực hiện xóa tài khoản.' }, 401);
+    if (SEED_VERIFIED_SQUADS.some((s) => s.id === claims.id)) {
+      return jsonRes(request, { ok: false, error: 'Không thể tự xóa tài khoản Đội Xung kích hệ thống mặc định.' }, 400);
+    }
+
+    const remainingAccounts = accounts.filter((a) => a.id !== claims.id);
+    if (remainingAccounts.length === accounts.length) {
+      return jsonRes(request, { ok: false, error: 'Tài khoản không tồn tại hoặc đã bị xóa trước đó.' }, 404);
+    }
+
+    const remainingCells = activeCells.filter((c) => c.responderId !== claims.id);
+    let shreddedTicketsCount = 0;
+    const scrubbedTickets = tickets.map((t) => {
+      const cleanedResponders = (t.assignedResponders || []).filter((r) => r.responderId !== claims.id);
+      if (t.requesterId === claims.id) {
+        shreddedTicketsCount += 1;
+        return {
+          ...t,
+          requesterId: 'DELETED_USER',
+          requesterName: 'Đã xóa theo yêu cầu (NĐ 13/2023)',
+          exactLat: null,
+          exactLng: null,
+          exactCoordShredded: true,
+          safetyPin: '****',
+          note: '[Dữ liệu đã xóa theo quyền chủ thể dữ liệu]',
+          status: String(t.status || '').includes('shredded') ? t.status : 'cancelled_shredded',
+          assignedResponders: cleanedResponders
+        };
+      }
+      if (cleanedResponders.length !== (t.assignedResponders || []).length) {
+        return { ...t, assignedResponders: cleanedResponders };
+      }
+      return t;
+    });
+
+    await Promise.all([
+      writeGenericCollection(ACCOUNTS_KEY, remainingAccounts),
+      writeGenericCollection(TICKETS_KEY, scrubbedTickets),
+      writeGenericCollection(HEARTBEATS_KEY, remainingCells)
+    ]);
+
+    return jsonRes(request, {
+      ok: true,
+      deletedAccountId: claims.id,
+      shreddedTicketsCount,
+      message: 'Đã xóa vĩnh viễn tài khoản và xóa trắng toàn bộ tọa độ / hồ sơ cá nhân theo Nghị định 13/2023/NĐ-CP.'
+    });
   }
 
   return jsonRes(request, { ok: false, error: 'Action POST không hợp lệ.' }, 400);

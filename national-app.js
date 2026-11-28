@@ -3432,7 +3432,9 @@ function updateCitizenAuthUi() {
   const title = document.getElementById('sos-profile-title');
   const sub = document.getElementById('sos-profile-sub');
   const loginBtn = document.getElementById('btn-sos-open-login');
+  const ekycBtn = document.getElementById('btn-open-volunteer-ekyc');
   const logoutBtn = document.getElementById('btn-sos-logout');
+  const delBtn = document.getElementById('btn-sos-delete-account');
 
   if (p) {
     const tierNames = {
@@ -3446,14 +3448,18 @@ function updateCitizenAuthUi() {
     if (title) title.textContent = `${p.fullName} · ${tierNames[p.trustTier] || p.trustTier}`;
     if (sub) sub.textContent = `${p.email} · Bảo vệ vị trí nền Geohash-6 đang bật (0 tọa độ lộ công khai).`;
     if (loginBtn) loginBtn.hidden = true;
+    if (ekycBtn) ekycBtn.hidden = !['citizen', 'pending_responder'].includes(p.trustTier);
     if (logoutBtn) logoutBtn.hidden = false;
+    if (delBtn) delBtn.hidden = p.authProvider === 'official_registry';
   } else {
     if (topLbl) topLbl.textContent = 'Tài khoản';
     if (dot) dot.className = 'dot dot-amber';
     if (title) title.textContent = 'Chưa đăng nhập tài khoản cá nhân';
     if (sub) sub.textContent = 'Đăng nhập bằng tài khoản cá nhân hoặc Google để mở tính năng gửi SOS chống báo giả và nhận mã PIN bảo vệ 2 chiều.';
     if (loginBtn) loginBtn.hidden = false;
+    if (ekycBtn) ekycBtn.hidden = true;
     if (logoutBtn) logoutBtn.hidden = true;
+    if (delBtn) delBtn.hidden = true;
   }
 }
 
@@ -4022,15 +4028,45 @@ function bindSosAndAppEvents() {
     setTimeout(() => switchPillar('sos'), 40);
   }
 
+  const isProdPublicDomain =
+    location.hostname === 'bando-cong-dong-dong-ngac.vercel.app' &&
+    !new URLSearchParams(location.search).has('demo');
+  if (isProdPublicDomain) {
+    const sqBtn = document.getElementById('btn-sos-switch-squad');
+    if (sqBtn) sqBtn.hidden = true;
+  }
+
+  const syncAuthModalProdMode = async () => {
+    if (!isProdPublicDomain) return;
+    if (typeof appSafetyState.googleClientIdConfigured !== 'boolean') {
+      try {
+        const h = await fetch('/api/sos-dispatch?action=health').then((r) => (r.ok ? r.json() : null));
+        appSafetyState.googleClientIdConfigured = Boolean(h?.googleClientIdConfigured);
+      } catch {
+        appSafetyState.googleClientIdConfigured = false;
+      }
+    }
+    const ggBox = document.getElementById('google-signin-box');
+    const ggNote = document.getElementById('google-prod-oauth-note');
+    const hasClientId = Boolean(appSafetyState.googleClientIdConfigured);
+    if (ggBox) ggBox.hidden = !hasClientId;
+    if (ggNote) ggNote.hidden = hasClientId;
+  };
+
+  let regProofDataUrl = '';
+  let modalEkycProofDataUrl = '';
+
   const openAuthModal = () => {
     if (appSafetyState.citizenProfile) {
       switchPillar('sos');
       return;
     }
+    syncAuthModalProdMode();
     document.getElementById('citizen-auth-dialog')?.showModal();
   };
   document.getElementById('btn-open-account')?.addEventListener('click', openAuthModal);
   document.getElementById('btn-sos-open-login')?.addEventListener('click', () => {
+    syncAuthModalProdMode();
     document.getElementById('citizen-auth-dialog')?.showModal();
   });
 
@@ -4041,6 +4077,40 @@ function bindSosAndAppEvents() {
       document.getElementById('citizen-login-form').hidden = m !== 'login';
       document.getElementById('citizen-register-form').hidden = m !== 'register';
     });
+  });
+
+  const regVolCheck = document.getElementById('cz-reg-volunteer');
+  const regEkycBox = document.getElementById('cz-reg-ekyc-fields');
+  regVolCheck?.addEventListener('change', () => {
+    if (regEkycBox) regEkycBox.hidden = !regVolCheck.checked;
+  });
+
+  document.getElementById('cz-reg-proof')?.addEventListener('change', async (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) {
+      regProofDataUrl = '';
+      return;
+    }
+    try {
+      regProofDataUrl = await stripExifClientSide(file);
+    } catch (err) {
+      regProofDataUrl = '';
+      showToast(err?.message || 'Không đọc được ảnh minh chứng.');
+    }
+  });
+
+  document.getElementById('ekyc-proof')?.addEventListener('change', async (ev) => {
+    const file = ev.target.files?.[0];
+    if (!file) {
+      modalEkycProofDataUrl = '';
+      return;
+    }
+    try {
+      modalEkycProofDataUrl = await stripExifClientSide(file);
+    } catch (err) {
+      modalEkycProofDataUrl = '';
+      showToast(err?.message || 'Không đọc được ảnh minh chứng.');
+    }
   });
 
   document.getElementById('btn-google-custom-toggle')?.addEventListener('click', () => {
@@ -4117,6 +4187,23 @@ function bindSosAndAppEvents() {
 
   document.getElementById('citizen-register-form')?.addEventListener('submit', async (ev) => {
     ev.preventDefault();
+    const regFb = document.getElementById('cz-reg-feedback');
+    const wantsVol = Boolean(document.getElementById('cz-reg-volunteer')?.checked);
+    const phone = document.getElementById('cz-reg-phone')?.value.trim() || '';
+    const idLast4 = document.getElementById('cz-reg-id4')?.value.trim() || '';
+    const organization = document.getElementById('cz-reg-org')?.value.trim() || '';
+    const pledgedZeroFee = Boolean(document.getElementById('cz-reg-pledge')?.checked);
+
+    if (wantsVol && (phone.replace(/\D/g, '').length < 8 || idLast4.replace(/\D/g, '').length !== 4 || !pledgedZeroFee)) {
+      if (regFb) {
+        regFb.hidden = false;
+        regFb.className = 'form-feedback is-error';
+        regFb.textContent = 'Đăng ký Tình nguyện viên cần nhập đủ SĐT, 4 số cuối CCCD và tích cam kết 0 đồng.';
+      }
+      return;
+    }
+    if (regFb) regFb.hidden = true;
+
     const res = await fetch('/api/sos-dispatch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4125,20 +4212,83 @@ function bindSosAndAppEvents() {
         fullName: document.getElementById('cz-reg-name')?.value,
         email: document.getElementById('cz-reg-email')?.value,
         password: document.getElementById('cz-reg-pass')?.value,
-        requestResponderVetting: document.getElementById('cz-reg-volunteer')?.checked
+        requestResponderVetting: wantsVol,
+        phone,
+        idLast4,
+        organization,
+        pledgedZeroFee,
+        proofDataUrl: wantsVol ? regProofDataUrl : ''
       })
     });
     const data = await res.json();
     if (!res.ok || !data?.ok) {
+      if (regFb) {
+        regFb.hidden = false;
+        regFb.className = 'form-feedback is-error';
+        regFb.textContent = data?.error || 'Không tạo được tài khoản.';
+      }
       showToast(data?.error || 'Không tạo được tài khoản.');
       return;
     }
+    regProofDataUrl = '';
     localStorage.setItem(CITIZEN_TOKEN_KEY, data.token);
     appSafetyState.citizenToken = data.token;
     document.getElementById('citizen-auth-dialog')?.close();
     await syncCitizenSession();
-    showToast('Đã tạo tài khoản cá nhân và đăng nhập thành công!');
+    showToast(
+      wantsVol
+        ? 'Đã tạo tài khoản và gửi hồ sơ eKYC Tình nguyện viên chờ thẩm định!'
+        : 'Đã tạo tài khoản cá nhân và đăng nhập thành công!'
+    );
     if (appSafetyState.pendingAutoSubmitSos) await submitSosNow();
+  });
+
+  document.getElementById('btn-open-volunteer-ekyc')?.addEventListener('click', () => {
+    const orgInput = document.getElementById('ekyc-org');
+    if (orgInput && appSafetyState.citizenProfile?.organization && !orgInput.value) {
+      orgInput.value = appSafetyState.citizenProfile.organization;
+    }
+    const phoneInput = document.getElementById('ekyc-phone');
+    if (phoneInput && appSafetyState.citizenProfile?.ekyc?.phone && !phoneInput.value) {
+      phoneInput.value = appSafetyState.citizenProfile.ekyc.phone;
+    }
+    document.getElementById('volunteer-ekyc-dialog')?.showModal();
+  });
+
+  document.getElementById('volunteer-ekyc-form')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const fb = document.getElementById('ekyc-feedback');
+    if (!appSafetyState.citizenToken) return;
+    const res = await fetch('/api/sos-dispatch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${appSafetyState.citizenToken}`
+      },
+      body: JSON.stringify({
+        action: 'submit_volunteer_ekyc',
+        phone: document.getElementById('ekyc-phone')?.value.trim(),
+        idLast4: document.getElementById('ekyc-id4')?.value.trim(),
+        organization: document.getElementById('ekyc-org')?.value.trim(),
+        roleNote: document.getElementById('ekyc-note')?.value.trim(),
+        pledgedZeroFee: Boolean(document.getElementById('ekyc-pledge')?.checked),
+        proofDataUrl: modalEkycProofDataUrl
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      if (fb) {
+        fb.hidden = false;
+        fb.className = 'form-feedback is-error';
+        fb.textContent = data?.error || 'Không gửi được hồ sơ eKYC.';
+      }
+      return;
+    }
+    if (fb) fb.hidden = true;
+    modalEkycProofDataUrl = '';
+    document.getElementById('volunteer-ekyc-dialog')?.close();
+    await syncCitizenSession();
+    showToast(data.message || 'Đã gửi hồ sơ Tình nguyện viên về Cổng Quản trị thẩm định.');
   });
 
   document.getElementById('btn-sos-switch-squad')?.addEventListener('click', async () => {
@@ -4165,6 +4315,35 @@ function bindSosAndAppEvents() {
     renderMySosTickets();
     loadResponderInboxIfVerified();
     showToast('Đã đăng xuất tài khoản.');
+  });
+
+  document.getElementById('btn-sos-delete-account')?.addEventListener('click', async () => {
+    if (!appSafetyState.citizenToken) return;
+    const confirmed = window.confirm(
+      'Xác nhận XÓA VĨNH VIỄN tài khoản và xóa trắng toàn bộ tọa độ / hồ sơ SOS theo Nghị định 13/2023/NĐ-CP? Thao tác không thể khôi phục.'
+    );
+    if (!confirmed) return;
+    const res = await fetch('/api/sos-dispatch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${appSafetyState.citizenToken}`
+      },
+      body: JSON.stringify({ action: 'delete_my_account' })
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      showToast(data?.error || 'Không thể xóa tài khoản.');
+      return;
+    }
+    localStorage.removeItem(CITIZEN_TOKEN_KEY);
+    appSafetyState.citizenToken = '';
+    appSafetyState.citizenProfile = null;
+    appSafetyState.myTickets = [];
+    updateCitizenAuthUi();
+    renderMySosTickets();
+    loadResponderInboxIfVerified();
+    showToast(data.message || 'Đã xóa vĩnh viễn tài khoản và xóa trắng dữ liệu cá nhân.');
   });
 
   // Chọn bằng 1 chạm: Tình huống SOS, Mực nước, Thẻ hoàn cảnh, Giọng nói & Phạm vi bảo vệ

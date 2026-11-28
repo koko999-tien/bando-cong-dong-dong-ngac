@@ -1089,22 +1089,35 @@ async function syncSosAdminOverview() {
 
   const aBox = document.getElementById('ops-sos-accounts-list');
   if (aBox) {
-    aBox.innerHTML = (data.accounts || [])
-      .map(
-        (a) => `
+    const sortedAccounts = [...(data.accounts || [])].sort((x, y) => {
+      const rank = (t) => (t === 'pending_responder' ? 0 : t === 'citizen' ? 1 : t === 'verified_responder' ? 2 : 3);
+      return rank(x.trustTier) - rank(y.trustTier);
+    });
+    aBox.innerHTML = sortedAccounts
+      .map((a) => {
+        const ek = a.ekyc || null;
+        const ekHtml = ek
+          ? `<div style="margin:6px 0;padding:8px 10px;border-radius:8px;background:#F8FAFC;border:1px solid #E2E8F0;font-size:0.75rem;color:#334155;">
+              <div><strong>Hồ sơ eKYC Tình nguyện viên:</strong> SĐT <code class="mono">${esc(ek.phone || '--')}</code> · CCCD cuối: <code class="mono">${esc(ek.idLast4 || '----')}</code> · Cam kết 0đ: ${ek.pledgedZeroFee ? 'Đã ký' : 'Chưa rõ'}</div>
+              ${ek.roleNote ? `<div style="margin-top:3px;color:#475569;">Kỹ năng/Phạm vi: ${esc(ek.roleNote)}</div>` : ''}
+              ${ek.proofDataUrl ? `<img src="${esc(ek.proofDataUrl)}" alt="Minh chứng eKYC" style="max-height:84px;max-width:100%;border-radius:6px;margin-top:6px;border:1px solid #CBD5E1;display:block;">` : ''}
+            </div>`
+          : '';
+        return `
         <div class="item-card">
           <div class="item-card-top">
             <h4>${esc(a.fullName)} <small class="mono">(${esc(a.id)})</small></h4>
-            <span class="badge ${a.status === 'suspended' ? 'badge-err' : a.trustTier === 'citizen' ? 'badge-info' : 'badge-ok'}">${esc(a.trustTier)} · ${esc(a.status)}</span>
+            <span class="badge ${a.status === 'suspended' ? 'badge-err' : a.trustTier === 'pending_responder' ? 'badge-warn' : a.trustTier === 'citizen' ? 'badge-info' : 'badge-ok'}">${esc(a.trustTier)} · ${esc(a.status)}</span>
           </div>
           <p style="margin:2px 0 6px;font-size:0.76rem;color:#475569;">${esc(a.email)} · ${esc(a.organization || a.authProvider)} · Vi phạm: ${a.abuseFlags || 0}</p>
+          ${ekHtml}
           <div class="btn-row">
             <button type="button" class="btn btn-sm btn-primary js-vet-sos-acc" data-id="${esc(a.id)}" data-tier="verified_responder" data-status="active">Cấp chuẩn Tình nguyện viên</button>
             <button type="button" class="btn btn-sm js-vet-sos-acc" data-id="${esc(a.id)}" data-tier="official_unit" data-status="active">Cấp chuẩn Đội chính thức</button>
             <button type="button" class="btn btn-sm btn-danger js-vet-sos-acc" data-id="${esc(a.id)}" data-tier="revoked" data-status="suspended">Khóa vĩnh viễn</button>
           </div>
-        </div>`
-      )
+        </div>`;
+      })
       .join('');
   }
 }

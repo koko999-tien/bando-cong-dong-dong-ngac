@@ -2770,3 +2770,36 @@ html.is-large-text .subtab-bar {
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
   cursor: pointer;
 }
+
+.btn-danger-outline {
+  background: transparent;
+  color: #BE123C;
+  border: 1px solid #FECDD3;
+}
+.btn-danger-outline:hover {
+  background: #FFF1F2;
+  border-color: #FB7185;
+}
+
+.sos-legal-strip {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+
+.ekyc-fields-card {
+  padding: 12px;
+  border-radius: 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

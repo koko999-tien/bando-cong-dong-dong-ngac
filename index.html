@@ -7,6 +7,8 @@
   <meta name="description" content="Hệ thống Thông tin Địa không gian & Cảnh báo Thiên tai Mở Việt Nam: Khoanh vùng dữ liệu rủi ro toàn quốc không lag, tích hợp hạ tầng y tế & thủy hệ thời gian thực, cổng nghiên cứu khoa học và bản tin thiên tai.">
   <title>Hệ thống Địa không gian &amp; An toàn Thiên tai Việt Nam</title>
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="icon" href="./icon-96.png" sizes="96x96" type="image/png">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -997,8 +999,10 @@
             </div>
             <div class="form-actions-row">
               <button type="button" id="btn-sos-open-login" class="btn btn-primary btn-sm">Đăng nhập Cá nhân / Google</button>
+              <button type="button" id="btn-open-volunteer-ekyc" class="btn btn-secondary btn-sm" hidden>Đăng ký Tình nguyện viên</button>
               <button type="button" id="btn-sos-switch-squad" class="btn btn-secondary btn-sm" title="Chuyển sang vai trò Đội xung kích đã xác minh để kiểm thử luồng nhận ca">Chế độ Đội Xung kích (Kiểm thử)</button>
               <button type="button" id="btn-sos-logout" class="btn btn-secondary btn-sm" hidden>Đăng xuất</button>
+              <button type="button" id="btn-sos-delete-account" class="btn btn-danger-outline btn-sm" hidden>Xóa tài khoản &amp; Dữ liệu</button>
             </div>
           </div>
 
@@ -1015,6 +1019,10 @@
               <strong>3. Không bao giờ lộ vị trí người tải App</strong>
               <span>Không lưu GPS nền của người dùng (<span id="sos-zone-squad-count" class="mono-num">--</span> đội trực trong ô lưới thô; 0 tọa độ lộ ra ngoài). Vị trí phiên tự xóa trắng sau ca.</span>
             </div>
+          </div>
+          <div class="sos-legal-strip">
+            <span>Minh bạch Nghị định 13/2023/NĐ-CP: Tọa độ SOS tự xóa trắng sau 45 phút; quyền xóa vĩnh viễn tài khoản trong 1 chạm.</span>
+            <a href="./phap-ly.html" class="text-btn">Xem Chính sách Bảo mật &amp; Quy chuẩn An toàn ↗</a>
           </div>
         </div>
 
@@ -1303,7 +1311,7 @@
       <button type="button" class="icon-close" data-close-dialog="citizen-auth-dialog" aria-label="Đóng">×</button>
     </div>
     <div class="dialog-body">
-      <div class="google-signin-box" style="display:flex;flex-direction:column;gap:7px;">
+      <div class="google-signin-box" id="google-signin-box" style="display:flex;flex-direction:column;gap:7px;">
         <div id="google-gsi-mount"></div>
         <button type="button" id="btn-google-quick-auth" class="btn btn-full google-oauth-btn">
           <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12s4.3 9.5 9.5 9.5c5.5 0 9.1-3.8 9.1-9.2 0-.6-.1-1.1-.2-1.6H12z"/></svg>
@@ -1318,6 +1326,9 @@
           <button type="button" id="btn-google-quick-confirm" class="btn btn-primary btn-sm">Xác nhận phiên Google</button>
         </div>
       </div>
+      <p id="google-prod-oauth-note" class="muted-meta" hidden style="margin:0 0 8px;text-align:center;">
+        Môi trường vận hành công khai yêu cầu đăng nhập Email/Mật khẩu xác thực (Google OAuth 1 chạm mở khi kích hoạt mã ứng dụng chính thức).
+      </p>
 
       <div class="auth-divider"><span>hoặc dùng Tài khoản Cá nhân riêng</span></div>
 
@@ -1358,7 +1369,78 @@
           <input type="checkbox" id="cz-reg-volunteer">
           <span>Đăng ký hồ sơ Tình nguyện viên hỗ trợ cộng đồng (Chờ Cổng Quản trị thẩm định danh tính trước khi được nhận ca).</span>
         </label>
+        <div id="cz-reg-ekyc-fields" class="ekyc-fields-card" hidden>
+          <div class="two-col-fields">
+            <div class="field-group">
+              <label for="cz-reg-phone" class="field-label">Số điện thoại liên hệ <span class="req">*</span></label>
+              <input type="tel" id="cz-reg-phone" class="text-input" autocomplete="tel" placeholder="VD: 0987654321">
+            </div>
+            <div class="field-group">
+              <label for="cz-reg-id4" class="field-label">4 số cuối CCCD <span class="req">*</span></label>
+              <input type="text" id="cz-reg-id4" class="text-input mono-num" maxlength="4" inputmode="numeric" placeholder="VD: 8421">
+            </div>
+          </div>
+          <div class="field-group">
+            <label for="cz-reg-org" class="field-label">Đơn vị / Đội tình nguyện / Phường công tác</label>
+            <input type="text" id="cz-reg-org" class="text-input" maxlength="110" placeholder="VD: Đội Xung kích ĐH Mỏ - Địa chất">
+          </div>
+          <div class="field-group">
+            <label for="cz-reg-proof" class="field-label">Ảnh thẻ SV / Thẻ tình nguyện hoặc minh chứng (tự động xóa GPS ảnh)</label>
+            <input type="file" id="cz-reg-proof" class="text-input" accept="image/jpeg,image/png">
+          </div>
+          <label class="toggle-check">
+            <input type="checkbox" id="cz-reg-pledge">
+            <span>Tôi cam kết hỗ trợ cộng đồng <strong>0 đồng</strong>, không thu phí và không tự ý vào điểm ngập &ge; 0,45 m.</span>
+          </label>
+        </div>
+        <div id="cz-reg-feedback" class="form-feedback" hidden role="alert"></div>
         <button type="submit" class="btn btn-primary btn-full">Tạo tài khoản &amp; Đăng nhập</button>
+      </form>
+      <p class="muted-meta" style="margin:10px 0 0;text-align:center;">
+        Khi đăng nhập, bạn đồng ý với <a href="./phap-ly.html" target="_blank" rel="noopener">Chính sách Bảo vệ Dữ liệu Cá nhân (NĐ 13/2023) &amp; Điều khoản An toàn</a>.
+      </p>
+    </div>
+  </dialog>
+
+  <!-- ================= HỘP THOẠI NÂNG CẤP TÌNH NGUYỆN VIÊN (eKYC) ================= -->
+  <dialog id="volunteer-ekyc-dialog" class="citizen-dialog" aria-labelledby="ekyc-dlg-title">
+    <div class="dialog-head">
+      <div>
+        <h2 id="ekyc-dlg-title">Đăng ký Hồ sơ Tình nguyện viên (eKYC)</h2>
+        <span class="muted-meta">Xác minh danh tính &amp; cam kết 0 đồng trước khi Cổng Quản trị cấp quyền nhận ca</span>
+      </div>
+      <button type="button" class="icon-close" data-close-dialog="volunteer-ekyc-dialog" aria-label="Đóng">×</button>
+    </div>
+    <div class="dialog-body">
+      <form id="volunteer-ekyc-form" class="stack-form">
+        <div class="two-col-fields">
+          <div class="field-group">
+            <label for="ekyc-phone" class="field-label">Số điện thoại xác minh <span class="req">*</span></label>
+            <input type="tel" id="ekyc-phone" class="text-input" required placeholder="09xx xxx xxx">
+          </div>
+          <div class="field-group">
+            <label for="ekyc-id4" class="field-label">4 số cuối CCCD <span class="req">*</span></label>
+            <input type="text" id="ekyc-id4" class="text-input mono-num" maxlength="4" inputmode="numeric" required placeholder="4 chữ số">
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="ekyc-org" class="field-label">Đơn vị / Đội / Khu vực hoạt động</label>
+          <input type="text" id="ekyc-org" class="text-input" maxlength="110" placeholder="VD: CLB Hỗ trợ Giao thông Mưa ngập Cầu Giấy">
+        </div>
+        <div class="field-group">
+          <label for="ekyc-note" class="field-label">Phương tiện &amp; Kỹ năng hỗ trợ (đẩy xe, sơ cứu, bộ đàm...)</label>
+          <input type="text" id="ekyc-note" class="text-input" maxlength="180" placeholder="VD: Có dây kéo, áo mưa, đèn pin, từng tập huấn sơ cứu chữ thập đỏ">
+        </div>
+        <div class="field-group">
+          <label for="ekyc-proof" class="field-label">Ảnh thẻ định danh / Minh chứng (JPEG/PNG — tự xóa EXIF GPS)</label>
+          <input type="file" id="ekyc-proof" class="text-input" accept="image/jpeg,image/png">
+        </div>
+        <label class="toggle-check">
+          <input type="checkbox" id="ekyc-pledge" required>
+          <span>Tôi cam kết hỗ trợ thiện nguyện <strong>0 đồng</strong>, xuất trình PIN 4 số đúng quy trình và chuyển ca &ge; 0,45 m cho lực lượng 112.</span>
+        </label>
+        <div id="ekyc-feedback" class="form-feedback" hidden role="alert"></div>
+        <button type="submit" class="btn btn-primary btn-full">Gửi Hồ sơ Thẩm định về Ops Console</button>
       </form>
     </div>
   </dialog>

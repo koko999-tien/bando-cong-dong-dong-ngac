@@ -165,13 +165,19 @@ export default {
       return Response.json({
         ok: true,
         engine: 'cloudflare_d1_edge',
+        ...map,
         researchers: map.researchers || [],
         submissions: map.submissions || [],
-        publications: map.publications || []
+        publications: map.publications || [],
+        sos_accounts: map.sos_accounts || [],
+        sos_tickets: map.sos_tickets || [],
+        sos_ephemeral_cells: map.sos_ephemeral_cells || []
       });
     }
 
-    const putMatch = url.pathname.match(/^\/collections\/(researchers|submissions|publications)$/);
+    const putMatch = url.pathname.match(
+      /^\/collections\/(researchers|submissions|publications|sos_accounts|sos_tickets|sos_ephemeral_cells)$/
+    );
     if (putMatch && request.method === 'PUT') {
       if (!isAuthed(request, env)) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
       const key = putMatch[1];

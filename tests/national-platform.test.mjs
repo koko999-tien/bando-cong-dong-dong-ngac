@@ -574,6 +574,80 @@ try {
   assert.ok(html.includes('id="sos-live-map"') && html.includes('id="btn-export-zone-dossier"') && html.includes('id="route-hydro-profile-svg"'));
   assert.ok(opsHtml.includes('id="btn-export-ops-snapshot"'));
 
+  // 7. GÓI 1 HARDENING: WORKER D1 SOS, PNG ICONS, PHÁP LÝ NĐ 13/2023, eKYC TNV & XÓA VĨNH VIỄN TÀI KHOẢN
+  const workerSrc = await fs.readFile(path.join(rootDir, 'infra', 'cloudflare', 'worker.js'), 'utf8');
+  assert.ok(workerSrc.includes('sos_accounts') && workerSrc.includes('sos_tickets') && workerSrc.includes('sos_ephemeral_cells'), 'Cloudflare Worker phải hỗ trợ lưu và đọc 3 bảng sos_* trên D1');
+
+  const manifestJson = JSON.parse(await fs.readFile(path.join(rootDir, 'manifest.webmanifest'), 'utf8'));
+  assert.ok(manifestJson.icons.some((ic) => ic.src === './icon-192.png' && ic.type === 'image/png'), 'Manifest phải có PNG 192x192');
+  assert.ok(manifestJson.icons.some((ic) => ic.src === './icon-512.png' && ic.type === 'image/png'), 'Manifest phải có PNG 512x512');
+  for (const pngName of ['icon-96.png', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png']) {
+    const stat = await fs.stat(path.join(rootDir, pngName));
+    assert.ok(stat.size > 1000, `${pngName} phải tồn tại và có dung lượng hợp lệ`);
+  }
+
+  const legalHtml = await fs.readFile(path.join(rootDir, 'phap-ly.html'), 'utf8');
+  assert.ok(legalHtml.includes('13/2023/NĐ-CP') && legalHtml.includes('0,45 m'), 'Trang phap-ly.html phải nêu rõ NĐ 13/2023 và ngưỡng an toàn 0,45 m');
+
+  const vercelJsonRaw = await fs.readFile(path.join(rootDir, 'vercel.json'), 'utf8');
+  assert.ok(vercelJsonRaw.includes('"Content-Security-Policy"') && !vercelJsonRaw.includes('Content-Security-Policy-Report-Only'), 'vercel.json phải bật thực thi CSP chính thức');
+
+  // Kiểm chứng luồng eKYC Tình nguyện viên & Tự xóa vĩnh viễn tài khoản + dữ liệu SOS (Điều 9 NĐ 13/2023)
+  const ekycCandidate = await (
+    await sosPOST(mkSosPost({ action: 'register_citizen', fullName: 'Lê Hoàng Việt', email: 'ekyc.viet@vn.org', password: 'Password#12345' }))
+  ).json();
+  assert.equal(ekycCandidate.profile.trustTier, 'citizen');
+
+  const ekycSubmit = await (
+    await sosPOST(
+      mkSosPost(
+        {
+          action: 'submit_volunteer_ekyc',
+          phone: '0988111222',
+          organization: 'Đội Tình nguyện Thanh Xuân',
+          idLast4: '7492',
+          roleNote: 'Có dây kéo & túi sơ cứu',
+          pledgedZeroFee: true
+        },
+        { Authorization: `Bearer ${ekycCandidate.token}` }
+      )
+    )
+  ).json();
+  assert.equal(ekycSubmit.ok, true);
+  assert.equal(ekycSubmit.profile.trustTier, 'pending_responder', 'Sau khi nộp eKYC phải chuyển trạng thái chờ Ops Console duyệt');
+
+  const ekycTicket = await (
+    await sosPOST(
+      mkSosPost(
+        { action: 'create_sos', lat: 21.0123, lng: 105.8123, category: 'stalled_vehicle', waterDepthM: 0.25, areaHint: 'Ngã tư Sở' },
+        { Authorization: `Bearer ${ekycCandidate.token}` }
+      )
+    )
+  ).json();
+  assert.equal(ekycTicket.ok, true);
+
+  const deleteRes = await (
+    await sosPOST(
+      mkSosPost(
+        { action: 'delete_my_account' },
+        { Authorization: `Bearer ${ekycCandidate.token}` }
+      )
+    )
+  ).json();
+  assert.equal(deleteRes.ok, true);
+  assert.ok(deleteRes.shreddedTicketsCount >= 1, 'Xóa tài khoản phải đồng thời xóa trắng tọa độ các phiếu SOS liên quan');
+
+  const reLoginDeleted = await sosPOST(
+    mkSosPost({ action: 'login_citizen', email: 'ekyc.viet@vn.org', password: 'Password#12345' })
+  );
+  assert.equal(reLoginDeleted.status, 401, 'Tài khoản đã xóa không thể đăng nhập lại');
+  const meAfterDelete = await sosGET(
+    new Request('http://localhost/api/sos-dispatch?action=me', {
+      headers: { Authorization: `Bearer ${ekycCandidate.token}` }
+    })
+  );
+  assert.equal(meAfterDelete.status, 401, 'Phiên token của tài khoản đã xóa phải bị thu hồi');
+
   console.log('VERIFIED VIETNAM NATIONAL 4-PILLAR + ZERO-TRUST SOS + HYDRO-AI + V31 DEEP TESTS PASSED:', {
     provincesCovered: uniqueProvinces.size,
     dongNgacPointsInZone: inDongNgac.length,
