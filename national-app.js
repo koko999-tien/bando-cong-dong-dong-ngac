@@ -4873,6 +4873,9 @@ async function initSecuritySdks() {
                 document.getElementById('citizen-auth-dialog')?.close();
                 await syncCitizenSession();
                 showToast(`Đã đăng nhập Google: ${data.profile.fullName}`);
+                if (appSafetyState.pendingAutoSubmitSos) {
+                  await submitSosNow();
+                }
               }
             }
           });
@@ -4882,6 +4885,12 @@ async function initSecuritySdks() {
             width: 340,
             text: 'continue_with'
           });
+          const quickBtn = document.getElementById('btn-google-quick-auth');
+          const customToggle = document.getElementById('btn-google-custom-toggle');
+          const quickFields = document.getElementById('google-quick-fields');
+          if (quickBtn) quickBtn.hidden = true;
+          if (customToggle) customToggle.hidden = true;
+          if (quickFields) quickFields.hidden = true;
         }
       }
     }
