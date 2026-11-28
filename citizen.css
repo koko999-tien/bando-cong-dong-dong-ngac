@@ -612,6 +612,16 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   background: transparent;
   box-shadow: inset 0 -2px 0 var(--danger-ink);
 }
+@media (max-width: 479px) {
+  .subtab-bar {
+    padding: 0 8px;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.88fr) minmax(0, 0.72fr) minmax(0, 1.25fr);
+  }
+  .subtab-btn {
+    padding: 6px 2px;
+    font-size: 0.75rem;
+  }
+}
 
 .dock-scroll {
   position: relative;
@@ -2802,39 +2812,58 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     position: absolute;
     left: 0;
     right: 0;
-    bottom: 0;
+    top: 6px;
+    bottom: auto;
     z-index: 436;
-    height: 118px;
-    max-height: calc(100% - 8px);
-    background: rgba(255, 255, 255, 0.97);
+    height: calc(100% - 6px);
+    max-height: calc(100% - 6px);
+    background: #FFFFFF;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     border-top: 1px solid var(--border-strong);
     border-radius: 20px 20px 0 0;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 -10px 30px rgba(15, 23, 42, 0.14);
+    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.14);
     overflow: hidden;
-    transition: height 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+    transform: translate3d(0, calc(100% - 118px), 0);
+    transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+    contain: layout style;
+  }
+  .workbench-left-dock.is-dragging {
+    transition: none !important;
   }
   .workbench-left-dock .dock-zone-header {
     padding: 4px 12px 8px;
     gap: 6px;
+    touch-action: pan-x;
   }
   .workbench-split[data-sheet="peek"] .workbench-left-dock {
-    height: 118px;
+    transform: translate3d(0, calc(100% - 118px), 0);
   }
-  .workbench-split[data-sheet="peek"] .workbench-left-dock > :not(.mobile-sheet-grabber):not(.dock-zone-header) {
-    display: none;
+  .workbench-split[data-sheet="peek"] .workbench-left-dock .dock-scroll,
+  .workbench-split[data-sheet="peek"] .workbench-left-dock .subtab-bar {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .workbench-split[data-sheet="peek"] .workbench-left-dock.is-dragging .dock-scroll,
+  .workbench-split[data-sheet="peek"] .workbench-left-dock.is-dragging .subtab-bar {
+    visibility: visible;
   }
   .workbench-split[data-sheet="half"] .workbench-left-dock {
-    height: 52%;
+    transform: translate3d(0, 48%, 0);
   }
   .workbench-split[data-sheet="full"] .workbench-left-dock {
-    height: calc(100% - 6px);
+    transform: translate3d(0, 0px, 0);
   }
-  .workbench-split:is([data-sheet="half"], [data-sheet="full"]) .workbench-left-dock .dock-scroll {
+  .workbench-left-dock .dock-scroll {
     flex: 1 1 auto;
     overflow-y: auto;
     overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    contain: layout style;
+  }
+  .workbench-split[data-sheet="half"] .workbench-left-dock .dock-scroll {
+    padding-bottom: 50vh;
   }
   .workbench-split .map-hud-bottom {
     position: absolute;
@@ -2850,10 +2879,12 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     align-items: center;
     gap: 6px;
     pointer-events: none;
-    transition: bottom 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition: opacity 150ms ease;
   }
   .workbench-split:is([data-sheet="half"], [data-sheet="full"]) .map-hud-bottom {
-    display: none;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
   }
   .workbench-split .map-hud-bottom .hydro-sim-strip {
     pointer-events: auto;
@@ -3527,6 +3558,7 @@ button, a, summary, input, select, textarea, label {
     display: block;
     flex-shrink: 0;
     padding: 5px 12px 1px;
+    touch-action: none;
   }
   .sheet-handle-btn {
     width: 100%;
@@ -3661,7 +3693,7 @@ body[data-basemap="satellite"] .ring-dist-label {
 #publications-feed-list .pub-card:nth-child(n+5),
 #zone-places-list .place-card:nth-child(n+12) {
   content-visibility: auto;
-  contain-intrinsic-size: auto none auto 96px;
+  contain-intrinsic-size: auto 96px;
 }
 
 /* Vi chuyển động tự nhiên có tôn trọng prefers-reduced-motion */
@@ -3814,7 +3846,7 @@ body[data-basemap="satellite"] .ring-dist-label {
     margin-bottom: 10px;
   }
   .sos-identity-strip #sos-profile-sub {
-    display: none;
+    display: none !important;
   }
   .sos-identity-strip .section-head-row,
   #pillar-sos .ai-guardian-card .section-head-row,

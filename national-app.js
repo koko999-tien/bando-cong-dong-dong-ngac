@@ -3438,53 +3438,143 @@ function bindEvents() {
     });
   });
 
-  // Bottom Sheet 3 trạng thái (peek / half / full) trên Mobile — bấm hoặc vuốt dọc
+  // Bottom Sheet 3 trạng thái (peek / half / full) trên Mobile — kéo mượt GPU translate3d theo ngón tay
+  const dockEl = document.getElementById('workbench-left-dock');
+  let sheetDragSuppressClickUntil = 0;
+
   const setMobileSheetState = (nextSheet) => {
     const layout = document.getElementById('map-split-layout');
     if (!layout) return;
     const clamped = ['peek', 'half', 'full'].includes(nextSheet) ? nextSheet : 'peek';
+    if (dockEl) {
+      dockEl.classList.remove('is-dragging');
+      dockEl.style.transform = '';
+    }
     layout.dataset.sheet = clamped;
     const isList = clamped !== 'peek';
     state.mapMobileMode = isList ? 'list' : 'map';
     layout.dataset.mobileMode = state.mapMobileMode;
     document.querySelectorAll('[data-map-mode]').forEach((b) => b.classList.toggle('is-active', b.dataset.mapMode === state.mapMobileMode));
-    setTimeout(() => {
-      nationalMap?.invalidateSize();
-      hydroSurfaceLayer?.redraw();
-    }, 240);
+    if (window.innerWidth >= 1024) {
+      setTimeout(() => {
+        nationalMap?.invalidateSize();
+        hydroSurfaceLayer?.redraw();
+      }, 240);
+    }
   };
 
   document.getElementById('btn-cycle-mobile-sheet')?.addEventListener('click', () => {
+    if (performance.now() < sheetDragSuppressClickUntil) return;
     const cur = document.getElementById('map-split-layout')?.dataset.sheet || 'peek';
     const next = cur === 'peek' ? 'half' : cur === 'half' ? 'full' : 'peek';
     setMobileSheetState(next);
   });
 
-  const grabberEl = document.getElementById('mobile-sheet-grabber');
-  let sheetTouchStartY = null;
-  grabberEl?.addEventListener(
-    'touchstart',
-    (ev) => {
-      sheetTouchStartY = ev.changedTouches?.[0]?.clientY ?? null;
-    },
-    { passive: true }
-  );
-  grabberEl?.addEventListener(
-    'touchend',
-    (ev) => {
-      if (sheetTouchStartY === null) return;
-      const endY = ev.changedTouches?.[0]?.clientY ?? sheetTouchStartY;
-      const dy = endY - sheetTouchStartY;
-      sheetTouchStartY = null;
-      const cur = document.getElementById('map-split-layout')?.dataset.sheet || 'peek';
-      if (dy < -28) {
-        setMobileSheetState(cur === 'peek' ? 'half' : 'full');
-      } else if (dy > 28) {
-        setMobileSheetState(cur === 'full' ? 'half' : 'peek');
+  if (dockEl) {
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+    let startOffset = 0;
+    let dockHeight = 0;
+    let maxOffset = 0;
+    let lastOffset = 0;
+    let lastDy = 0;
+    let isDragging = false;
+    let touchLockedOut = false;
+    let dragRafId = 0;
+
+    dockEl.addEventListener(
+      'touchstart',
+      (ev) => {
+        if (window.innerWidth >= 1024 || ev.touches.length !== 1) return;
+        const tgt = ev.target;
+        if (tgt?.closest?.('input, select, textarea, #vn-zone-suggestions, .leaflet-container')) {
+          touchLockedOut = true;
+          return;
+        }
+        const t = ev.touches[0];
+        startX = t.clientX;
+        startY = t.clientY;
+        startTime = performance.now();
+        isDragging = false;
+        touchLockedOut = false;
+        lastDy = 0;
+        dockHeight = dockEl.clientHeight || Math.max(320, window.innerHeight - 130);
+        maxOffset = Math.max(0, dockHeight - 118);
+        const cur = document.getElementById('map-split-layout')?.dataset.sheet || 'peek';
+        startOffset = cur === 'full' ? 0 : cur === 'half' ? Math.round(dockHeight * 0.48) : maxOffset;
+        lastOffset = startOffset;
+      },
+      { passive: true }
+    );
+
+    dockEl.addEventListener(
+      'touchmove',
+      (ev) => {
+        if (touchLockedOut || window.innerWidth >= 1024 || ev.touches.length !== 1) return;
+        const t = ev.touches[0];
+        const dx = t.clientX - startX;
+        const dy = t.clientY - startY;
+        if (!isDragging) {
+          if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+            touchLockedOut = true;
+            return;
+          }
+          if (Math.abs(dy) < 6) return;
+          const activePaneScroll = ev.target?.closest?.('.dock-scroll');
+          const cur = document.getElementById('map-split-layout')?.dataset.sheet || 'peek';
+          if (activePaneScroll && cur !== 'peek') {
+            const atTop = activePaneScroll.scrollTop <= 1;
+            if (!atTop || dy < 0) {
+              touchLockedOut = true;
+              return;
+            }
+          }
+          isDragging = true;
+          dockEl.classList.add('is-dragging');
+        }
+        if (ev.cancelable) ev.preventDefault();
+        lastDy = dy;
+        lastOffset = Math.max(0, Math.min(maxOffset, startOffset + dy));
+        if (!dragRafId) {
+          dragRafId = requestAnimationFrame(() => {
+            dragRafId = 0;
+            dockEl.style.transform = `translate3d(0, ${Math.round(lastOffset)}px, 0)`;
+          });
+        }
+      },
+      { passive: false }
+    );
+
+    const finishSheetDrag = () => {
+      if (dragRafId) {
+        cancelAnimationFrame(dragRafId);
+        dragRafId = 0;
       }
-    },
-    { passive: true }
-  );
+      if (!isDragging) return;
+      isDragging = false;
+      sheetDragSuppressClickUntil = performance.now() + 140;
+      const dt = Math.max(16, performance.now() - startTime);
+      const vy = lastDy / dt;
+      const halfOffset = Math.round(dockHeight * 0.48);
+      const cur = document.getElementById('map-split-layout')?.dataset.sheet || 'peek';
+      let next = cur;
+      if (vy < -0.42) {
+        next = vy < -0.95 || lastOffset < halfOffset * 0.6 ? 'full' : cur === 'peek' ? 'half' : 'full';
+      } else if (vy > 0.42) {
+        next = vy > 0.95 || lastOffset > (halfOffset + maxOffset) * 0.55 ? 'peek' : cur === 'full' ? 'half' : 'peek';
+      } else {
+        const dFull = Math.abs(lastOffset);
+        const dHalf = Math.abs(lastOffset - halfOffset);
+        const dPeek = Math.abs(lastOffset - maxOffset);
+        next = dFull <= dHalf && dFull <= dPeek ? 'full' : dHalf <= dPeek ? 'half' : 'peek';
+      }
+      setMobileSheetState(next);
+    };
+
+    dockEl.addEventListener('touchend', finishSheetDrag, { passive: true });
+    dockEl.addEventListener('touchcancel', finishSheetDrag, { passive: true });
+  }
 
   // Nút nổi "Tìm tại vùng bản đồ này" (kiểu Google Maps / Felt khi kéo bản đồ)
   document.getElementById('btn-search-this-area')?.addEventListener('click', () => {
