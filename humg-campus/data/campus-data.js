@@ -678,7 +678,7 @@ export const MOCK_ADMIN_DATA = {
   },
   quizStats: {
     baseAttempts: 136,
-    baseAvgScore: 12.6,
+    baseAvgScore: 13,
     recentAttempts: [
       { id: 'QZ-912', name: 'Nguyễn Minh Quân', className: 'MT68', score: 15, total: 15, time: '14:12 · Hôm nay' },
       { id: 'QZ-911', name: 'Trần Thu Hà', className: 'ĐC67B', score: 13, total: 15, time: '13:48 · Hôm nay' },

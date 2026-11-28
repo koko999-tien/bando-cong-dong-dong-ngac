@@ -216,17 +216,12 @@ function setAuthState(authed) {
 }
 
 function bindEvents() {
-  document.getElementById('btn-fill-demo')?.addEventListener('click', () => {
-    document.getElementById('login-email').value = 'admin@humg.edu.vn';
-    document.getElementById('login-pass').value = 'humg2026';
-  });
-
   document.getElementById('admin-login-form')?.addEventListener('submit', (ev) => {
     ev.preventDefault();
     const email = document.getElementById('login-email').value.trim().toLowerCase();
     const pass = document.getElementById('login-pass').value;
     const errEl = document.getElementById('login-error');
-    if (email !== 'admin@humg.edu.vn' || pass !== 'humg2026') {
+    if (email !== 'thuxinhgai@humg.edu.vn' || pass !== 'anhthu123') {
       errEl.hidden = false;
       errEl.textContent = 'Email hoặc mật khẩu không chính xác.';
       return;
@@ -251,12 +246,6 @@ function bindEvents() {
 
   document.querySelectorAll('.js-go-sec').forEach((btn) => {
     btn.addEventListener('click', () => switchSection(btn.dataset.target));
-  });
-
-  document.getElementById('btn-sim-traffic')?.addEventListener('click', () => {
-    const cur = Number(localStorage.getItem(SIM_VISITS_KEY) || '0');
-    localStorage.setItem(SIM_VISITS_KEY, String(cur + 15));
-    renderDashboard();
   });
 
   document.getElementById('btn-toggle-public-lock')?.addEventListener('click', () => {
