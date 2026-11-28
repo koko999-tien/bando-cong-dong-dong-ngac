@@ -72,17 +72,20 @@
           <div class="zone-grid" role="group" aria-label="Chọn khu vực trường Mỏ">
             <button type="button" class="zone-btn is-active" data-zone="A">
               <strong>Khu A</strong>
-              <span>18 Phố Viên · Nền 17m</span>
+              <span>18 Phố Viên · ~2,3 ha</span>
             </button>
             <button type="button" class="zone-btn" data-zone="A1">
               <strong>Khu A1</strong>
-              <span>Cao tầng · Sảnh tầng 1</span>
+              <span>KĐT Đại học · ~5,0 ha</span>
             </button>
             <button type="button" class="zone-btn" data-zone="B">
               <strong>Khu B</strong>
-              <span>Phạm Văn Nghị · Nền 8.5m</span>
+              <span>Phạm Văn Nghị · ~1,5 ha</span>
             </button>
           </div>
+          <button type="button" id="btn-fit-all-zones" class="chip-btn" style="margin-top:8px;width:100%;">
+            Xem trọn ranh giới cả 3 khu (A · A1 · B)
+          </button>
           <p id="active-zone-note" class="zone-note"></p>
         </section>
 
@@ -103,10 +106,10 @@
         <!-- 3. 2 TUYẾN ĐƯỜNG CỐT LÕI QUANH MỎ -->
         <section class="card card-emerald">
           <div class="card-head">
-            <strong>① Tuyến đi bộ mát nhất (Khu A → A1)</strong>
+            <strong>① Tuyến đi bộ mát nhất (Khu A → Khu A1)</strong>
             <label class="chk-inline"><input type="checkbox" id="toggle-cool" checked> Hiện</label>
           </div>
-          <p class="muted-small">~460 m · ~6 phút đi bộ · 85% bóng cây &amp; mái che liên thông.</p>
+          <p class="muted-small">~520 m · ~7 phút đi bộ (Khu A → Phố Viên → Khu A1) · 82% bóng râm &amp; mái che.</p>
           <button type="button" id="btn-focus-cool" class="btn btn-emerald btn-sm btn-full">Xem trọn tuyến đi mát nhất</button>
         </section>
 
@@ -156,7 +159,9 @@
           <button type="button" class="bm-btn" data-bm="topo">Địa hình</button>
         </div>
         <div class="map-legend">
-          <span><i class="lg-dot lg-zone">A</i> Khu A / A1 / B</span>
+          <span><i class="lg-zone-a"></i> Khu A (18 Phố Viên)</span>
+          <span><i class="lg-zone-a1"></i> Khu A1 (KĐT Đại học)</span>
+          <span><i class="lg-zone-b"></i> Khu B (Phạm Văn Nghị)</span>
           <span><i class="lg-dot lg-med">+</i> Y tế</span>
           <span><i class="lg-dot lg-flood">!</i> Ngập / Nguy hiểm</span>
           <span><i class="lg-dot lg-heat">☀</i> Nắng gắt</span>

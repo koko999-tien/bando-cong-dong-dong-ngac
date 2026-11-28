@@ -22,8 +22,19 @@ assert.deepEqual(
   'Phải có đủ 3 khu chính quanh Mỏ: Khu A, Khu A1, Khu B'
 );
 for (const z of CAMPUS_ZONES) {
-  assert.ok(z.lat > 21.05 && z.lat < 21.09 && z.lng > 105.74 && z.lng < 105.79, `Tọa độ ${z.code} phải nằm đúng quanh ĐH Mỏ`);
+  assert.ok(z.lat > 21.06 && z.lat < 21.08 && z.lng > 105.755 && z.lng < 105.785, `Tọa độ ${z.code} phải nằm đúng quanh ĐH Mỏ`);
+  assert.ok(Array.isArray(z.polygon) && z.polygon.length >= 5, `${z.code} phải có đa giác khoanh vùng tối thiểu 5 đỉnh`);
+  const firstPt = z.polygon[0];
+  const lastPt = z.polygon[z.polygon.length - 1];
+  assert.deepEqual(firstPt, lastPt, `${z.code} đa giác khoanh vùng phải khép kín`);
+  for (const [pLat, pLng] of z.polygon) {
+    assert.ok(pLat > 21.06 && pLat < 21.08 && pLng > 105.755 && pLng < 105.785, `Đỉnh đa giác ${z.code} phải thuộc Bắc Từ Liêm / HUMG`);
+  }
+  assert.ok(z.osmWayId && z.osmWayId.startsWith('way/'), `${z.code} phải có osmWayId đối chiếu chuẩn`);
+  assert.ok(z.googleMapsUrl && z.googleMapsUrl.startsWith('https://www.google.com/maps/'), `${z.code} phải có link đối chiếu Google Maps`);
 }
+const zoneMap = Object.fromEntries(CAMPUS_ZONES.map((z) => [z.id, z]));
+assert.ok(zoneMap.B.lng < zoneMap.A.lng && zoneMap.A.lng < zoneMap.A1.lng, 'Thứ tự Đông–Tây phải chuẩn: Khu B < Khu A < Khu A1');
 assert.ok(FLOOD_ZONES.length >= 3, 'Phải có ít nhất 3 vùng ngập đa giác quanh trường Mỏ');
 assert.ok(CAMPUS_POINTS.filter((p) => p.group === 'flood').length >= 8, 'Phải có >= 8 điểm ngập/nguy hiểm quanh Mỏ');
 assert.ok(CAMPUS_ROUTES.medicalRoutes.A && CAMPUS_ROUTES.medicalRoutes.A1 && CAMPUS_ROUTES.medicalRoutes.B, 'Phải có tuyến đường y tế từ cả 3 khu A, A1, B');

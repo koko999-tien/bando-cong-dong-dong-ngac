@@ -6,8 +6,8 @@
  */
 
 export const CAMPUS_CENTER = {
-  lat: 21.07255,
-  lng: 105.7736,
+  lat: 21.0722,
+  lng: 105.7764,
   zoom: 16
 };
 
@@ -15,105 +15,213 @@ export const CAMPUS_ZONES = [
   {
     id: 'A',
     code: 'Khu A',
-    title: 'Khu A — Trụ sở Chính (18 Phố Viên)',
-    shortDesc: 'Cốt nền cao ráo (~17 m), tập trung giảng đường chính, Thư viện và hành lang mái che liên thông.',
-    lat: 21.07255,
-    lng: 105.7736,
+    title: 'Trường Đại học Mỏ - Địa chất (Khu A — 18 Phố Viên)',
+    address: 'Số 18 Phố Viên, P. Đức Thắng, Q. Bắc Từ Liêm, Hà Nội',
+    areaLabel: '~2,3 ha',
+    osmWayId: 'way/699218352',
+    buildings: 'Nhà A, B, C12 (12 tầng), D, E, F, Thư viện, Hội trường 300, KTX D1–D2, Trạm Y tế HUMG',
+    color: '#1e5fc4',
+    fillColor: '#3b82f6',
+    googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=21.07235,105.77386',
+    shortDesc: 'Trụ sở chính 18 Phố Viên (~2,3 ha, nền cao ~17 m), tập trung giảng đường chính, Thư viện, Nhà C12 và hành lang mái che liên thông.',
+    lat: 21.07235,
+    lng: 105.77386,
     elevationM: 17,
     riskLevel: 'an-toan',
-    advice: 'Điểm xuất phát & tránh trú an toàn khi mưa lớn hoặc nắng gắt khung 11h00–14h30.'
+    advice: 'Điểm xuất phát & tránh trú an toàn khi mưa lớn hoặc nắng gắt khung 11h00–14h30.',
+    polygon: [
+      [21.073252, 105.77321],
+      [21.072605, 105.773245],
+      [21.072606, 105.77327],
+      [21.071623, 105.773298],
+      [21.071613, 105.773426],
+      [21.071616, 105.773527],
+      [21.071621, 105.773602],
+      [21.071653, 105.773628],
+      [21.071655, 105.773872],
+      [21.071664, 105.774195],
+      [21.071638, 105.774196],
+      [21.071643, 105.774434],
+      [21.07165, 105.774468],
+      [21.071675, 105.774494],
+      [21.071693, 105.774498],
+      [21.072423, 105.774474],
+      [21.072675, 105.774456],
+      [21.07272, 105.774428],
+      [21.072768, 105.774394],
+      [21.072827, 105.774385],
+      [21.072823, 105.773995],
+      [21.073287, 105.773975],
+      [21.073252, 105.77321]
+    ]
   },
   {
     id: 'A1',
     code: 'Khu A1',
-    title: 'Khu A1 — Cụm Giảng đường Cao tầng A1',
-    shortDesc: 'Tập trung nhiều lớp học chuyển tiết, sảnh tầng 1 thoáng mát; chú ý đoạn yên ngựa trũng Lê Văn Hiến phía ngoài.',
-    lat: 21.0738,
-    lng: 105.7742,
-    elevationM: 15,
+    title: 'Khu Giảng đường A1 (Khu Đô thị Đại học — Phía Đông Phố Viên)',
+    address: 'Khu Đô thị Đại học (Phía Đông Phố Viên / Đức Thắng), Q. Bắc Từ Liêm, Hà Nội',
+    areaLabel: '~5,0 ha',
+    osmWayId: 'way/895234877',
+    buildings: 'Khối Giảng đường A1 mới (khánh thành 2025) & khuôn viên mở rộng Khu Đô thị Đại học',
+    color: '#0f766e',
+    fillColor: '#14b8a6',
+    googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=21.072201,105.77908',
+    shortDesc: 'Khu mở rộng Khu Đô thị Đại học (~5,0 ha, nền ~14,5 m) phía Đông Phố Viên; chú ý trục Phố Viên – Đức Thắng giờ chuyển tiết.',
+    lat: 21.072201,
+    lng: 105.77908,
+    elevationM: 14.5,
     riskLevel: 'an-toan',
-    advice: 'Trú tại sảnh tầng 1 khi mưa dông bất chợt; tránh đi qua khoảng sân bê tông mở lúc 12h–14h.'
+    advice: 'Trú tại sảnh tầng 1 tòa Giảng đường A1 khi mưa dông bất chợt; chọn trục bóng cây khi đi bộ từ Khu A sang.',
+    polygon: [
+      [21.071644, 105.777362],
+      [21.071658, 105.780575],
+      [21.071806, 105.780739],
+      [21.072938, 105.780822],
+      [21.072958, 105.777384],
+      [21.071644, 105.777362]
+    ],
+    subBuildings: [
+      {
+        name: 'Tòa Giảng đường A1 mới',
+        polygon: [
+          [21.072018, 105.777747],
+          [21.072163, 105.777746],
+          [21.072169, 105.778518],
+          [21.072024, 105.77852],
+          [21.072018, 105.777747]
+        ]
+      }
+    ]
   },
   {
     id: 'B',
     code: 'Khu B',
-    title: 'Khu B — Cơ sở Thực hành (Đường Phạm Văn Nghị)',
-    shortDesc: 'Nằm ở bờ Tây sông Nhuệ (cốt nền thấp 8–10 m). Tuyến nối sang Khu A qua cuối Phố Viên dễ ngập sâu khi mưa > 45 mm.',
-    lat: 21.067813,
-    lng: 105.757184,
+    title: 'Khu B — Cơ sở Cổ Nhuế 2 (Đường Phạm Văn Nghị)',
+    address: 'Khu B ĐH Mỏ, Đường Phạm Văn Nghị, P. Cổ Nhuế 2 / Đông Ngạc, Q. Bắc Từ Liêm, Hà Nội',
+    areaLabel: '~1,5 ha',
+    osmWayId: 'way/1294976834',
+    buildings: 'Giảng đường Nhà G, Khu GDTC/QP, KTX 9 tầng (D3), KTX Quân sự (D4), sát Khu thực hành cơ khí HUMG',
+    color: '#b45309',
+    fillColor: '#f59e0b',
+    googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=21.06905,105.761224',
+    shortDesc: 'Khuôn viên Cổ Nhuế 2 (~1,5 ha) ở bờ Tây sông Nhuệ (nền thấp ~8,5 m). Tuyến nối sang Khu A qua cuối Phố Viên dễ ngập sâu khi mưa > 45 mm.',
+    lat: 21.06905,
+    lng: 105.761224,
     elevationM: 8.5,
     riskLevel: 'chu-y',
-    advice: 'Khi mưa lớn, KHÔNG đi xe máy qua đoạn cuối Phố Viên có xoáy cống; giữ lộ trình vòng qua trục nền cao.'
+    advice: 'Khi mưa lớn, KHÔNG đi xe máy qua đoạn cuối Phố Viên có xoáy cống; giữ lộ trình vòng qua trục Cầu Phố Viên.',
+    polygon: [
+      [21.070381, 105.761227],
+      [21.070381, 105.761503],
+      [21.070259, 105.761507],
+      [21.070179, 105.761509],
+      [21.070095, 105.761512],
+      [21.070017, 105.761514],
+      [21.06821, 105.761535],
+      [21.06797, 105.761551],
+      [21.067908, 105.761552],
+      [21.067764, 105.761549],
+      [21.067736, 105.761239],
+      [21.067685, 105.761237],
+      [21.067668, 105.761103],
+      [21.067647, 105.761103],
+      [21.067648, 105.761039],
+      [21.067898, 105.761041],
+      [21.068174, 105.760993],
+      [21.068368, 105.760935],
+      [21.068336, 105.760761],
+      [21.068502, 105.760742],
+      [21.068532, 105.760801],
+      [21.068718, 105.760823],
+      [21.068852, 105.760915],
+      [21.069249, 105.76093],
+      [21.069248, 105.760969],
+      [21.069914, 105.760963],
+      [21.069957, 105.761234],
+      [21.070381, 105.761227]
+    ],
+    subBuildings: [
+      {
+        name: 'Khu thực hành cơ khí HUMG',
+        polygon: [
+          [21.070623, 105.761549],
+          [21.070626, 105.762019],
+          [21.070491, 105.76202],
+          [21.070489, 105.76155],
+          [21.070623, 105.761549]
+        ]
+      }
+    ]
   }
 ];
 
 export const CAMPUS_ROUTES = {
   coolRoute: {
-    name: 'Tuyến đi bộ mát nhất Khu A → A1 → Trục nội bộ',
-    summary: 'Ưu tiên hành lang nối nhà, tán cây lớn và mái che để giảm nắng bức xạ trực tiếp khung 11h00–14h30.',
-    distanceM: 460,
-    walkMin: 6,
-    shadePct: 85,
+    name: 'Tuyến đi bộ mát nhất Khu A → Trục Phố Viên → Khu A1',
+    summary: 'Ưu tiên hành lang mái che Khu A và dải bóng cây dọc trục Phố Viên sang Giảng đường A1 giảm bức xạ nắng 11h00–14h30.',
+    distanceM: 520,
+    walkMin: 7,
+    shadePct: 82,
     coordinates: [
-      [21.07255, 105.7736],
-      [21.07285, 105.77385],
-      [21.07335, 105.77405],
-      [21.0738, 105.7742],
-      [21.07395, 105.7747],
-      [21.07365, 105.775]
+      [21.07235, 105.77386],
+      [21.071655, 105.773872],
+      [21.07166, 105.7752],
+      [21.07165, 105.7765],
+      [21.071644, 105.777362],
+      [21.072093, 105.778133]
     ]
   },
   safeAtoBRoute: {
     name: 'Tuyến tránh xoáy cống khi đi giữa Khu A ↔ Khu B',
-    summary: 'Tránh đoạn cuối Phố Viên – bờ sông Nhuệ ngập sâu kèm xoáy cống; di chuyển qua trục Cầu Phố Viên nền ổn định hơn hoặc chờ nước rút.',
-    distanceM: 2150,
-    walkMin: 9,
+    summary: 'Tránh đoạn cuối Phố Viên – bờ sông Nhuệ ngập sâu kèm xoáy cống; di chuyển qua trục Cầu Phố Viên – Phạm Văn Nghị nền ổn định hơn.',
+    distanceM: 1750,
+    walkMin: 7,
     coordinates: [
-      [21.07255, 105.7736],
-      [21.0721, 105.7722],
+      [21.07235, 105.77386],
+      [21.071655, 105.773872],
       [21.07168, 105.77125],
-      [21.0706, 105.7685],
-      [21.0686, 105.7634],
-      [21.067813, 105.757184]
+      [21.0709, 105.7678],
+      [21.0698, 105.7642],
+      [21.06905, 105.761224]
     ]
   },
   medicalRoutes: {
     A: {
       fromLabel: 'Khu A (18 Phố Viên)',
-      targetLabel: 'Trạm Y tế HUMG / BV Phương Đông',
-      distanceM: 210,
-      walkMin: 3,
-      note: 'Đi theo hành lang nội bộ nền cao ~15–17 m, không đọng nước.',
+      targetLabel: 'Trạm Y tế HUMG (Nội khu A)',
+      distanceM: 115,
+      walkMin: 2,
+      note: 'Đi theo hành lang nội bộ nền cao ~15–17 m phía sau Nhà C12 tới Trạm Y tế HUMG, không đọng nước.',
       coordinates: [
-        [21.07255, 105.7736],
-        [21.07295, 105.7741],
-        [21.07335, 105.77465],
-        [21.07365, 105.775]
+        [21.07235, 105.77386],
+        [21.0728, 105.77391],
+        [21.0732, 105.77393]
       ]
     },
     A1: {
-      fromLabel: 'Khu A1 (Giảng đường cao tầng)',
-      targetLabel: 'Trạm Y tế HUMG',
-      distanceM: 145,
-      walkMin: 2,
-      note: 'Từ sảnh tầng 1 Khu A1 rẽ theo lối đi bộ có mái che sang Trạm Y tế.',
+      fromLabel: 'Khu A1 (Khu Đô thị Đại học)',
+      targetLabel: 'BV Đa khoa Phương Đông (Số 9 Phố Viên)',
+      distanceM: 520,
+      walkMin: 6,
+      note: 'Từ Giảng đường A1 đi thẳng trục Phố Viên về phía Tây tới cổng BV Đa khoa Phương Đông (trực cấp cứu 24/7).',
       coordinates: [
-        [21.0738, 105.7742],
-        [21.07372, 105.77465],
-        [21.07365, 105.775]
+        [21.072093, 105.778133],
+        [21.071644, 105.777362],
+        [21.07165, 105.7754],
+        [21.069922, 105.774942]
       ]
     },
     B: {
       fromLabel: 'Khu B (Đường Phạm Văn Nghị)',
       targetLabel: 'BV Đa khoa Phương Đông & Trạm Y tế HUMG',
-      distanceM: 1950,
-      walkMin: 7,
-      note: 'Khi trời mưa ngập, KHÔNG đi cắt qua ngõ cuối Phố Viên ngập sâu; đi theo trục Cầu Phố Viên để tới BV Phương Đông (310 m cách Khu A).',
+      distanceM: 1650,
+      walkMin: 6,
+      note: 'Khi trời mưa ngập, KHÔNG đi cắt qua ngõ cuối Phố Viên ngập sâu; đi theo trục Phạm Văn Nghị – Cầu Phố Viên để tới BV Phương Đông.',
       coordinates: [
-        [21.067813, 105.757184],
-        [21.0685, 105.7632],
+        [21.06905, 105.761224],
+        [21.0698, 105.7642],
         [21.07168, 105.77125],
-        [21.0715, 105.7742],
+        [21.07165, 105.7743],
         [21.069922, 105.774942]
       ]
     }
@@ -152,16 +260,16 @@ export const FLOOD_ZONES = [
   },
   {
     id: 'FZ-KHUB-NHUE',
-    name: 'Vùng trũng Nền thấp Khu B – Đường Phạm Văn Nghị (8 m)',
+    name: 'Vùng trũng Nền thấp Khu B – Đường Phạm Văn Nghị (8,5 m)',
     severity: 'moderate',
     rainThresholdMm: 45,
     depthRangeCm: '15 – 35 cm',
-    description: 'Dải địa hình thấp bờ Tây sông Nhuệ quanh Khu B HUMG & lối nối ra Học viện Cảnh sát.',
+    description: 'Dải địa hình thấp bờ Tây sông Nhuệ bao quanh Khu B HUMG (Nhà G, KTX D3/D4) & lối nối ra Học viện Cảnh sát.',
     polygon: [
-      [21.0691, 105.7562],
-      [21.0692, 105.7604],
-      [21.0666, 105.7603],
-      [21.0665, 105.7561]
+      [21.0708, 105.7602],
+      [21.0709, 105.7634],
+      [21.0672, 105.7632],
+      [21.0671, 105.7601]
     ]
   }
 ];
@@ -174,11 +282,11 @@ export const CAMPUS_POINTS = [
     badge: 'A',
     zoneCode: 'A',
     title: 'Khu A — ĐH Mỏ - Địa chất (18 Phố Viên)',
-    lat: 21.07255,
-    lng: 105.7736,
+    lat: 21.07235,
+    lng: 105.77386,
     elevationM: 17,
     severity: 'safe',
-    desc: 'Gò nền cao ráo (~17 m), hành lang râm mát, Thư viện và khu giảng đường trung tâm không ngập.',
+    desc: 'Khuôn viên trụ sở chính (~2,3 ha, nền cao ~17 m), gồm Nhà A, B, C12, D, Thư viện và KTX D1–D2 không ngập.',
     action: 'Dùng làm điểm tập kết an toàn khi trời nắng gắt hoặc mưa ngập vùng trũng xung quanh.'
   },
   {
@@ -186,26 +294,26 @@ export const CAMPUS_POINTS = [
     group: 'zone',
     badge: 'A1',
     zoneCode: 'A1',
-    title: 'Khu A1 — Giảng đường Cao tầng A1',
-    lat: 21.0738,
-    lng: 105.7742,
-    elevationM: 15,
+    title: 'Khu A1 — Giảng đường A1 (Khu Đô thị Đại học)',
+    lat: 21.072093,
+    lng: 105.778133,
+    elevationM: 14.5,
     severity: 'safe',
-    desc: 'Khu nhà giảng đường cao tầng đông sinh viên chuyển tiết; sảnh tầng 1 có mái che thoáng gió.',
-    action: 'Trú mưa dông ngay tại sảnh tầng 1; chọn tuyến xanh lá để tránh sân bê tông nắng gắt.'
+    desc: 'Cụm giảng đường mới phía Đông Phố Viên (~5,0 ha), sảnh tầng 1 thoáng mát, kết nối thẳng trục Phố Viên.',
+    action: 'Trú mưa dông ngay tại sảnh tầng 1 Giảng đường A1; chọn tuyến xanh lá có bóng râm khi đi từ Khu A.'
   },
   {
     id: 'Z-B',
     group: 'zone',
     badge: 'B',
     zoneCode: 'B',
-    title: 'Khu B — Cơ sở Thực hành Phạm Văn Nghị',
-    lat: 21.067813,
-    lng: 105.757184,
+    title: 'Khu B — Cơ sở Cổ Nhuế 2 (Đường Phạm Văn Nghị)',
+    lat: 21.06905,
+    lng: 105.761224,
     elevationM: 8.5,
     severity: 'warn',
-    desc: 'Nằm ở bờ Tây sông Nhuệ nền thấp 8–10 m; cần lưu ý ngập đoạn Phố Viên – sông Nhuệ khi di chuyển giữa Khu A và Khu B.',
-    action: 'Theo dõi mực nước trước giờ về; tránh tuyệt đối lối cuối Phố Viên ngập xoáy cống.'
+    desc: 'Khuôn viên Nhà G, KTX 9 tầng D3, KTX Quân sự & Xưởng cơ khí ở bờ Tây sông Nhuệ nền thấp ~8,5 m.',
+    action: 'Theo dõi mực nước trước giờ về; tránh tuyệt đối lối cuối Phố Viên ngập xoáy cống khi đi về Khu A.'
   },
 
   // Y TẾ & CỨU HỘ QUANH MỎ
@@ -213,13 +321,13 @@ export const CAMPUS_POINTS = [
     id: 'MED-01',
     group: 'medical',
     badge: '+',
-    title: 'Trạm Y tế Trường ĐH Mỏ - Địa chất',
-    lat: 21.07365,
-    lng: 105.775,
-    elevationM: 15,
+    title: 'Trạm Y tế Trường ĐH Mỏ - Địa chất (Nội khu A)',
+    lat: 21.0732,
+    lng: 105.77393,
+    elevationM: 16,
     severity: 'safe',
-    desc: 'Điểm sơ cứu say nắng, choáng váng, hạ nhiệt và hỗ trợ y tế ban đầu ngay trong khuôn viên trường.',
-    action: 'Đưa người mệt lả/say nắng tới đây theo tuyến xanh dương đứt nét từ Khu A, A1 hoặc B.'
+    desc: 'Điểm sơ cứu say nắng, choáng váng, hạ nhiệt và hỗ trợ y tế ban đầu ngay phía Bắc khuôn viên Khu A.',
+    action: 'Đưa người mệt lả/say nắng tới đây theo tuyến xanh dương đứt nét từ Khu A hoặc Khu A1.'
   },
   {
     id: 'MED-02',
@@ -323,13 +431,13 @@ export const CAMPUS_POINTS = [
     id: 'D-07',
     group: 'flood',
     badge: '!',
-    title: 'Điểm trũng đọng nước & trơn trượt nội khu A1 – trục giữa',
-    lat: 21.07395,
-    lng: 105.7751,
+    title: 'Điểm trũng đọng nước nút Phố Viên – Đức Thắng (lối sang Khu A1)',
+    lat: 21.07166,
+    lng: 105.7769,
     elevationM: 12.5,
     severity: 'moderate',
-    desc: 'Mặt sân gạch trơn khi mưa rào bất chợt, dễ trượt ngã khi chạy vội tới Trạm Y tế.',
-    action: 'Bước chậm, bám theo hành lang có mái che thay vì chạy băng qua mặt sân ướt.'
+    desc: 'Mặt đường nối từ cổng Phố Viên sang Khu Đô thị Đại học (Khu A1) dễ đọng vũng và trơn trượt khi mưa rào bất chợt.',
+    action: 'Đi chậm qua vũng đọng sát mép đường, tránh phanh gấp xe máy giờ tan học.'
   },
   {
     id: 'D-08',
@@ -349,13 +457,13 @@ export const CAMPUS_POINTS = [
     id: 'H-01',
     group: 'heat',
     badge: '☀',
-    title: 'Khoảng sân mở hấp nhiệt Khu A – A1 (11h00–14h30)',
-    lat: 21.07315,
-    lng: 105.77415,
-    elevationM: 16,
+    title: 'Đoạn sân mở & trục Phố Viên nối Khu A → Khu A1 (11h00–14h30)',
+    lat: 21.07185,
+    lng: 105.7761,
+    elevationM: 14.5,
     severity: 'moderate',
-    desc: 'Bề mặt bê tông rộng, ít tán cây che liên tục; nhiệt cảm nhận giữa trưa tăng thêm 3–5°C.',
-    action: 'Ưu tiên đi theo Tuyến đường đi mát nhất (xanh lá) dọc hành lang nhà.'
+    desc: 'Khoảng mở giữa cổng Phố Viên và Khu Đô thị Đại học A1 có đoạn ít mái che liên tục; nhiệt cảm nhận giữa trưa tăng 3–5°C.',
+    action: 'Ưu tiên đi theo Tuyến đường đi mát nhất (xanh lá) men sát hàng cây.'
   },
   {
     id: 'H-02',

@@ -26,9 +26,11 @@ let map = null;
 let streetTile = null;
 let satTile = null;
 let topoTile = null;
+let campusZoneLayer = null;
 let floodPolyLayer = null;
 let routeLayer = null;
 let markerLayer = null;
+let zonePolygons = {};
 
 function esc(s) {
   return String(s ?? '')
@@ -112,12 +114,20 @@ function initCampusMap() {
     { maxZoom: 19, attribution: '&copy; Esri World Topo' }
   );
 
+  campusZoneLayer = window.L.layerGroup().addTo(map);
   floodPolyLayer = window.L.layerGroup().addTo(map);
   routeLayer = window.L.layerGroup().addTo(map);
   markerLayer = window.L.layerGroup().addTo(map);
 
   renderMapLayers();
   selectZone('A', false);
+  fitAllZones();
+}
+
+function fitAllZones() {
+  if (!map) return;
+  const allPts = CAMPUS_ZONES.flatMap((z) => z.polygon || [[z.lat, z.lng]]);
+  map.fitBounds(window.L.latLngBounds(allPts), { padding: [36, 36] });
 }
 
 function setBasemap(mode) {
@@ -133,9 +143,11 @@ function setBasemap(mode) {
 
 function renderMapLayers() {
   if (!map) return;
+  campusZoneLayer.clearLayers();
   floodPolyLayer.clearLayers();
   routeLayer.clearLayers();
   markerLayer.clearLayers();
+  zonePolygons = {};
 
   const showZones = document.getElementById('layer-zones').checked;
   const showFlood = document.getElementById('layer-flood').checked;
@@ -144,6 +156,55 @@ function renderMapLayers() {
   const showCoolRoute = document.getElementById('toggle-cool').checked;
   const showMedRoute = document.getElementById('toggle-med').checked;
   const showSafeAB = document.getElementById('toggle-safe-ab').checked;
+
+  // Vẽ đa giác khoanh vùng chuẩn 3 khu Khu A, Khu A1, Khu B (đối chiếu OSM & Google Maps)
+  if (showZones) {
+    CAMPUS_ZONES.forEach((z) => {
+      const isAct = state.activeZone === z.id;
+      const poly = window.L.polygon(z.polygon, {
+        color: z.color,
+        weight: isAct ? 3.5 : 2.5,
+        opacity: 0.95,
+        fillColor: z.fillColor,
+        fillOpacity: isAct ? 0.28 : 0.16
+      });
+      const tipText =
+        z.id === 'A'
+          ? 'Khu A · 18 Phố Viên'
+          : z.id === 'A1'
+            ? 'Khu A1 · KĐT Đại học'
+            : 'Khu B · Phạm Văn Nghị';
+      poly.bindTooltip(tipText, {
+        permanent: true,
+        direction: 'top',
+        offset: [0, -4],
+        className: `zone-label-tip zone-tip-${z.id.toLowerCase()}`
+      });
+      poly.bindPopup(
+        `<strong>${esc(z.title)}</strong><br>` +
+          `<small>${esc(z.address)} · Diện tích: <strong>${esc(z.areaLabel)}</strong> · Cốt nền: ~${z.elevationM} m</small><br>` +
+          `<span>${esc(z.buildings)}</span><br>` +
+          `<small style="color:#475569">Nguồn ranh giới: OSM (${esc(z.osmWayId)}) &amp; Google Maps</small><br>` +
+          `<a href="${esc(z.googleMapsUrl)}" target="_blank" rel="noopener" class="popup-gmaps-link">Mở vị trí trên Google Maps ↗</a>`
+      );
+      poly.on('click', () => selectZone(z.id, false));
+      poly.addTo(campusZoneLayer);
+      zonePolygons[z.id] = poly;
+
+      if (Array.isArray(z.subBuildings)) {
+        z.subBuildings.forEach((sb) => {
+          window.L.polygon(sb.polygon, {
+            color: z.color,
+            weight: 1.5,
+            fillColor: z.fillColor,
+            fillOpacity: 0.35
+          })
+            .bindPopup(`<strong>${esc(sb.name)}</strong><br><small>Thuộc ${esc(z.code)} — ĐH Mỏ - Địa chất</small>`)
+            .addTo(campusZoneLayer);
+        });
+      }
+    });
+  }
 
   // Vẽ 3 vùng ngập đa giác cảnh báo quanh trường
   if (showFlood) {
@@ -247,11 +308,17 @@ function selectZone(zoneCode, fly = true) {
   const z = CAMPUS_ZONES.find((x) => x.id === zoneCode) || CAMPUS_ZONES[0];
   state.activeZone = z.id;
   document.querySelectorAll('.zone-btn').forEach((b) => b.classList.toggle('is-active', b.dataset.zone === z.id));
-  document.getElementById('active-zone-note').textContent = `${z.shortDesc} ${z.advice}`;
+  document.getElementById('active-zone-note').innerHTML =
+    `<strong>${esc(z.address)}</strong> (${esc(z.areaLabel)}). ${esc(z.shortDesc)} ${esc(z.advice)} ` +
+    `<a href="${esc(z.googleMapsUrl)}" target="_blank" rel="noopener" style="color:#1e5fc4;font-weight:700;">Google Maps ↗</a>`;
 
   selectMedicalOrigin(z.id, false);
   if (fly && map) {
-    map.flyTo([z.lat, z.lng], z.id === 'B' ? 16 : 17, { duration: 0.45 });
+    if (Array.isArray(z.polygon) && z.polygon.length >= 3) {
+      map.fitBounds(window.L.latLngBounds(z.polygon), { padding: [55, 55], maxZoom: 17 });
+    } else {
+      map.flyTo([z.lat, z.lng], z.id === 'B' ? 16 : 17, { duration: 0.45 });
+    }
   }
 }
 
@@ -412,6 +479,11 @@ function bindEvents() {
   });
 
   document.querySelectorAll('.zone-btn').forEach((b) => b.addEventListener('click', () => selectZone(b.dataset.zone, true)));
+  document.getElementById('btn-fit-all-zones')?.addEventListener('click', () => {
+    document.getElementById('layer-zones').checked = true;
+    renderMapLayers();
+    fitAllZones();
+  });
   document.querySelectorAll('.origin-btn').forEach((b) => b.addEventListener('click', () => selectMedicalOrigin(b.dataset.origin, true)));
   document.querySelectorAll('.bm-btn').forEach((b) => b.addEventListener('click', () => setBasemap(b.dataset.bm)));
 
@@ -425,8 +497,8 @@ function bindEvents() {
     updateTimeContext(17, true);
     map?.fitBounds(
       window.L.latLngBounds([
-        [21.066, 105.756],
-        [21.075, 105.778]
+        [21.0665, 105.7595],
+        [21.0745, 105.7812]
       ]),
       { padding: [32, 32] }
     );

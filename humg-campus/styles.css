@@ -373,7 +373,38 @@ html, body {
 .lg-med { background: #2563eb; }
 .lg-flood { background: #dc2626; }
 .lg-heat { background: #d97706; }
+.lg-zone-a { width: 14px; height: 10px; border-radius: 3px; background: rgba(59, 130, 246, 0.25); border: 2px solid #1e5fc4; display: inline-block; }
+.lg-zone-a1 { width: 14px; height: 10px; border-radius: 3px; background: rgba(20, 184, 166, 0.25); border: 2px solid #0f766e; display: inline-block; }
+.lg-zone-b { width: 14px; height: 10px; border-radius: 3px; background: rgba(245, 158, 11, 0.25); border: 2px solid #b45309; display: inline-block; }
 .lg-poly { width: 14px; height: 10px; border-radius: 3px; background: rgba(220, 38, 38, 0.25); border: 1.5px dashed #dc2626; display: inline-block; }
+
+.zone-label-tip {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1.5px solid #1e5fc4 !important;
+  border-radius: 999px !important;
+  padding: 2px 9px !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.2) !important;
+}
+.zone-label-tip::before { display: none !important; }
+.zone-tip-a { border-color: #1e5fc4 !important; color: #1e40af !important; }
+.zone-tip-a1 { border-color: #0f766e !important; color: #0f766e !important; }
+.zone-tip-b { border-color: #b45309 !important; color: #b45309 !important; }
+
+.popup-gmaps-link {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: #1e5fc4;
+  color: #fff !important;
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.popup-gmaps-link:hover { background: #1a4da3; }
 
 /* ================= NÚT & FORM DÙNG CHUNG ================= */
 .btn {
