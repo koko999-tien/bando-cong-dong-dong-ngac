@@ -155,11 +155,21 @@
 
             <!-- TAB 1A: TỔNG QUAN VÙNG + BIỂU ĐỒ MƯA 24H + DANH SÁCH ĐỐI TƯỢNG -->
             <div id="pubpane-overview" class="pubpane dock-scroll">
+              <section id="my-saved-places-card" class="telemetry-panel my-places-panel" aria-label="Địa điểm cá nhân lưu trên thiết bị">
+                <div class="section-head-row">
+                  <strong class="panel-label">Địa điểm Của Tôi (Lưu riêng tư tại máy)</strong>
+                  <button type="button" id="btn-safe-route-home" class="btn btn-sm btn-primary" hidden>Đường về Nhà an toàn</button>
+                </div>
+                <div id="my-places-slots" class="my-places-grid"></div>
+              </section>
+
               <article id="advisory-hero" class="advisory-card is-normal" aria-live="polite">
                 <div class="advisory-top-row">
                   <span id="advisory-level-pill" class="status-pill is-normal">Đang kiểm tra</span>
                   <div class="advisory-freshness">
                     <span id="advisory-updated-time" class="mono-num">--:--</span>
+                    <button type="button" id="btn-share-zone-link" class="text-btn" title="Sao chép đường dẫn mở thẳng khu vực đang khoanh">Chép link</button>
+                    <button type="button" id="btn-share-zone-png" class="text-btn" title="Tạo ảnh thẻ tóm tắt cảnh báo gửi nhanh qua Zalo/Messenger">Ảnh Zalo</button>
                     <button type="button" id="btn-export-zone-dossier" class="text-btn" title="Tải hồ sơ chẩn đoán hành chính & thiên tai của vùng đang khoanh">Xuất hồ sơ</button>
                     <button type="button" id="btn-refresh-zone" class="text-btn">Làm mới</button>
                   </div>
@@ -339,13 +349,19 @@
               </div>
               <form id="national-route-form" class="card-panel">
                 <div class="travel-switch" role="group" aria-label="Phương tiện di chuyển">
-                  <button type="button" class="seg-btn is-active" data-travel="bike">Xe máy / Ô tô con</button>
+                  <button type="button" class="seg-btn is-active" data-travel="motorbike">Xe số (&lt;30cm)</button>
+                  <button type="button" class="seg-btn" data-travel="scooter">Xe tay ga (&lt;20cm)</button>
+                  <button type="button" class="seg-btn" data-travel="sedan">Ô tô con (&lt;25cm)</button>
+                  <button type="button" class="seg-btn" data-travel="suv">Gầm cao (&lt;45cm)</button>
                   <button type="button" class="seg-btn" data-travel="foot">Đi bộ</button>
                 </div>
                 <div class="field-group">
                   <div class="field-label-row">
                     <label for="route-start-input">Điểm xuất phát</label>
-                    <button type="button" id="btn-route-use-zone" class="text-btn">Lấy tâm vùng</button>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                      <button type="button" id="btn-route-use-gps" class="text-btn">Vị trí GPS</button>
+                      <button type="button" id="btn-route-use-zone" class="text-btn">Lấy tâm vùng</button>
+                    </div>
                   </div>
                   <input type="text" id="route-start-input" class="text-input" value="18 Phố Viên, Đông Ngạc, Hà Nội" placeholder="VD: Bến xe Mỹ Đình, Cầu Rồng Đà Nẵng...">
                 </div>
@@ -472,6 +488,7 @@
                     <label for="rep-photo" class="field-label">Ảnh hiện trường (tự xóa EXIF)</label>
                     <input type="file" id="rep-photo" accept="image/*" class="text-input file-input">
                     <div id="rep-photo-status" class="field-status-note" hidden></div>
+                    <div id="rep-ai-vision-box" class="ai-vision-preview" hidden aria-live="polite"></div>
                   </div>
                 </div>
 

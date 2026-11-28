@@ -75,6 +75,7 @@ const CACHE_KEY = 'vn_resilience_cache_v2';
 const CHECKLIST_KEY = 'vn_resilience_housing_checklist_v1';
 const OFFLINE_QUEUE_KEY = 'vn_resilience_offline_queue_v1';
 const LARGE_TEXT_KEY = 'vn_resilience_large_text_v1';
+const MY_PLACES_KEY = 'vn_resilience_my_places_v1';
 const RESEARCHER_TOKEN_KEY = 'vn_resilience_researcher_token_v1';
 const REVIEWER_TOKEN_KEY = 'vn_resilience_reviewer_token_v1';
 const CITIZEN_TOKEN_KEY = 'vn_resilience_citizen_token_v1';
@@ -158,7 +159,7 @@ const state = {
     flowAnimated: true,
     demGrid: null
   },
-  travelMode: 'bike',
+  travelMode: 'motorbike',
   reportPin: { lat: VIETNAM_ZONES[0].lat, lng: VIETNAM_ZONES[0].lng },
   reportPhotoDataUrl: '',
   // Phân hệ 2: Nhà Nghiên cứu
@@ -733,7 +734,161 @@ function exportActiveZoneDossier() {
   showToast(`Đã xuất Hồ sơ Vùng Khoanh (${z.name}) chuẩn in A4!`);
 }
 
+const MY_PLACE_SLOTS = [
+  { key: 'home', label: 'Nhà' },
+  { key: 'work', label: 'Chỗ làm' },
+  { key: 'school', label: 'Trường / Người thân' }
+];
+
+function buildShareableZoneUrl() {
+  const lat = Number(state.zone?.lat || 21.072514).toFixed(5);
+  const lng = Number(state.zone?.lng || 105.77387).toFixed(5);
+  const r = Number(state.zone?.radiusKm || 2);
+  const nm = encodeURIComponent(String(state.zone?.name || 'Khu vực Việt Nam').slice(0, 80));
+  const origin = location.protocol.startsWith('http') ? location.origin : 'https://bando-antoan-vn.vercel.app';
+  return `${origin}/?lat=${lat}&lng=${lng}&r=${r}&name=${nm}`;
+}
+
+function renderMySavedPlaces() {
+  const mount = document.getElementById('my-places-slots');
+  const homeRouteBtn = document.getElementById('btn-safe-route-home');
+  if (!mount) return;
+  const saved = readJson(MY_PLACES_KEY, { home: null, work: null, school: null });
+  if (homeRouteBtn) homeRouteBtn.hidden = !saved?.home;
+
+  const allRisk = [...ALL_STATIC_POINTS, ...(state.cloudReports || [])].filter((p) => p.layerGroup === 'risk');
+  mount.innerHTML = MY_PLACE_SLOTS.map((slot) => {
+    const item = saved?.[slot.key];
+    if (!item || !Number.isFinite(Number(item.lat)) || !Number.isFinite(Number(item.lng))) {
+      return `<div class="my-place-chip">
+        <button type="button" class="my-place-go js-pin-my-place" data-slot="${slot.key}" title="Ghim vị trí ${esc(slot.label)} tại tâm vùng đang xem">
+          <strong>+ Ghim ${esc(slot.label)}</strong>
+          <span>Lưu tại vùng này</span>
+        </button>
+      </div>`;
+    }
+    const nearRiskCnt = allRisk.filter((p) => haversineMeters(item.lat, item.lng, Number(p.lat), Number(p.lng)) <= 1500).length;
+    return `<div class="my-place-chip is-saved">
+      <button type="button" class="my-place-go js-go-my-place" data-slot="${slot.key}" title="Bay thẳng tới ${esc(item.name)}">
+        <strong>${esc(slot.label)}: ${esc(item.name)}</strong>
+        <span>${nearRiskCnt > 0 ? `${nearRiskCnt} điểm lưu ý (<1,5 km)` : 'Không có điểm ngập gần'}</span>
+      </button>
+      <button type="button" class="my-place-clear js-clear-my-place" data-slot="${slot.key}" aria-label="Xóa ghim ${esc(slot.label)}" title="Gỡ ghim">×</button>
+    </div>`;
+  }).join('');
+}
+
+async function exportZoneZaloPngCard() {
+  const c = document.createElement('canvas');
+  c.width = 1080;
+  c.height = 620;
+  const ctx = c.getContext('2d');
+  if (!ctx) return;
+
+  const riskCount = state.zonePoints.filter((p) => p.layerGroup === 'risk').length;
+  const safeCount = state.zonePoints.filter((p) => p.layerGroup === 'safe').length;
+  const adv = buildCitizenStatusAdvisory({
+    areaName: `${state.zone.name} (R=${state.zone.radiusKm} km)`,
+    weather: state.weather,
+    aqi: state.aqi,
+    nearbyFloodCount: riskCount,
+    updatedAtLabel: state.lastUpdatedAt ? formatTimeHm(state.lastUpdatedAt) : 'Trực tiếp',
+    isOffline: state.isOffline
+  });
+  const toneColor = adv.level === 'danger' ? '#DC2626' : adv.level === 'attention' ? '#D97706' : '#0D9488';
+
+  ctx.fillStyle = '#0B1220';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = toneColor;
+  ctx.fillRect(0, 0, 18, c.height);
+
+  ctx.fillStyle = '#94A3B8';
+  ctx.font = '600 22px sans-serif';
+  ctx.fillText('VN RESILIENCE ATLAS · BẢN TIN AN TOÀN KHU VỰC (34 TỈNH/THÀNH)', 56, 58);
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '800 38px sans-serif';
+  ctx.fillText(String(state.zone.name || 'Khu vực Việt Nam').slice(0, 42), 56, 114);
+
+  const postLabel = state.vnZoneIntel?.admin?.postMerger?.fullLabel;
+  if (postLabel) {
+    ctx.fillStyle = '#5EEAD4';
+    ctx.font = '600 22px sans-serif';
+    ctx.fillText(`Địa giới hiện hành: ${postLabel}`.slice(0, 68), 56, 150);
+  }
+
+  ctx.fillStyle = toneColor;
+  ctx.fillRect(56, 178, 340, 42);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '700 21px sans-serif';
+  ctx.fillText(String(adv.levelLabel || 'Theo dõi').toUpperCase(), 74, 206);
+
+  const boxes = [
+    { lbl: 'MƯA HIỆN TẠI / 24H', val: `${state.weather?.rainMm ?? 0} / ${state.weather?.dailyRainMm ?? 0} mm` },
+    { lbl: 'NHIỆT ĐỘ / CẢM NHẬN', val: `${state.weather?.temp ?? '--'}°C / ${state.weather?.apparentTemp ?? '--'}°C` },
+    { lbl: 'CHẤT LƯỢNG KHÔNG KHÍ', val: `US AQI ${state.aqi?.usAqi ?? '--'}` },
+    { lbl: 'TRONG VÒNG KHOANH', val: `${riskCount} rủi ro · ${safeCount} y tế/trú` }
+  ];
+  boxes.forEach((b, idx) => {
+    const bx = 56 + idx * 246;
+    ctx.fillStyle = '#132038';
+    ctx.fillRect(bx, 248, 228, 108);
+    ctx.strokeStyle = '#334155';
+    ctx.strokeRect(bx, 248, 228, 108);
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '600 15px sans-serif';
+    ctx.fillText(b.lbl, bx + 16, 282);
+    ctx.fillStyle = '#F8FAFC';
+    ctx.font = '700 24px sans-serif';
+    ctx.fillText(b.val, bx + 16, 326);
+  });
+
+  ctx.fillStyle = '#E2E8F0';
+  ctx.font = '600 23px sans-serif';
+  ctx.fillText(String(adv.action || '').slice(0, 74), 56, 412);
+  ctx.fillStyle = '#94A3B8';
+  ctx.font = '500 20px sans-serif';
+  ctx.fillText(String(adv.cause || '').slice(0, 86), 56, 452);
+
+  ctx.fillStyle = '#0F172A';
+  ctx.fillRect(0, 508, c.width, 112);
+  ctx.fillStyle = '#FDA4AF';
+  ctx.font = '700 23px sans-serif';
+  ctx.fillText('KHẨN CẤP QUỐC GIA:  112 (Cứu nạn)  ·  114 (PCCC)  ·  115 (Cấp cứu)', 56, 552);
+  ctx.fillStyle = '#5EEAD4';
+  ctx.font = '600 20px monospace';
+  ctx.fillText(buildShareableZoneUrl().slice(0, 78), 56, 592);
+
+  c.toBlob(async (blob) => {
+    if (!blob) return;
+    const fname = `CanhBao_${Date.now().toString(36)}.png`;
+    const file = new File([blob], fname, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          title: `Cảnh báo an toàn: ${state.zone.name}`,
+          text: `${adv.levelLabel}: ${adv.headline}. Mở bản đồ: ${buildShareableZoneUrl()}`,
+          files: [file]
+        });
+        return;
+      } catch {
+        // fallback download below
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('Đã tải ảnh thẻ cảnh báo — bạn gửi thẳng vào Zalo/Messenger được ngay!');
+  }, 'image/png');
+}
+
 function renderPublicOverview({ flyMap = false } = {}) {
+  renderMySavedPlaces();
   const updatedStr = state.lastUpdatedAt ? formatTimeHm(state.lastUpdatedAt) : 'Dữ liệu sẵn có';
   const riskCount = state.zonePoints.filter((p) => p.layerGroup === 'risk').length;
   const safeCount = state.zonePoints.filter((p) => p.layerGroup === 'safe').length;
@@ -1534,7 +1689,9 @@ function renderPointCardHtml(pt) {
             ${
               pt.layerGroup === 'risk'
                 ? `<button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="flooding">Đang ngập</button>
-                   <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="clear">Khô ráo</button>`
+                   <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="receding">Đang rút</button>
+                   <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="clear">Khô ráo</button>
+                   <button type="button" class="checkin-btn js-confirm-national-pt" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}">+1 (${Number(pt.confirmCount) || 1})</button>`
                 : ''
             }
           </div>
@@ -1638,6 +1795,14 @@ async function handleVietnamZoneSearch() {
    ========================================================================= */
 async function geocodeVietnamPlace(text) {
   const q = String(text || '').trim();
+  const coordMatch = q.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (coordMatch) {
+    const lat = Number(coordMatch[1]);
+    const lng = Number(coordMatch[2]);
+    if (isInsideVietnam(lat, lng)) {
+      return { name: `Tọa độ (${lat.toFixed(4)}, ${lng.toFixed(4)})`, lat, lng };
+    }
+  }
   const zoneHit = searchVietnamZones(q, 'all', 1)[0];
   if (zoneHit) return { name: zoneHit.name, lat: zoneHit.lat, lng: zoneHit.lng };
   const localPt = state.zonePoints.find((p) => (p.name || '').toLowerCase().includes(q.toLowerCase()));
@@ -1692,7 +1857,19 @@ async function runNationalRouteComparison(e) {
     const end = await geocodeVietnamPlace(document.getElementById('route-end-input')?.value);
 
     const riskPoints = state.zonePoints.filter((p) => p.layerGroup === 'risk');
-    const highWaypoints = selectHighGroundWaypoints(start, end, state.hydroSim.demGrid, riskPoints, state.zoneCorridors);
+    const liveFloodPointIds = new Set(
+      Object.values(state.livePulse?.byPoint || {})
+        .filter((x) => x && x.status === 'flooding' && x.pointId)
+        .map((x) => x.pointId)
+    );
+    const highWaypoints = selectHighGroundWaypoints(
+      start,
+      end,
+      state.hydroSim.demGrid,
+      riskPoints,
+      state.zoneCorridors,
+      liveFloodPointIds
+    );
 
     const [directList, ...viaLists] = await Promise.all([
       fetchOsrmRoutes([[start.lat, start.lng], [end.lat, end.lng]], state.travelMode, true),
@@ -1716,7 +1893,8 @@ async function runNationalRouteComparison(e) {
         dischargeRatio,
         riskPoints,
         corridors: state.zoneCorridors,
-        travelMode: state.travelMode
+        travelMode: state.travelMode,
+        liveFloodPointIds
       });
 
     const directHydro = evalOpts(direct.coordsLngLat);
@@ -1735,7 +1913,8 @@ async function runNationalRouteComparison(e) {
       destName: end.name,
       travelMode: state.travelMode,
       directRoute: { distanceKm: direct.distanceKm, durationMin: direct.durationMin, risks: directHydro.nearRisks },
-      detourRoute: { distanceKm: bestAlt.geom.distanceKm, durationMin: bestAlt.geom.durationMin, risks: bestAlt.hydro.nearRisks }
+      detourRoute: { distanceKm: bestAlt.geom.distanceKm, durationMin: bestAlt.geom.durationMin, risks: bestAlt.hydro.nearRisks },
+      liveFloodPointIds
     });
 
     const recommendAlt =
@@ -1956,6 +2135,10 @@ async function handleNationalReportSubmit(e) {
     const locInp = document.getElementById('rep-location-name');
     if (locInp) locInp.value = resolveAutoLocationLabel(state.reportPin.lat, state.reportPin.lng);
     state.reportPhotoDataUrl = '';
+    const vBox = document.getElementById('rep-ai-vision-box');
+    if (vBox) vBox.hidden = true;
+    const pSt = document.getElementById('rep-photo-status');
+    if (pSt) pSt.hidden = true;
     refreshActiveZoneData({ flyMap: false });
   } catch {
     const queue = readJson(OFFLINE_QUEUE_KEY, []);
@@ -2693,6 +2876,48 @@ function bindEvents() {
   });
   document.getElementById('btn-refresh-zone')?.addEventListener('click', () => refreshActiveZoneData({ flyMap: false }));
   document.getElementById('btn-export-zone-dossier')?.addEventListener('click', exportActiveZoneDossier);
+  document.getElementById('btn-share-zone-link')?.addEventListener('click', async () => {
+    const url = buildShareableZoneUrl();
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `VN Resilience: ${state.zone.name}`, url });
+        return;
+      }
+      await navigator.clipboard?.writeText(url);
+      showToast('Đã sao chép đường dẫn mở thẳng vùng đang khoanh!');
+    } catch {
+      showToast(url);
+    }
+  });
+  document.getElementById('btn-share-zone-png')?.addEventListener('click', exportZoneZaloPngCard);
+
+  document.getElementById('btn-safe-route-home')?.addEventListener('click', () => {
+    const saved = readJson(MY_PLACES_KEY, { home: null, work: null, school: null });
+    if (!saved?.home) {
+      showToast('Hãy bấm "+ Ghim Nhà" ở vùng bạn sinh sống trước.');
+      return;
+    }
+    switchPublicTab('route');
+    document.getElementById('route-end-input').value = `${Number(saved.home.lat).toFixed(5)}, ${Number(saved.home.lng).toFixed(5)}`;
+    const fallbackStart = `${Number(state.zone.lat).toFixed(5)}, ${Number(state.zone.lng).toFixed(5)}`;
+    if (!('geolocation' in navigator)) {
+      document.getElementById('route-start-input').value = fallbackStart;
+      runNationalRouteComparison();
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: la, longitude: ln } = pos.coords;
+        document.getElementById('route-start-input').value = isInsideVietnam(la, ln) ? `${la.toFixed(5)}, ${ln.toFixed(5)}` : fallbackStart;
+        runNationalRouteComparison();
+      },
+      () => {
+        document.getElementById('route-start-input').value = fallbackStart;
+        runNationalRouteComparison();
+      },
+      { timeout: 2500 }
+    );
+  });
 
   const hourlyBarsEl = document.getElementById('hourly-rain-bars');
   const activateHourlyScrub = (col) => {
@@ -2937,7 +3162,25 @@ function bindEvents() {
     });
   });
   document.getElementById('btn-route-use-zone')?.addEventListener('click', () => {
-    document.getElementById('route-start-input').value = state.zone.name;
+    document.getElementById('route-start-input').value = `${Number(state.zone.lat).toFixed(5)}, ${Number(state.zone.lng).toFixed(5)}`;
+  });
+  document.getElementById('btn-route-use-gps')?.addEventListener('click', () => {
+    if (!('geolocation' in navigator)) {
+      showToast('Thiết bị không hỗ trợ định vị GPS.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: la, longitude: ln } = pos.coords;
+        if (!isInsideVietnam(la, ln)) {
+          showToast('Tọa độ GPS nằm ngoài phạm vi Việt Nam.');
+          return;
+        }
+        document.getElementById('route-start-input').value = `${la.toFixed(5)}, ${ln.toFixed(5)}`;
+        showToast('Đã lấy vị trí GPS hiện tại làm điểm xuất phát.');
+      },
+      () => showToast('Không lấy được tín hiệu GPS — hãy dùng "Lấy tâm vùng" hoặc gõ tên đường.')
+    );
   });
   document.getElementById('btn-route-swap')?.addEventListener('click', () => {
     const a = document.getElementById('route-start-input');
@@ -3031,14 +3274,59 @@ function bindEvents() {
   document.getElementById('rep-photo')?.addEventListener('change', async (ev) => {
     const file = ev.target.files?.[0];
     const st = document.getElementById('rep-photo-status');
+    const vBox = document.getElementById('rep-ai-vision-box');
     if (!file) return;
     try {
       state.reportPhotoDataUrl = await stripExifClientSide(file);
       st.hidden = false;
       st.textContent = 'Đã xóa sạch EXIF/GPS ẩn và nén ảnh an toàn.';
+      if (vBox && navigator.onLine) {
+        vBox.hidden = false;
+        vBox.className = 'ai-vision-preview';
+        vBox.textContent = 'AI Vision đang đọc hiện trường ảnh...';
+        try {
+          const cat = document.querySelector('input[name="repCategory"]:checked')?.value || 'flood';
+          const vr = await fetch('/api/ai-copilot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'inspect_photo', photoDataUrl: state.reportPhotoDataUrl, category: cat })
+          });
+          const vj = await vr.json();
+          const vis = vj?.vision;
+          if (vr.ok && vj?.ok && vis) {
+            vBox.className = `ai-vision-preview ${vis.isValidScene ? '' : 'is-warning'}`.trim();
+            vBox.innerHTML = `<strong>AI Vision (${esc(vj.modelUsed || 'Gemini')}):</strong> ${esc(vis.sceneSummary || 'Đã kiểm định ảnh.')}${
+              vis.safetyNote ? `<br><span>${esc(vis.safetyNote)}</span>` : ''
+            }`;
+            const scaleEl = document.getElementById('rep-water-scale');
+            if (scaleEl && vis.suggestedWaterScale && vis.suggestedWaterScale !== 'none') {
+              scaleEl.value = vis.suggestedWaterScale;
+            }
+            if (vis.suggestedCategory) {
+              const catRadio = document.querySelector(`input[name="repCategory"][value="${vis.suggestedCategory}"]`);
+              if (catRadio) {
+                catRadio.checked = true;
+                document.querySelectorAll('.cat-tile').forEach((lbl) => lbl.classList.toggle('is-selected', lbl.contains(catRadio)));
+              }
+            }
+            if (Array.isArray(vis.suggestedHazards) && vis.suggestedHazards.some((h) => h === 'open_drain_vortex' || h === 'uneven_pothole')) {
+              const chip = document.querySelector('.js-rep-chip[data-text*="Mất nắp cống"]');
+              if (chip && !chip.classList.contains('is-active')) {
+                chip.classList.add('is-active');
+                chip.setAttribute('aria-pressed', 'true');
+              }
+            }
+          } else {
+            vBox.hidden = true;
+          }
+        } catch {
+          vBox.hidden = true;
+        }
+      }
     } catch (err) {
       st.hidden = false;
       st.textContent = err.message;
+      if (vBox) vBox.hidden = true;
     }
   });
   document.getElementById('national-report-form')?.addEventListener('submit', handleNationalReportSubmit);
@@ -3412,6 +3700,60 @@ function bindEvents() {
       } catch {
         showToast('Chưa gửi được cập nhật trực tiếp lúc này.');
       }
+      return;
+    }
+
+    const confirmBtn = ev.target.closest('.js-confirm-national-pt');
+    if (confirmBtn) {
+      try {
+        const ptId = confirmBtn.dataset.ptid;
+        const res = await fetch(PROJECT_CONFIG.communityApiUrl || '/api/community', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'confirm_point',
+            pointId: ptId,
+            reporterRole: 'Người dân xác nhận trên bản đồ'
+          })
+        });
+        const d = await res.json();
+        if (res.ok && d?.ok) {
+          const targetPt = state.zonePoints.find((p) => p.id === ptId);
+          if (targetPt) targetPt.confirmCount = (Number(targetPt.confirmCount) || 1) + 1;
+          renderPublicOverview({ flyMap: false });
+          showToast(`Đã ghi nhận +1 xác nhận cho ${confirmBtn.dataset.ptname}.`);
+        }
+      } catch {
+        showToast('Chưa gửi được lượt xác nhận +1 lúc này.');
+      }
+      return;
+    }
+
+    const pinSlotBtn = ev.target.closest('.js-pin-my-place');
+    if (pinSlotBtn) {
+      const slot = pinSlotBtn.dataset.slot;
+      const saved = readJson(MY_PLACES_KEY, { home: null, work: null, school: null });
+      saved[slot] = { name: state.zone.name, province: state.zone.province, lat: state.zone.lat, lng: state.zone.lng };
+      writeJson(MY_PLACES_KEY, saved);
+      renderMySavedPlaces();
+      showToast(`Đã ghim "${state.zone.name}" riêng tư trên thiết bị của bạn.`);
+      return;
+    }
+    const goSlotBtn = ev.target.closest('.js-go-my-place');
+    if (goSlotBtn) {
+      const saved = readJson(MY_PLACES_KEY, { home: null, work: null, school: null });
+      const item = saved?.[goSlotBtn.dataset.slot];
+      if (item) {
+        selectZone({ id: `my-${goSlotBtn.dataset.slot}`, name: item.name, province: item.province || item.name, lat: item.lat, lng: item.lng }, { radiusKm: 2, flyMap: true });
+      }
+      return;
+    }
+    const clearSlotBtn = ev.target.closest('.js-clear-my-place');
+    if (clearSlotBtn) {
+      const saved = readJson(MY_PLACES_KEY, { home: null, work: null, school: null });
+      saved[clearSlotBtn.dataset.slot] = null;
+      writeJson(MY_PLACES_KEY, saved);
+      renderMySavedPlaces();
       return;
     }
 
@@ -5023,7 +5365,29 @@ function boot() {
   applyLargeTextMode(Boolean(readJson(LARGE_TEXT_KEY, false)));
   populateProvinceSelects();
   bindEvents();
-  selectZone(VIETNAM_ZONES[0], { radiusKm: 2, flyMap: true });
+
+  const urlParams = new URLSearchParams(location.search);
+  const qLat = Number(urlParams.get('lat'));
+  const qLng = Number(urlParams.get('lng'));
+  const qRad = Math.min(25, Math.max(1, Number(urlParams.get('r')) || 2));
+  const qName = urlParams.get('name');
+  if (urlParams.has('lat') && urlParams.has('lng') && isInsideVietnam(qLat, qLng)) {
+    const near = findNearestVietnamZone(qLat, qLng);
+    selectZone(
+      {
+        id: 'deeplink-vn',
+        name: qName || near?.name || 'Khu vực được chia sẻ',
+        province: near?.province || 'Việt Nam',
+        macroRegion: near?.macroRegion || 'bac',
+        lat: qLat,
+        lng: qLng
+      },
+      { radiusKm: qRad, flyMap: true }
+    );
+  } else {
+    selectZone(VIETNAM_ZONES[0], { radiusKm: 2, flyMap: true });
+  }
+
   loadPublicationsFeed();
   initSecuritySdks();
 }

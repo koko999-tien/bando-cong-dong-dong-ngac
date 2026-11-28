@@ -2803,3 +2803,99 @@ html.is-large-text .subtab-bar {
   flex-direction: column;
   gap: 10px;
 }
+
+.travel-switch {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.travel-switch .seg-btn {
+  flex: 1 1 auto;
+  font-size: 0.78rem;
+  padding: 6px 8px;
+}
+
+.my-places-panel {
+  margin-bottom: 10px;
+}
+
+.my-places-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.my-place-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line, #CBD5E1);
+  background: #F8FAFC;
+  font-size: 0.78rem;
+}
+
+.my-place-chip.is-saved {
+  border-color: #99F6E4;
+  background: #F0FDFA;
+}
+
+.my-place-go {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink, #0F172A);
+  flex: 1;
+  min-width: 0;
+}
+
+.my-place-go strong {
+  display: block;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.my-place-go span {
+  display: block;
+  font-size: 0.71rem;
+  color: var(--ink-muted, #64748B);
+}
+
+.my-place-clear {
+  border: 0;
+  background: transparent;
+  color: #64748B;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 6px;
+}
+
+.my-place-clear:hover {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+.ai-vision-preview {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #BAE6FD;
+  background: #F0F9FF;
+  font-size: 0.77rem;
+  color: #0C4A6E;
+  line-height: 1.45;
+}
+
+.ai-vision-preview.is-warning {
+  border-color: #FDE68A;
+  background: #FFFBEB;
+  color: #92400E;
+}

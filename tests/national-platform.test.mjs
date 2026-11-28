@@ -42,7 +42,7 @@ import { lookupCentralMeridian, wgs84ToVn2000Local, vn2000ToWgs84Local, computeV
 import { GET as vnGisGET } from '../api/vn-gis.js';
 import { GET as sosGET, POST as sosPOST } from '../api/sos-dispatch.js';
 import { GET as aiGET, POST as aiPOST, OPTIONS as aiOPTIONS } from '../api/ai-copilot.js';
-import { evaluateRouteHydroTerrain, renderRouteHydroProfileSvg } from '../platform/gis/hydro-route.js';
+import { VEHICLE_HYDRO_PROFILES, evaluateRouteHydroTerrain, renderRouteHydroProfileSvg } from '../platform/gis/hydro-route.js';
 import { buildNationalGroundedBrief } from '../platform/ai/national-intelligence.js';
 import { buildOfflineSosSmsPayload } from '../citizen-logic.js';
 import {
@@ -820,6 +820,69 @@ try {
 
   assert.ok(html.includes('id="btn-enable-web-push"') && html.includes('id="live-basin-cards-grid"'));
   assert.ok(opsHtml.includes('id="ops-wh-url"') && !opsHtml.includes('63 tỉnh'));
+
+  // 10. NÂNG CẤP SÂU: 5 PHƯƠNG TIỆN THỦY LỰC + LIVE FLOOD ROUTING + MY PLACES + AI VISION + ZALO PNG
+  assert.ok(VEHICLE_HYDRO_PROFILES.scooter && VEHICLE_HYDRO_PROFILES.sedan && VEHICLE_HYDRO_PROFILES.suv);
+  const testRouteCoords = [
+    [105.771, 21.074],
+    [105.774, 21.0725],
+    [105.777, 21.071]
+  ];
+  const testLiveSet = new Set(['R-01']);
+  const liveRiskPt = [
+    { id: 'R-01', name: 'Rốn ngập Phố Viên', layerGroup: 'risk', category: 'flood', lat: 21.0725, lng: 105.774 }
+  ];
+  const evalScooter = evaluateRouteHydroTerrain({
+    coordsLngLat: testRouteCoords,
+    rainMm: 0,
+    riskPoints: liveRiskPt,
+    travelMode: 'scooter',
+    liveFloodPointIds: testLiveSet
+  });
+  const evalMotorbike = evaluateRouteHydroTerrain({
+    coordsLngLat: testRouteCoords,
+    rainMm: 0,
+    riskPoints: liveRiskPt,
+    travelMode: 'motorbike',
+    liveFloodPointIds: testLiveSet
+  });
+  const evalSedan = evaluateRouteHydroTerrain({
+    coordsLngLat: testRouteCoords,
+    rainMm: 0,
+    riskPoints: liveRiskPt,
+    travelMode: 'sedan',
+    liveFloodPointIds: testLiveSet
+  });
+  const evalSuv = evaluateRouteHydroTerrain({
+    coordsLngLat: testRouteCoords,
+    rainMm: 0,
+    riskPoints: liveRiskPt,
+    travelMode: 'suv',
+    liveFloodPointIds: testLiveSet
+  });
+  const evalSuvClear = evaluateRouteHydroTerrain({
+    coordsLngLat: testRouteCoords,
+    rainMm: 0,
+    riskPoints: liveRiskPt,
+    travelMode: 'suv'
+  });
+  assert.ok(evalScooter.maxDepthCm >= 28, 'Điểm đang có báo cáo Đang ngập (liveFloodPointIds) phải nâng mực nước thực tế >= 28cm');
+  assert.equal(evalScooter.passability, 'impassable_deep', 'Xe tay ga (ngưỡng 20cm) phải cảnh báo không đi qua ở mực 28cm');
+  assert.equal(evalSedan.passability, 'impassable_deep', 'Ô tô Sedan (ngưỡng 25cm) phải cảnh báo nguy cơ thủy kích ở mực 28cm');
+  assert.equal(evalMotorbike.passability, 'caution_stall', 'Xe số (ngưỡng 30cm) cảnh báo đi chậm cẩn thận ở mực 28cm');
+  assert.equal(evalSuv.passability, 'caution_stall', 'Gầm cao chạm ngưỡng 28cm tại điểm đang ngập phải báo đi chậm tránh sóng');
+  assert.equal(evalSuvClear.passability, 'passable', 'Gầm cao lúc đường khô không có điểm Đang ngập phải báo thông thoáng');
+
+  assert.ok(
+    html.includes('id="my-saved-places-card"') &&
+      html.includes('id="btn-safe-route-home"') &&
+      html.includes('id="btn-share-zone-png"') &&
+      html.includes('id="rep-ai-vision-box"') &&
+      html.includes('data-travel="scooter"') &&
+      html.includes('data-travel="sedan"') &&
+      html.includes('data-travel="suv"'),
+    'index.html phải chứa đủ giao diện Gói nâng cấp 1+2+3'
+  );
 
   console.log('VERIFIED VIETNAM NATIONAL 34-PROVINCE + WEB PUSH VAPID + OFFICIAL BASIN ALERT HUB TESTS PASSED:', {
     provincesPostMerger2025: uniqueProvinces.size,

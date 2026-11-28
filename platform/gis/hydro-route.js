@@ -9,6 +9,73 @@ import { sampleAnyDemGrid, computeTerrainGradient } from './hydro-surface.js';
 import { computeHydrodynamicInstability } from '../ai/distress-inference.js';
 import { haversineMeters } from '../../citizen-logic.js';
 
+export const VEHICLE_HYDRO_PROFILES = Object.freeze({
+  foot: {
+    id: 'foot',
+    label: 'Đi bộ',
+    warnCm: 12,
+    dangerCm: 28,
+    dangerDv: 0.25,
+    warnLabel: 'Ngập quá mắt cá — Cần đi đường vòng',
+    dangerLabel: 'Ngập sâu nguy hiểm — Không lội bộ',
+    osrmProfile: 'foot'
+  },
+  scooter: {
+    id: 'scooter',
+    label: 'Xe tay ga',
+    warnCm: 12,
+    dangerCm: 20,
+    dangerDv: 0.14,
+    warnLabel: 'Xe tay ga cổ hút thấp — Rất dễ chết máy',
+    dangerLabel: 'Quá ngưỡng xe tay ga (≥20 cm) — Không đi qua',
+    osrmProfile: 'driving'
+  },
+  motorbike: {
+    id: 'motorbike',
+    label: 'Xe số',
+    warnCm: 18,
+    dangerCm: 30,
+    dangerDv: 0.18,
+    warnLabel: 'Nên chạy số thấp & giữ ga đều nếu buộc phải qua',
+    dangerLabel: 'Ngập sâu nguy hiểm (≥30 cm) — Không nên đi qua',
+    osrmProfile: 'driving'
+  },
+  bike: {
+    id: 'bike',
+    label: 'Xe số',
+    warnCm: 18,
+    dangerCm: 30,
+    dangerDv: 0.18,
+    warnLabel: 'Nên chạy số thấp & giữ ga đều nếu buộc phải qua',
+    dangerLabel: 'Ngập sâu nguy hiểm (≥30 cm) — Không nên đi qua',
+    osrmProfile: 'driving'
+  },
+  sedan: {
+    id: 'sedan',
+    label: 'Ô tô con (Sedan)',
+    warnCm: 15,
+    dangerCm: 25,
+    dangerDv: 0.22,
+    warnLabel: 'Gầm thấp dễ tạt nước lọc gió — Cân nhắc tránh',
+    dangerLabel: 'Nguy cơ thủy kích Sedan (≥25 cm) — Cấm đi qua',
+    osrmProfile: 'driving'
+  },
+  suv: {
+    id: 'suv',
+    label: 'Gầm cao (SUV/Bán tải)',
+    warnCm: 28,
+    dangerCm: 45,
+    dangerDv: 0.35,
+    warnLabel: 'Nước chạm gầm — Đi chậm tránh tạo sóng',
+    dangerLabel: 'Ngập cực sâu (≥45 cm) — Nguy hiểm kể cả gầm cao',
+    osrmProfile: 'driving'
+  }
+});
+
+export function resolveVehicleHydroProfile(mode = 'motorbike') {
+  return VEHICLE_HYDRO_PROFILES[String(mode || '').toLowerCase()] || VEHICLE_HYDRO_PROFILES.motorbike;
+}
+
 function distToSegmentMeters(lat, lng, aLat, aLng, bLat, bLng) {
   const ax = aLng;
   const ay = aLat;
@@ -39,7 +106,7 @@ function minDistanceToCorridorsMeters(lat, lng, corridors = []) {
 /**
  * Quét địa hình ngang trục xuất phát → đích để tìm tối đa 3 điểm dẫn đường nền cao ít rủi ro ngập.
  */
-export function selectHighGroundWaypoints(start, end, demGrid, riskPoints = [], corridors = []) {
+export function selectHighGroundWaypoints(start, end, demGrid, riskPoints = [], corridors = [], liveFloodPointIds = null) {
   const sLat = Number(start?.lat);
   const sLng = Number(start?.lng);
   const eLat = Number(end?.lat);
@@ -57,10 +124,11 @@ export function selectHighGroundWaypoints(start, end, demGrid, riskPoints = [], 
   const nxLng = vy / (vLen * cosLat);
 
   const baseDistM = Math.max(300, haversineMeters(sLat, sLng, eLat, eLng));
-  const latOffsets = [0.0045, -0.0045, 0.0085, -0.0085, 0.013, -0.013];
+  const latOffsets = [0.0045, -0.0045, 0.0085, -0.0085, 0.013, -0.013, 0.018, -0.018];
   const alongFracs = [0.35, 0.5, 0.65];
 
   const floodRisks = (riskPoints || []).filter((p) => p.layerGroup === 'risk');
+  const liveSet = liveFloodPointIds instanceof Set ? liveFloodPointIds : null;
   const candidates = [];
 
   for (const frac of alongFracs) {
@@ -73,16 +141,21 @@ export function selectHighGroundWaypoints(start, end, demGrid, riskPoints = [], 
       const elevScore = elev !== null ? elev : demGrid?.stats?.p50M ?? 12;
 
       let minRiskDistM = 1200;
+      let minLiveFloodDistM = 1200;
       for (const rp of floodRisks) {
         const d = haversineMeters(cLat, cLng, Number(rp.lat), Number(rp.lng));
         if (d < minRiskDistM) minRiskDistM = d;
+        if (liveSet && liveSet.has(rp.id) && d < minLiveFloodDistM) {
+          minLiveFloodDistM = d;
+        }
       }
       const corDist = minDistanceToCorridorsMeters(cLat, cLng, corridors);
       const effectiveRiskDistM = Math.min(minRiskDistM, corDist);
 
       const viaDist = haversineMeters(sLat, sLng, cLat, cLng) + haversineMeters(cLat, cLng, eLat, eLng);
       const extraDetourM = Math.max(0, viaDist - baseDistM);
-      const score = elevScore * 2.6 + Math.min(700, effectiveRiskDistM) * 0.025 - extraDetourM * 0.0022;
+      const livePenalty = minLiveFloodDistM < 260 ? (260 - minLiveFloodDistM) * 0.18 : 0;
+      const score = elevScore * 2.6 + Math.min(700, effectiveRiskDistM) * 0.025 - extraDetourM * 0.0022 - livePenalty;
 
       candidates.push({ lat: cLat, lng: cLng, elevM: Math.round(elevScore * 10) / 10, score });
     }
@@ -108,8 +181,10 @@ export function evaluateRouteHydroTerrain({
   dischargeRatio = 1,
   riskPoints = [],
   corridors = [],
-  travelMode = 'bike'
+  travelMode = 'bike',
+  liveFloodPointIds = null
 }) {
+  const veh = resolveVehicleHydroProfile(travelMode);
   const pts = Array.isArray(coordsLngLat) && coordsLngLat.length >= 2 ? coordsLngLat : [];
   if (pts.length < 2) {
     return {
@@ -122,7 +197,9 @@ export function evaluateRouteHydroTerrain({
       nearRiskCount: 0,
       nearRisks: [],
       passability: 'passable',
-      passabilityLabel: 'Thông thoáng theo dữ liệu hiện có',
+      passabilityLabel: `Thông thoáng cho ${veh.label} theo dữ liệu hiện có`,
+      vehicleLabel: veh.label,
+      vehicleClearanceCm: veh.dangerCm,
       compositeScore: 0,
       profile: []
     };
@@ -138,6 +215,7 @@ export function evaluateRouteHydroTerrain({
   const sampleCount = 28;
   const stats = demGrid?.stats || { minM: 8, p50M: 12.5, p65M: 14 };
   const floodPts = (riskPoints || []).filter((p) => p.layerGroup === 'risk');
+  const liveSet = liveFloodPointIds instanceof Set ? liveFloodPointIds : null;
   const rainVal = Math.max(0, Number(rainMm) || 0);
   const effectiveDailyRain = rainVal * Math.max(1, (Number(dischargeRatio || 1) - 1) * 0.45 + 1);
   const effectiveHourlyRain = rainVal * 0.36;
@@ -149,6 +227,7 @@ export function evaluateRouteHydroTerrain({
   let maxDepthM = 0;
   let maxDv = 0;
   let floodedSegments = 0;
+  let liveFloodHits = 0;
   const matchedRiskMap = new Map();
 
   for (let s = 0; s < sampleCount; s++) {
@@ -167,6 +246,7 @@ export function evaluateRouteHydroTerrain({
     const slopeDeg = grad?.slopeDeg ?? 1.1;
 
     let nearFloodSpotM = 999;
+    let nearLiveFloodM = 999;
     for (const rp of floodPts) {
       const dist = haversineMeters(lat, lng, Number(rp.lat), Number(rp.lng));
       if (dist <= 130 && !matchedRiskMap.has(rp.id)) {
@@ -174,6 +254,9 @@ export function evaluateRouteHydroTerrain({
       }
       if (rp.category === 'flood' && dist < nearFloodSpotM) {
         nearFloodSpotM = dist;
+      }
+      if (liveSet && liveSet.has(rp.id) && dist < nearLiveFloodM) {
+        nearLiveFloodM = dist;
       }
     }
     const corDist = minDistanceToCorridorsMeters(lat, lng, corridors);
@@ -189,41 +272,52 @@ export function evaluateRouteHydroTerrain({
       nearFloodSpotMeters: effectiveFloodProxM
     });
 
+    let effectiveDepthM = hydro.depthM;
+    if (nearLiveFloodM <= 150) {
+      effectiveDepthM = Math.max(effectiveDepthM, 0.28);
+      liveFloodHits += 1;
+    }
+
     if (elevM < minElevM) minElevM = elevM;
     if (elevM > maxElevM) maxElevM = elevM;
     if (slopeDeg > maxSlopeDeg) maxSlopeDeg = slopeDeg;
-    if (hydro.depthM > maxDepthM) maxDepthM = hydro.depthM;
+    if (effectiveDepthM > maxDepthM) maxDepthM = effectiveDepthM;
     if (hydro.dvProduct > maxDv) maxDv = hydro.dvProduct;
-    if (hydro.depthM >= 0.08 || (rainVal >= 30 && effectiveFloodProxM <= 85)) {
+    if (effectiveDepthM >= 0.08 || (rainVal >= 30 && effectiveFloodProxM <= 85)) {
       floodedSegments++;
     }
 
     profile.push({
       distKm: Math.round((targetD / 1000) * 100) / 100,
       elevM: Math.round(elevM * 10) / 10,
-      depthCm: Math.round(hydro.depthM * 100),
-      waterTopM: Math.round((elevM + hydro.depthM) * 100) / 100
+      depthCm: Math.round(effectiveDepthM * 100),
+      waterTopM: Math.round((elevM + effectiveDepthM) * 100) / 100
     });
   }
 
   const nearRisks = [...matchedRiskMap.values()];
   const floodedLengthM = Math.round((floodedSegments / sampleCount) * totalDistM);
   const maxDepthCm = Math.round(maxDepthM * 100);
-  const depthThresholdDanger = travelMode === 'foot' ? 30 : 34;
-  const depthThresholdWarn = travelMode === 'foot' ? 14 : 16;
 
   let passability = 'passable';
-  let passabilityLabel = 'Thông thoáng theo kịch bản mưa';
-  if (maxDepthCm >= depthThresholdDanger || maxDv >= 0.3) {
+  let passabilityLabel = `Thông thoáng cho ${veh.label} theo kịch bản mưa`;
+  if (maxDepthCm >= veh.dangerCm || maxDv >= veh.dangerDv) {
     passability = 'impassable_deep';
-    passabilityLabel = travelMode === 'foot' ? 'Ngập sâu nguy hiểm — Không lội bộ' : 'Ngập sâu nguy hiểm — Không nên đi qua';
-  } else if (maxDepthCm >= depthThresholdWarn || maxDv >= 0.14 || floodedLengthM >= 140 || nearRisks.length >= 2) {
+    passabilityLabel = veh.dangerLabel;
+  } else if (
+    maxDepthCm >= veh.warnCm ||
+    maxDv >= veh.dangerDv * 0.6 ||
+    floodedLengthM >= 140 ||
+    nearRisks.length >= 2 ||
+    liveFloodHits > 0
+  ) {
     passability = 'caution_stall';
-    passabilityLabel = travelMode === 'foot' ? 'Ngập quá mắt cá — Cần đi đường vòng' : 'Xe tay ga dễ chết máy — Nên tránh';
+    passabilityLabel = veh.warnLabel;
   }
 
   const compositeScore = Math.round(
     nearRisks.length * 36 +
+      liveFloodHits * 45 +
       floodedLengthM * 0.11 +
       maxDepthCm * 1.45 +
       maxDv * 110 +
@@ -241,6 +335,8 @@ export function evaluateRouteHydroTerrain({
     nearRisks,
     passability,
     passabilityLabel,
+    vehicleLabel: veh.label,
+    vehicleClearanceCm: veh.dangerCm,
     compositeScore,
     profile
   };
@@ -310,6 +406,7 @@ export function renderRouteHydroProfileSvg(directEval, detourEval) {
     <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:0.72rem;color:#475569;margin-top:5px;">
       <span><strong style="color:#DC2626;">---</strong> Nền tuyến thẳng (${directEval.minElevM}m thấp nhất)</span>
       <span><strong style="color:#0284C7;">■</strong> Lớp nước ngập tối đa ~${directEval.maxDepthCm} cm</span>
+      ${directEval.vehicleClearanceCm ? `<span><strong>•</strong> Ngưỡng ${directEval.vehicleLabel || 'xe'}: &lt;${directEval.vehicleClearanceCm} cm</span>` : ''}
       ${p2.length >= 2 ? `<span><strong style="color:#0F766E;">—</strong> Nền tuyến đề xuất (${detourEval.minElevM}m thấp nhất)</span>` : ''}
     </div>`;
 }
