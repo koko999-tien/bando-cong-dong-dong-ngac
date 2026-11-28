@@ -682,9 +682,17 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
 .advisory-freshness {
   display: inline-flex;
   align-items: center;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
   gap: 8px;
   font-size: 0.74rem;
   color: var(--ink-muted);
+}
+.advisory-freshness .text-btn,
+#advisory-updated-time,
+.status-pill {
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .advisory-headline {
