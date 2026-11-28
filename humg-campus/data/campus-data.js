@@ -656,28 +656,28 @@ export const QUIZ_15_QUESTIONS = [
 
 export const MOCK_ADMIN_DATA = {
   visits: {
-    total: 3842,
-    today: 247,
-    unique: 1619,
+    total: 618,
+    today: 54,
+    unique: 312,
     byPage: [
-      { path: '/', label: 'Bản đồ Khu A – A1 – B quanh Mỏ', views: 1845 },
-      { path: '/quiz-15', label: 'Bộ Quiz 15 câu An toàn HUMG', views: 964 },
-      { path: '/tuyen-duong-mat', label: 'Tuyến đi mát 11h00–14h30', views: 492 },
-      { path: '/tram-y-te', label: 'Tuyến nhanh tới Trạm Y tế / BV Phương Đông', views: 348 },
-      { path: '/so-cuu-trai-nghiem', label: 'Sơ cứu & Ghi nhận trải nghiệm', views: 193 }
+      { path: '/', label: 'Bản đồ Khu A – A1 – B quanh Mỏ', views: 274 },
+      { path: '/quiz-15', label: 'Bộ Quiz 15 câu An toàn HUMG', views: 148 },
+      { path: '/tuyen-duong-mat', label: 'Tuyến đi mát 11h00–14h30', views: 89 },
+      { path: '/tram-y-te', label: 'Tuyến nhanh tới Trạm Y tế / BV Phương Đông', views: 64 },
+      { path: '/so-cuu-trai-nghiem', label: 'Sơ cứu & Ghi nhận trải nghiệm', views: 43 }
     ],
     last7Days: [
-      { day: 'T2', visits: 390 },
-      { day: 'T3', visits: 445 },
-      { day: 'T4', visits: 520 },
-      { day: 'T5', visits: 485 },
-      { day: 'T6', visits: 615 },
-      { day: 'T7', visits: 678 },
-      { day: 'CN', visits: 709 }
+      { day: 'T2', visits: 68 },
+      { day: 'T3', visits: 82 },
+      { day: 'T4', visits: 95 },
+      { day: 'T5', visits: 89 },
+      { day: 'T6', visits: 108 },
+      { day: 'T7', visits: 122 },
+      { day: 'CN', visits: 54 }
     ]
   },
   quizStats: {
-    baseAttempts: 486,
+    baseAttempts: 136,
     baseAvgScore: 12.6,
     recentAttempts: [
       { id: 'QZ-912', name: 'Nguyễn Minh Quân', className: 'MT68', score: 15, total: 15, time: '14:12 · Hôm nay' },

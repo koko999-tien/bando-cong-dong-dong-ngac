@@ -56,7 +56,24 @@ assert.ok(adminHtml.includes('Đăng nhập quản trị'), 'Phải có màn hì
 assert.ok(adminHtml.includes('Lượt truy cập') && adminHtml.includes('Tổng lượt') && adminHtml.includes('Hôm nay') && adminHtml.includes('Người dùng'), 'Phải có thống kê Lượt truy cập đầy đủ 3 chỉ số');
 assert.ok(adminHtml.includes('Khóa khu vực công khai') && adminJs.includes('Chắc chắn đổi?'), 'Phải có nút Khóa khu vực công khai 2 bước xác nhận');
 assert.ok(adminHtml.includes('overview-4-grid') && adminHtml.includes('Quản lý điểm Khu A, A1, B') && adminHtml.includes('Hòm thư góp ý &amp; phản ánh') && adminHtml.includes('Kết quả Quiz 15 câu') && adminHtml.includes('Khiếu nại &amp; Báo ngập'), 'Trang tổng quan phải có đủ 4 thẻ quản lý như GEOENV RUN');
-assert.ok(MOCK_ADMIN_DATA.visits.total >= 1000 && MOCK_ADMIN_DATA.quizStats.baseAttempts >= 100, 'Phải có số liệu ảo hợp lý');
+assert.ok(
+  MOCK_ADMIN_DATA.visits.total > 0 &&
+    MOCK_ADMIN_DATA.visits.total < 700 &&
+    MOCK_ADMIN_DATA.visits.today < 700 &&
+    MOCK_ADMIN_DATA.visits.unique < 700 &&
+    MOCK_ADMIN_DATA.quizStats.baseAttempts < 700,
+  'Tất cả số liệu truy cập & thống kê phải dưới 700 cho thực tế'
+);
+assert.equal(
+  MOCK_ADMIN_DATA.visits.byPage.reduce((s, p) => s + p.views, 0),
+  MOCK_ADMIN_DATA.visits.total,
+  'Tổng lượt xem từng trang phải khớp tổng lượt truy cập'
+);
+assert.equal(
+  MOCK_ADMIN_DATA.visits.last7Days.reduce((s, d) => s + d.visits, 0),
+  MOCK_ADMIN_DATA.visits.total,
+  'Tổng lượt truy cập 7 ngày phải khớp tổng lượt truy cập'
+);
 assert.ok(indexHtml.includes('id="btn-quiz-submit"') && indexHtml.includes('id="public-locked-screen"'), 'Trang chính phải có Quiz 15 câu & hỗ trợ khóa công khai');
 
 // 4. Kiểm tra cân bằng ngoặc CSS cho styles.css & admin.css
