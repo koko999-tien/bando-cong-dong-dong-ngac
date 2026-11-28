@@ -2814,7 +2814,7 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     right: 0;
     top: 6px;
     bottom: auto;
-    z-index: 436;
+    z-index: 448;
     height: calc(100% - 6px);
     max-height: calc(100% - 6px);
     background: #FFFFFF;
@@ -2882,6 +2882,11 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
     transition: opacity 150ms ease;
   }
   .workbench-split:is([data-sheet="half"], [data-sheet="full"]) .map-hud-bottom {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+  .workbench-split[data-sheet="full"] :is(.map-hud-topbar, .search-area-pill) {
     opacity: 0;
     pointer-events: none;
     visibility: hidden;
