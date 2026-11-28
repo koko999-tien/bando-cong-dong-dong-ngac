@@ -173,6 +173,7 @@ export default {
           osmEnabled: true,
           normalizedTablesReady: true,
           rateLimitEngine: 'cloudflare_kv_edge',
+          aiCacheEnabled: true,
           turnstileEnabled: Boolean(env.TURNSTILE_SITE_KEY && env.TURNSTILE_SECRET_KEY),
           turnstileSiteKey: env.TURNSTILE_SITE_KEY || ''
         },
@@ -304,6 +305,25 @@ export default {
         .bind(subHash, responderId, geohash5, JSON.stringify(subscription), expMs, nowIso)
         .run();
       return Response.json({ ok: true, geohash5, expiresAtMs: expMs });
+    }
+
+    if (url.pathname === '/ai-cache/get' && request.method === 'POST') {
+      if (!isAuthed(request, env)) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+      const body = await request.json().catch(() => ({}));
+      const rawKey = String(body.key || '').replace(/[^a-z0-9:._-]/gi, '').slice(0, 120);
+      if (!rawKey) return Response.json({ ok: true, hit: false });
+      const cached = await env.CACHE.get(`ai:${rawKey}`, { type: 'json' });
+      return Response.json({ ok: true, hit: Boolean(cached), value: cached || null });
+    }
+
+    if (url.pathname === '/ai-cache/set' && request.method === 'POST') {
+      if (!isAuthed(request, env)) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+      const body = await request.json().catch(() => ({}));
+      const rawKey = String(body.key || '').replace(/[^a-z0-9:._-]/gi, '').slice(0, 120);
+      if (!rawKey || !body.value) return Response.json({ ok: false, error: 'Invalid ai cache payload' }, { status: 400 });
+      const ttl = Math.min(Math.max(Number(body.ttlSeconds) || 900, 60), 3600);
+      await env.CACHE.put(`ai:${rawKey}`, JSON.stringify(body.value), { expirationTtl: ttl });
+      return Response.json({ ok: true, ttlSeconds: ttl });
     }
 
     if (url.pathname === '/collections' && request.method === 'GET') {

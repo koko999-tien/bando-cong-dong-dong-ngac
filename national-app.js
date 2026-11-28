@@ -3078,24 +3078,61 @@ function bindEvents() {
     const file = ev.target.files?.[0];
     if (!file) return;
     try {
-      const parsed = JSON.parse(await file.text());
-      const rawArr = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.features) ? parsed.features : [];
+      const rawText = await file.text();
+      let rawArr = [];
+      if (/\.csv$/i.test(file.name) || (!rawText.trim().startsWith('{') && !rawText.trim().startsWith('['))) {
+        const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        if (lines.length >= 2) {
+          const splitCsv = (line) =>
+            line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map((c) => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+          const hdr = splitCsv(lines[0]).map((h) => h.toLowerCase());
+          const col = (keys) => hdr.findIndex((h) => keys.some((k) => h === k || h.includes(k)));
+          const iN = col(['name', 'ten', 'title', 'dia diem']);
+          const iLat = col(['lat', 'vi do', 'vido', 'y']);
+          const iLng = col(['lng', 'lon', 'kinh do', 'kinhdo', 'x']);
+          const iCat = col(['category', 'loai']);
+          const iNote = col(['note', 'ghi chu']);
+          for (const line of lines.slice(1, 201)) {
+            const c = splitCsv(line);
+            rawArr.push({
+              name: c[iN >= 0 ? iN : 0],
+              lat: Number(c[iLat >= 0 ? iLat : 1]),
+              lng: Number(c[iLng >= 0 ? iLng : 2]),
+              category: c[iCat] || 'flood',
+              notes: c[iNote] || ''
+            });
+          }
+        }
+      } else {
+        const parsed = JSON.parse(rawText);
+        rawArr = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.features) ? parsed.features : [];
+      }
+      let added = 0;
+      let dupSkipped = 0;
       for (const f of rawArr.slice(0, 150)) {
         const lat = Number(f.lat ?? f.geometry?.coordinates?.[1]);
         const lng = Number(f.lng ?? f.geometry?.coordinates?.[0]);
         if (!isInsideVietnam(lat, lng)) continue;
+        const dup =
+          state.draftStudyPoints.some((p) => haversineMeters(lat, lng, Number(p.lat), Number(p.lng)) <= 50) ||
+          state.zonePoints.some((p) => haversineMeters(lat, lng, Number(p.lat), Number(p.lng)) <= 50);
+        if (dup) {
+          dupSkipped++;
+          continue;
+        }
         state.draftStudyPoints.push({
-          name: f.properties?.name || f.name || 'Điểm GeoJSON',
+          name: f.properties?.name || f.name || `Điểm khảo sát ${added + 1}`,
           lat,
           lng,
           category: f.properties?.category || f.category || 'flood',
           notes: f.properties?.notes || f.notes || ''
         });
+        added++;
       }
       renderStudyDraftOverlay();
-      showToast(`Đã nạp ${state.draftStudyPoints.length} điểm hợp lệ từ GeoJSON.`);
+      showToast(`Đã nạp ${added} điểm mới hợp lệ${dupSkipped ? ` (bỏ qua ${dupSkipped} điểm trùng ≤ 50 m)` : ''}.`);
     } catch {
-      showToast('Tệp GeoJSON không đúng định dạng JSON hợp lệ.');
+      showToast('Tệp không đúng định dạng GeoJSON hoặc CSV (name,lat,lng) hợp lệ.');
     }
   });
   document.getElementById('study-submission-form')?.addEventListener('submit', handleStudySubmission);
@@ -3460,7 +3497,7 @@ function updateCitizenAuthUi() {
     if (title) title.textContent = `${p.fullName} · ${tierNames[p.trustTier] || p.trustTier}`;
     if (sub) sub.textContent = `${p.email} · Bảo vệ vị trí nền Geohash-6 đang bật (0 tọa độ lộ công khai).`;
     if (loginBtn) loginBtn.hidden = true;
-    if (ekycBtn) ekycBtn.hidden = !['citizen', 'pending_responder'].includes(p.trustTier);
+    if (ekycBtn) ekycBtn.hidden = true;
     if (logoutBtn) logoutBtn.hidden = false;
     if (delBtn) delBtn.hidden = p.authProvider === 'official_registry';
   } else {
@@ -3506,12 +3543,36 @@ async function syncCitizenSession() {
   await loadResponderInboxIfVerified();
 }
 
+function playGentleSosAlertChime() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    [587.33, 880].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + i * 0.14);
+      gain.gain.setValueAtTime(0.001, now + i * 0.14);
+      gain.gain.exponentialRampToValueAtTime(0.08, now + i * 0.14 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.14 + 0.22);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.14);
+      osc.stop(now + i * 0.14 + 0.24);
+    });
+  } catch {
+    // autoplay blocked before user gesture
+  }
+}
+
 async function loadResponderInboxIfVerified() {
   const box = document.getElementById('responder-inbox-box');
   if (!box) return;
   const p = appSafetyState.citizenProfile;
-  if (!p || !['verified_responder', 'official_unit'].includes(p.trustTier)) {
-    box.innerHTML = `<p class="muted-body">Khóa bảo mật Zero-Trust: Chỉ <strong>Đội xung kích / Tình nguyện viên đã thẩm định</strong> mới được xem danh sách ca cần hỗ trợ trong ô lưới Geohash để ngăn kẻ xấu lợi dụng rình mò người gặp nạn.</p>`;
+  if (!p) {
+    box.innerHTML = `<p class="muted-body">Đăng nhập tài khoản cá nhân để tự động nhận cảnh báo khi có người gặp nạn ở gần khu vực của bạn (làm mờ 300 m, khóa tối đa 2 người nhận).</p>`;
     return;
   }
   try {
@@ -3521,10 +3582,19 @@ async function loadResponderInboxIfVerified() {
     });
     const data = await res.json();
     if (res.ok && data?.ok) {
-      appSafetyState.responderInbox = data.tickets || [];
+      const nextTickets = data.tickets || [];
+      const prevIds = new Set(appSafetyState.seenNearbyTicketIds || []);
+      const freshOpen = nextTickets.filter((t) => !prevIds.has(t.id) && !(t.assignedSummary || []).some((r) => r.responderId === p.id));
+      if (appSafetyState._inboxBooted && freshOpen.length > 0) {
+        playGentleSosAlertChime();
+        showToast(`Có yêu cầu hỗ trợ mới ở gần (${freshOpen[0].areaHint})!`);
+      }
+      appSafetyState._inboxBooted = true;
+      appSafetyState.seenNearbyTicketIds = nextTickets.map((t) => t.id);
+      appSafetyState.responderInbox = nextTickets;
       renderResponderInbox();
     } else {
-      box.innerHTML = `<p class="muted-body">${esc(data?.error || 'Không tải được hộp thư điều phối.')}</p>`;
+      box.innerHTML = `<p class="muted-body">${esc(data?.error || 'Không tải được cảnh báo hỗ trợ gần đây.')}</p>`;
     }
   } catch {
     box.innerHTML = `<p class="muted-body">Đang ngoại tuyến.</p>`;
@@ -3596,11 +3666,11 @@ function renderResponderInbox() {
   const box = document.getElementById('responder-inbox-box');
   if (!box) return;
   const p = appSafetyState.citizenProfile;
-  if (!p || !['verified_responder', 'official_unit'].includes(p.trustTier)) return;
+  if (!p) return;
 
   const list = appSafetyState.responderInbox || [];
   if (list.length === 0) {
-    box.innerHTML = `<p class="muted-body">Hiện không có yêu cầu SOS nào còn trống hạn ngạch quanh ô lưới Geohash hiện tại.</p>`;
+    box.innerHTML = `<p class="muted-body">Hiện chưa có yêu cầu hỗ trợ nào gần bạn quanh khu vực này (chỉ hiện các ca ngập nông còn trống hạn ngạch).</p>`;
     return;
   }
 
@@ -3618,14 +3688,14 @@ function renderResponderInbox() {
             ${
               t.locationUnlocked
                 ? `<span style="color:var(--ok-ink);font-weight:600;">Đã mở khóa tọa độ phiên: ${t.exactLat.toFixed(5)}°N, ${t.exactLng.toFixed(5)}°E</span>`
-                : `Vùng làm mờ bảo vệ quyền riêng tư (~${t.privacyRadiusM}m quanh ${t.fuzzyLat}°N, ${t.fuzzyLng}°E — chỉ mở tọa độ thật sau khi khóa chỗ)`
+                : `Vùng làm mờ bảo vệ quyền riêng tư (~${t.privacyRadiusM}m quanh ${t.fuzzyLat}°N, ${t.fuzzyLng}°E — chỉ mở tọa độ thật sau khi bấm nhận)`
             }
             ${t.note ? `<br>Ghi chú: ${esc(t.note)}` : ''}
           </p>
           <div class="place-card-actions" style="margin-top:6px;">
             ${
               !mine
-                ? `<button type="button" class="btn btn-sm btn-primary js-claim-sos-slot" data-tid="${esc(t.id)}">Nhận hỗ trợ 0 đồng (Khóa 1/${t.maxResponders} chỗ)</button>`
+                ? `<button type="button" class="btn btn-sm btn-primary js-claim-sos-slot" data-tid="${esc(t.id)}">Tôi ở gần — Tới giúp 0đ (Khóa 1/${t.maxResponders} chỗ)</button>`
                 : !mine.pinVerified
                   ? `<input type="text" maxlength="4" class="text-input mono-num js-pin-input-${esc(t.id)}" style="width:94px;min-height:31px;padding:3px 8px;" placeholder="PIN 4 số">
                      <button type="button" class="btn btn-sm btn-primary js-verify-sos-pin" data-tid="${esc(t.id)}">Đối chiếu PIN</button>`
@@ -4509,11 +4579,47 @@ function bindSosAndAppEvents() {
     });
     const data = await res.json();
     if (res.ok && data?.ok) {
-      showToast(`Đã báo trực tại ô lưới ẩn danh ${data.coarseGeohash5} (tự hủy sau 30 phút, không lưu GPS chính xác).`);
+      appSafetyState.nearbyAlertEnabled = true;
+      showToast(`Đã bật nhận cảnh báo quanh ô lưới ${data.coarseGeohash5} (tự tắt sau 30 phút, không lưu GPS chính xác).`);
       loadResponderInboxIfVerified();
     } else {
-      showToast(data?.error || 'Chỉ Tình nguyện viên đã xác minh mới bật được báo trực.');
+      showToast(data?.error || 'Vui lòng đăng nhập tài khoản để bật cảnh báo hỗ trợ quanh đây.');
     }
+  });
+
+  if (!window.__vnSosPollerSet) {
+    window.__vnSosPollerSet = true;
+    setInterval(() => {
+      const sosSection = document.getElementById('pillar-sos');
+      if (appSafetyState.citizenToken && ((sosSection && !sosSection.hidden) || appSafetyState.nearbyAlertEnabled)) {
+        loadResponderInboxIfVerified();
+      }
+    }, 25000);
+  }
+
+  // Hiệu chuẩn AI thực địa ẩn danh (P4.2 — cải thiện ngưỡng kẹt thật vs dừng đèn đỏ)
+  const CALIB_KEY = 'vn_ai_calib_stats_v1';
+  const renderCalibCounter = () => {
+    const el = document.getElementById('ai-calib-count');
+    if (!el) return;
+    const st = readJson(CALIB_KEY, { true_stall: 0, false_redlight: 0 });
+    const tot = (st.true_stall || 0) + (st.false_redlight || 0);
+    el.textContent = tot > 0 ? `Đã ghi nhận ${tot} phản hồi (${st.true_stall || 0} kẹt / ${st.false_redlight || 0} đèn đỏ)` : '';
+  };
+  renderCalibCounter();
+  document.querySelectorAll('.js-ai-calib').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const lbl = btn.dataset.label === 'true_stall' ? 'true_stall' : 'false_redlight';
+      const st = readJson(CALIB_KEY, { true_stall: 0, false_redlight: 0 });
+      st[lbl] = (st[lbl] || 0) + 1;
+      writeJson(CALIB_KEY, st);
+      renderCalibCounter();
+      showToast(
+        lbl === 'true_stall'
+          ? 'Đã ghi nhận xác nhận kẹt/ngập cục bộ giúp AI tinh chỉnh độ nhạy.'
+          : 'Đã ghi nhận tình huống dừng bình thường giúp AI giảm báo giả.'
+      );
+    });
   });
 
   // Bật/tắt theo dõi GPS Hộ tống cục bộ trên thiết bị

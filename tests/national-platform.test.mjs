@@ -4,6 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   VIETNAM_ZONES,
+  LEGACY_63_TO_34_PROVINCES,
+  resolvePostMergerProvince,
   isInsideVietnam,
   searchVietnamZones,
   filterFeaturesInZone,
@@ -44,9 +46,12 @@ const localSimPath = path.join(rootDir, '.local-data', 'national-platform.json')
 await fs.rm(localSimPath, { force: true }).catch(() => {});
 
 try {
-  // 1. PHỦ TOÀN LÃNH THỔ VIỆT NAM (63 TỈNH/THÀNH + KHOANH VÙNG CHỐNG LAG)
+  // 1. PHỦ TOÀN LÃNH THỔ VIỆT NAM (34 TỈNH/THÀNH SAU SÁP NHẬP NQ 202/2025 + ÁNH XẠ 63 ĐỊA BÀN CŨ + KHOANH VÙNG CHỐNG LAG)
   const uniqueProvinces = new Set(VIETNAM_ZONES.map((z) => z.province));
-  assert.equal(uniqueProvinces.size, 63, `Phải phủ đủ 63 tỉnh/thành Việt Nam (thực tế: ${uniqueProvinces.size})`);
+  assert.equal(uniqueProvinces.size, 34, `Phải phủ đủ 34 tỉnh/thành sau sáp nhập NQ 202/2025 (thực tế: ${uniqueProvinces.size})`);
+  assert.ok(Object.keys(LEGACY_63_TO_34_PROVINCES).length >= 63, 'Phải ánh xạ đầy đủ 63 địa danh trước sáp nhập về 34 tỉnh/thành mới');
+  assert.equal(resolvePostMergerProvince('Hải Dương')?.province, 'Hải Phòng', 'Hải Dương cũ phải quy chiếu về Hải Phòng');
+  assert.equal(resolvePostMergerProvince('Bến Tre')?.province, 'Vĩnh Long', 'Bến Tre cũ phải quy chiếu về Vĩnh Long');
 
   assert.equal(isInsideVietnam(21.0285, 105.8542), true, 'Hà Nội phải nằm trong Việt Nam');
   assert.equal(isInsideVietnam(16.0544, 108.2022), true, 'Đà Nẵng phải nằm trong Việt Nam');
@@ -54,8 +59,9 @@ try {
   assert.equal(isInsideVietnam(35.6762, 139.6503), false, 'Tokyo phải bị chặn ngoài Việt Nam');
 
   assert.ok(searchVietnamZones('da nang').some((z) => z.id === 'vn-danang'), 'Tìm không dấu "da nang" phải khớp Đà Nẵng');
+  assert.ok(searchVietnamZones('hai duong').some((z) => z.province === 'Hải Phòng'), 'Tìm địa danh cũ "hai duong" vẫn khớp về TP. Hải Phòng');
   assert.ok(searchVietnamZones('can tho').some((z) => z.id === 'vn-cantho'), 'Tìm không dấu "can tho" phải khớp Cần Thơ');
-  assert.equal(findNearestVietnamZone(16.4637, 107.5909)?.province, 'Thừa Thiên Huế');
+  assert.equal(findNearestVietnamZone(16.4637, 107.5909)?.province, 'Huế');
 
   // Chống lag: Khoanh vùng tại Đà Nẵng KHÔNG được đổ 60 điểm Đông Ngạc (Hà Nội) ra bản đồ!
   const inDongNgac = filterFeaturesInZone(SAMPLE_HUMG_POINTS, 21.072514, 105.77387, 2);
@@ -313,27 +319,30 @@ try {
   ).json();
   assert.equal(victimAuth.ok, true);
 
-  const strangerAuth = await (
+  const nearbyUser = await (
     await sosPOST(
       mkSosPost({
         action: 'register_citizen',
-        fullName: 'Tài Khoản Chưa Duyệt',
-        email: 'stranger@example.vn',
-        password: 'Password#12345',
-        requestResponderVetting: true
+        fullName: 'Người Dùng Ở Gần',
+        email: 'nearby.helper@example.vn',
+        password: 'Password#12345'
       })
     )
   ).json();
-  assert.equal(strangerAuth.ok, true);
-  assert.equal(strangerAuth.profile.trustTier, 'pending_responder');
+  assert.equal(nearbyUser.ok, true);
+  assert.equal(nearbyUser.profile.trustTier, 'citizen');
 
-  // Kẻ lạ chưa được Ops Console thẩm định CỐ TÌNH đọc hộp thư SOS -> BỊ CHẶN 403!
-  const blockedInbox = await sosGET(
+  // Chưa đăng nhập CỐ TÌNH đọc danh sách ca SOS -> BỊ CHẶN 401!
+  const unauthInbox = await sosGET(new Request('http://localhost/api/sos-dispatch?action=responder_inbox&lat=21.0725&lng=105.7738'));
+  assert.equal(unauthInbox.status, 401, 'Người lạ chưa đăng nhập không được đọc danh sách yêu cầu SOS');
+
+  // Tài khoản người dùng thường ở gần bật nhận cảnh báo được xem các ca ngập nông trong ô lưới (làm mờ 300m)!
+  const activeNearbyInbox = await sosGET(
     new Request('http://localhost/api/sos-dispatch?action=responder_inbox&lat=21.0725&lng=105.7738', {
-      headers: { Authorization: `Bearer ${strangerAuth.token}` }
+      headers: { Authorization: `Bearer ${nearbyUser.token}` }
     })
   );
-  assert.equal(blockedInbox.status, 403, 'Tài khoản chưa thẩm định tuyệt đối không được xem danh sách người cần cứu trợ');
+  assert.equal(activeNearbyInbox.status, 200, 'Người dùng đã đăng nhập ở gần phải nhận được cảnh báo ca ngập nông quanh mình');
 
   // 5C. Sự cố ngập quá sâu (>= 55 cm) -> Tự động khóa luồng dân sự (maxResponders = 0) chuyển thẳng 112!
   const deepSos = await (
@@ -513,7 +522,7 @@ try {
   assert.equal(directHydroEval.profile.length, 28, 'Mặt cắt tuyến phải đủ 28 trạm');
   assert.ok(profileSvg.includes('<svg') && profileSvg.includes('polyline'), 'Phải sinh SVG mặt cắt cao độ & mực nước tuyến đường');
 
-  // 6C. Tổng hợp Đa nguồn Toàn quốc 63 Tỉnh/Thành (TP. Huế) & CORS /api/ai-copilot
+  // 6C. Tổng hợp Đa nguồn Toàn quốc 34 Tỉnh/Thành sau NQ 202/2025 (TP. Huế) & CORS /api/ai-copilot
   const aiOptionsRes = await aiOPTIONS(
     new Request('http://localhost/api/ai-copilot', {
       method: 'OPTIONS',
@@ -525,7 +534,8 @@ try {
 
   const aiHealthJson = await (await aiGET(new Request('http://localhost/api/ai-copilot'))).json();
   assert.equal(aiHealthJson.ok, true);
-  assert.equal(aiHealthJson.nationalCoverageProvinces, 63);
+  assert.equal(aiHealthJson.nationalCoverageProvinces, 34);
+  assert.equal(aiHealthJson.preMergerProvincesCovered, 63);
 
   const hueBrief = buildNationalGroundedBrief({
     question: 'Khu vực TP. Huế có nguy cơ gì cần lưu ý lúc này?',
@@ -648,10 +658,39 @@ try {
   );
   assert.equal(meAfterDelete.status, 401, 'Phiên token của tài khoản đã xóa phải bị thu hồi');
 
-  // 8. GÓI 2 INFRA: EDGE GUARD, D1 SCHEMA SQL, SERVICE WORKER PUSH & CAPACITOR MOBILE PREP
+  // 8. GÓI 2 + P2.2B + NQ 202/2025 TESTS: NEARBY CITIZEN CLAIM, AI KV CACHE, PUSH SW & CAPACITOR PREP
   const sosHealth = await (await sosGET(new Request('http://localhost/api/sos-dispatch?action=health'))).json();
   assert.equal(sosHealth.d1NormalizedTables, true, 'Health check phải báo hỗ trợ bảng chuẩn hóa D1');
   assert.ok(['local_memory', 'cloudflare_kv_edge', 'upstash_redis'].includes(sosHealth.rateLimitEngine));
+
+  assert.ok(workerSrc.includes('/ai-cache/get') && workerSrc.includes('/ai-cache/set'), 'Worker phải có endpoint cache AI Copilot trên KV');
+
+  // Kiểm chứng: người dùng thường ở gần (nearbyUser) bấm nhận ca ngập nông thành công ngay, NHƯNG ca official_only (đi đêm/nguy hiểm) vẫn bị chặn 403!
+  const lightSosRes = await (
+    await sosPOST(
+      mkSosPost(
+        { action: 'create_sos', lat: 21.0725, lng: 105.7738, category: 'stalled_vehicle', waterDepthM: 0.2, areaHint: 'Cầu Noi' },
+        { Authorization: `Bearer ${victimAuth.token}` }
+      )
+    )
+  ).json();
+  const nearbyClaimOk = await sosPOST(
+    mkSosPost({ action: 'claim_slot', ticketId: lightSosRes.ticket.id, pledgedFreeSupport: true }, { Authorization: `Bearer ${nearbyUser.token}` })
+  );
+  assert.equal(nearbyClaimOk.status, 200, 'Người dùng ở gần đã đăng nhập phải bấm nhận hỗ trợ ca ngập nông được ngay');
+
+  const nightSosRes = await (
+    await sosPOST(
+      mkSosPost(
+        { action: 'create_sos', lat: 21.0725, lng: 105.7738, category: 'stalled_vehicle', waterDepthM: 0.22, dispatchScope: 'official_only', areaHint: 'Cầu Noi Đêm' },
+        { Authorization: `Bearer ${victimAuth.token}` }
+      )
+    )
+  ).json();
+  const citizenBlockedOfficial = await sosPOST(
+    mkSosPost({ action: 'claim_slot', ticketId: nightSosRes.ticket.id, pledgedFreeSupport: true }, { Authorization: `Bearer ${nearbyUser.token}` })
+  );
+  assert.equal(citizenBlockedOfficial.status, 403, 'Ca Chế độ Bảo vệ Tối đa (official_only) vẫn chặn người dùng thường');
 
   const cfSchemaSql = await fs.readFile(path.join(rootDir, 'infra', 'cloudflare', 'schema.sql'), 'utf8');
   assert.ok(cfSchemaSql.includes('CREATE TABLE IF NOT EXISTS sos_accounts') && cfSchemaSql.includes('push_subscriptions'));
@@ -665,8 +704,9 @@ try {
   const swRaw = await fs.readFile(path.join(rootDir, 'sw.js'), 'utf8');
   assert.ok(swRaw.includes("addEventListener('push'") && swRaw.includes("addEventListener('notificationclick'"), 'Service Worker phải sẵn sàng nhận Push Notification');
 
-  console.log('VERIFIED VIETNAM NATIONAL 4-PILLAR + ZERO-TRUST SOS + HYDRO-AI + V31 DEEP TESTS PASSED:', {
-    provincesCovered: uniqueProvinces.size,
+  console.log('VERIFIED VIETNAM NATIONAL 34-PROVINCE + NEARBY PEER SOS + EDGE KV + CAPACITOR DEEP TESTS PASSED:', {
+    provincesPostMerger2025: uniqueProvinces.size,
+    legacyProvincesMapped: Object.keys(LEGACY_63_TO_34_PROVINCES).length,
     dongNgacPointsInZone: inDongNgac.length,
     daNangPublishedAfterReview: afterDaNang.features.length,
     canThoZeroLagIsolation: afterCanTho.features.length,
@@ -674,7 +714,7 @@ try {
     antiCongestionSlotCap2: claim3Res.status === 409,
     proactiveAiDistressPct: stallAnomaly.probabilityPct,
     vn2000SquareAreaM2: metricPoly.areaM2,
-    aiCopilot63Provinces: aiHealthJson.nationalCoverageProvinces
+    aiCopilot34Provinces: aiHealthJson.nationalCoverageProvinces
   });
 } finally {
   await fs.rm(localSimPath, { force: true }).catch(() => {});

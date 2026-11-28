@@ -246,9 +246,10 @@ async function runClusterProbes() {
       name: 'Zero-Trust SOS & Privacy Dispatch (/api/sos-dispatch)',
       run: async () => {
         const { res, data } = await apiFetch('/api/sos-dispatch?action=health');
+        state.lastSosHealth = data || null;
         return {
           ok: res.ok && data?.ok,
-          detail: `HTTP ${res.status} · MaxSlots=${data?.antiCongestionMaxSlots ?? 2} · ${data?.locationPrivacy || 'ok'}`
+          detail: `HTTP ${res.status} · MaxSlots=${data?.antiCongestionMaxSlots ?? 2} · Turnstile=${data?.turnstileEnabled ? 'ON' : 'OFF'} · RateLimit=${data?.rateLimitEngine || 'mem'}`
         };
       }
     },
@@ -256,9 +257,10 @@ async function runClusterProbes() {
       name: 'National Grounded AI Copilot (/api/ai-copilot)',
       run: async () => {
         const { res, data } = await apiFetch('/api/ai-copilot');
+        state.lastAiHealth = data || null;
         return {
           ok: res.ok && data?.ok,
-          detail: `HTTP ${res.status} · Phủ ${data?.nationalCoverageProvinces || 63} tỉnh · ${data?.engine || 'ok'}`
+          detail: `HTTP ${res.status} · Phủ ${data?.nationalCoverageProvinces || 34} tỉnh (sau NQ 202/2025) · ${data?.engine || 'ok'}`
         };
       }
     }
@@ -296,6 +298,38 @@ async function runClusterProbes() {
       </tr>`
     )
     .join('');
+
+  const auditBox = document.getElementById('ops-env-audit-grid');
+  const auditSum = document.getElementById('env-audit-summary');
+  if (auditBox) {
+    const sh = state.lastSosHealth || {};
+    const ah = state.lastAiHealth || {};
+    const items = [
+      { lbl: 'CSDL Chính (D1 / Supabase)', ok: sh.storageBackend && sh.storageBackend !== 'local_file_dev', val: sh.storageBackend || 'local' },
+      { lbl: 'Bảng chuẩn hóa D1 SQL', ok: Boolean(sh.d1NormalizedTables), val: sh.d1NormalizedTables ? 'Sẵn sàng' : 'Chưa bật' },
+      { lbl: 'Rate Limit Phân tán', ok: sh.rateLimitEngine && sh.rateLimitEngine !== 'local_memory', val: sh.rateLimitEngine || 'local_memory' },
+      { lbl: 'Cloudflare Turnstile Chống Bot', ok: Boolean(sh.turnstileEnabled), val: sh.turnstileEnabled ? 'Đang bật (Production)' : 'Tạm tắt' },
+      { lbl: 'Google Sign-In (GOOGLE_CLIENT_ID)', ok: Boolean(sh.googleClientIdConfigured), val: sh.googleClientIdConfigured ? 'Đã gắn Client ID' : 'Chưa gắn (Chờ OAuth Client ID)' },
+      { lbl: 'Gemini Cloud Key (GEMINI_API_KEY)', ok: Boolean(ah.llmVaultConfigured), val: ah.llmVaultConfigured ? `Đã gắn (${ah.keySource || 'vault'})` : 'Chế độ Tổng hợp Cục bộ' },
+      { lbl: 'Độ phủ Hành chính', ok: true, val: `${ah.nationalCoverageProvinces || 34} tỉnh/thành (NQ 202/2025)` }
+    ];
+    const readyCnt = items.filter((i) => i.ok).length;
+    if (auditSum) {
+      auditSum.className = `badge ${readyCnt >= 5 ? 'badge-ok' : 'badge-warn'}`;
+      auditSum.textContent = `${readyCnt}/${items.length} hạng mục sẵn sàng`;
+    }
+    auditBox.innerHTML = items
+      .map(
+        (it) => `<div class="item-card" style="flex:1 1 210px;margin:0;padding:8px 10px;">
+          <div style="font-size:0.72rem;color:#64748B;">${esc(it.lbl)}</div>
+          <div style="margin-top:3px;display:flex;align-items:center;justify-content:space-between;gap:6px;">
+            <strong style="font-size:0.78rem;">${esc(it.val)}</strong>
+            <span class="badge ${it.ok ? 'badge-ok' : 'badge-warn'}">${it.ok ? 'OK' : 'Cần cấu hình'}</span>
+          </div>
+        </div>`
+      )
+      .join('');
+  }
 }
 
 async function inspectSelectedZone() {
@@ -757,22 +791,62 @@ function bindEvents() {
     const pushBtn = document.getElementById('btn-push-batch-geojson');
     if (!file) return;
     try {
-      const parsed = JSON.parse(await file.text());
-      const arr = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.features) ? parsed.features : [];
+      const rawText = await file.text();
+      let arr = [];
+      if (/\.csv$/i.test(file.name) || (!rawText.trim().startsWith('{') && !rawText.trim().startsWith('['))) {
+        const rows = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        if (rows.length >= 2) {
+          const splitCsv = (line) =>
+            line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map((c) => c.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+          const hdr = splitCsv(rows[0]).map((h) => h.toLowerCase());
+          const colIdx = (keys) => hdr.findIndex((h) => keys.some((k) => h === k || h.includes(k)));
+          const iName = colIdx(['name', 'ten', 'title', 'dia diem']);
+          const iLat = colIdx(['lat', 'vi do', 'vido', 'y']);
+          const iLng = colIdx(['lng', 'lon', 'kinh do', 'kinhdo', 'x']);
+          const iCat = colIdx(['category', 'loai', 'phan loai']);
+          const iProv = colIdx(['province', 'tinh', 'thanh pho']);
+          const iNote = colIdx(['note', 'ghi chu', 'mo ta']);
+          for (const line of rows.slice(1, 201)) {
+            const cols = splitCsv(line);
+            arr.push({
+              name: cols[iName >= 0 ? iName : 0],
+              lat: Number(cols[iLat >= 0 ? iLat : 1]),
+              lng: Number(cols[iLng >= 0 ? iLng : 2]),
+              category: cols[iCat] || 'flood',
+              province: cols[iProv] || 'Việt Nam',
+              notes: cols[iNote] || ''
+            });
+          }
+        }
+      } else {
+        const parsed = JSON.parse(rawText);
+        arr = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.features) ? parsed.features : [];
+      }
+
       const valid = [];
       let rejected = 0;
-      for (const f of arr.slice(0, 100)) {
+      let dupSkipped = 0;
+      const existingPts = [...(state.reports || []), ...(state.studyPts || [])];
+
+      for (const f of arr.slice(0, 150)) {
         const lat = Number(f.lat ?? f.geometry?.coordinates?.[1]);
         const lng = Number(f.lng ?? f.geometry?.coordinates?.[0]);
         if (!isVietnamCoord(lat, lng)) {
           rejected++;
           continue;
         }
+        const isDup =
+          existingPts.some((ex) => quickDistMeters(lat, lng, Number(ex.lat), Number(ex.lng)) <= 50) ||
+          valid.some((v) => quickDistMeters(lat, lng, v.lat, v.lng) <= 50);
+        if (isDup) {
+          dupSkipped++;
+          continue;
+        }
         const props = f.properties || f;
         const cat = String(props.category || 'flood');
         valid.push({
-          id: `GEO-${Date.now().toString(36).toUpperCase()}-${valid.length + 1}`,
-          name: String(props.name || props.title || `Điểm GeoJSON ${valid.length + 1}`).slice(0, 140),
+          id: `IMP-${Date.now().toString(36).toUpperCase()}-${valid.length + 1}`,
+          name: String(props.name || props.title || `Điểm nhập lô ${valid.length + 1}`).slice(0, 140),
           province: String(props.province || 'Việt Nam').slice(0, 80),
           category: cat,
           layerGroup: ['medical', 'shelter'].includes(cat) ? 'safe' : 'risk',
@@ -782,18 +856,18 @@ function bindEvents() {
           dataClass: 'OBSERVED_DATA',
           status: 'approved',
           confirmCount: 3,
-          sourceType: 'Nạp lô GeoJSON từ Ops Console',
+          sourceType: 'Nạp lô GeoJSON / CSV từ Ops Console',
           sourceCitation: String(props.sourceCitation || 'Ops Batch Import').slice(0, 140),
           notes: String(props.notes || '').slice(0, 300)
         });
       }
       state.batchCandidates = valid;
       pushBtn.disabled = valid.length === 0;
-      st.textContent = `Đã kiểm tra: ${valid.length} điểm hợp lệ trong lãnh thổ Việt Nam (${rejected} điểm bị loại).`;
+      st.textContent = `Đã lọc thông minh: ${valid.length} điểm mới hợp lệ · loại ${rejected} điểm ngoài VN · gộp bỏ ${dupSkipped} điểm trùng ≤ 50 m.`;
     } catch {
       state.batchCandidates = [];
       pushBtn.disabled = true;
-      st.textContent = 'Lỗi: Tệp không đúng định dạng JSON / GeoJSON hợp lệ.';
+      st.textContent = 'Lỗi: Tệp không đúng định dạng GeoJSON hoặc CSV (name,lat,lng) hợp lệ.';
     }
   });
 

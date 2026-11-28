@@ -15,20 +15,27 @@ import { DATA_CLASSES } from '../platform/data/provenance-catalog.js';
 import { applyScientificGuardrails } from '../platform/ai/provider-layer.js';
 import { createBoundedRateLimiter } from '../platform/security/validators.js';
 import { buildCorsHeaders } from '../platform/security/cors.js';
+import { checkDistributedRateLimit, readEdgeAiCache, writeEdgeAiCache } from '../platform/security/edge-guard.js';
 import { buildNationalGroundedBrief, sanitizeCitizenJargon } from '../platform/ai/national-intelligence.js';
 
 const AI_CONFIG_PATH = 'config/ai-provider.enc.json';
 const FAST_MODELS = ['gemini-3.5-flash-lite', 'gemini-4-hydrogen', 'gemini-4-argon'];
 const DEEP_MODELS = ['gemini-4-hydrogen', 'gemini-3.5-flash-lite', 'gemini-4-argon'];
 
-// Chống lạm dụng tần suất gọi AI theo IP có trần bộ nhớ (Milestone 2 chuyển sang Upstash Redis)
+// Chống lạm dụng tần suất gọi AI theo IP dùng Cloudflare KV / Upstash Redis phân tán + fallback RAM
 const aiRateLimiter = createBoundedRateLimiter({ maxRequests: 18, windowMs: 60_000, maxEntries: 2000 });
-function checkRateLimit(request) {
+async function checkRateLimit(request) {
   const ip =
     request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
     request.headers.get('x-real-ip') ||
     'anon';
-  return aiRateLimiter.check(`ai:${ip}`).allowed;
+  const rl = await checkDistributedRateLimit({
+    key: `ai:${ip}`,
+    maxRequests: 18,
+    windowMs: 60_000,
+    fallbackLimiter: aiRateLimiter
+  });
+  return rl.allowed;
 }
 
 function cleanText(val, maxLen = 600) {
@@ -285,9 +292,10 @@ export async function GET(request) {
         aiReady: true,
         deterministicEngineReady: true,
         llmVaultConfigured: Boolean(resolved.key),
-        nationalCoverageProvinces: 63,
+        nationalCoverageProvinces: 34,
+        preMergerProvincesCovered: 63,
         keySource: resolved.source,
-        engine: resolved.key ? 'Google Gemini Interactions API v1 + Grounded 63-Province Synthesizer' : 'VN Resilience Multi-Source Deterministic Engine (63 Provinces)',
+        engine: resolved.key ? 'Google Gemini Interactions API v1 + Grounded 34-Province Synthesizer' : 'VN Resilience Multi-Source Deterministic Engine (34 Post-Merger Provinces)',
         models: resolved.key ? FAST_MODELS : ['multi-source-deterministic-v2']
       },
       { headers: { 'Cache-Control': 'no-store, max-age=0', ...cors } }
@@ -301,7 +309,7 @@ export async function GET(request) {
 export async function POST(request) {
   const cors = buildCorsHeaders(request);
   try {
-    if (!checkRateLimit(request, 18)) {
+    if (!(await checkRateLimit(request))) {
       return Response.json(
         { ok: false, error: 'Bạn đang gửi yêu cầu AI quá nhanh. Vui lòng đợi vài giây rồi thử lại.' },
         { status: 429, headers: cors }
@@ -335,7 +343,7 @@ export async function POST(request) {
 
     const { key: apiKey } = await resolveGeminiApiKey();
 
-    // 2. Trợ lý Hỏi-Đáp Thực chứng Đa nguồn Toàn quốc (63 Tỉnh/Thành)
+    // 2. Trợ lý Hỏi-Đáp Thực chứng Đa nguồn Toàn quốc (34 Tỉnh/Thành sau NQ 202/2025)
     if (action === 'ask_copilot') {
       const question = cleanText(body.question, 500);
       if (question.length < 3) {
@@ -343,6 +351,21 @@ export async function POST(request) {
       }
 
       const zCtx = body.zoneContext && typeof body.zoneContext === 'object' ? body.zoneContext : {};
+      const activeProv = cleanText(zCtx.zone?.province || 'VN', 40);
+      const qHash = crypto
+        .createHash('sha1')
+        .update(`${activeProv}|${question.toLowerCase()}|${Math.round(Number(zCtx.weather?.dailyRainMm || 0) / 10)}`)
+        .digest('hex')
+        .slice(0, 16);
+      const edgeCacheKey = `copilot:${qHash}`;
+
+      if (apiKey) {
+        const edgeHit = await readEdgeAiCache(edgeCacheKey);
+        if (edgeHit?.answer) {
+          return Response.json({ ...edgeHit, cache: 'EDGE_KV_HIT' }, { headers: cors });
+        }
+      }
+
       const brief = buildNationalGroundedBrief({
         question,
         zone: zCtx.zone || { name: 'Phường Đông Ngạc, Hà Nội', province: 'Hà Nội', lat: HUMG_CENTER.lat, lng: HUMG_CENTER.lng, radiusKm: 2 },
@@ -398,22 +421,21 @@ export async function POST(request) {
             hasHumanOfficialApproval: false
           });
 
-          return Response.json(
-            {
-              ok: true,
-              mode: 'cloud_llm',
-              answer: sanitizeCitizenJargon(guarded.answer),
-              modelUsed,
-              referencedPoints: brief.referencedPoints,
-              metrics: brief.metrics,
-              citedPointIds: guarded.factsCited,
-              unverifiedCitedIds: guarded.unverifiedCitedIds,
-              dataClasses: guarded.dataClasses,
-              uncertaintyNotes: guarded.uncertaintyNotes,
-              blockedOfficialClaim: guarded.blockedOfficialClaim
-            },
-            { headers: cors }
-          );
+          const llmOut = {
+            ok: true,
+            mode: 'cloud_llm',
+            answer: sanitizeCitizenJargon(guarded.answer),
+            modelUsed,
+            referencedPoints: brief.referencedPoints,
+            metrics: brief.metrics,
+            citedPointIds: guarded.factsCited,
+            unverifiedCitedIds: guarded.unverifiedCitedIds,
+            dataClasses: guarded.dataClasses,
+            uncertaintyNotes: guarded.uncertaintyNotes,
+            blockedOfficialClaim: guarded.blockedOfficialClaim
+          };
+          await writeEdgeAiCache(edgeCacheKey, llmOut, 900);
+          return Response.json(llmOut, { headers: cors });
         } catch (llmErr) {
           console.warn('[api/ai-copilot LLM fallback to deterministic]', llmErr?.message);
         }

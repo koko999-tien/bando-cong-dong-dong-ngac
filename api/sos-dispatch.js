@@ -220,18 +220,19 @@ export async function GET(request) {
     });
   }
 
-  // Hộp thư điều phối: CHỈ dành cho Tình nguyện viên ĐÃ XÁC MINH (`verified_responder` / `official_unit`)
+  // Cảnh báo hỗ trợ gần đây: Mọi tài khoản đang hoạt động (`status === 'active'`, không bị khóa) ở gần ô lưới đều xem & nhận hỗ trợ ca ngập nông;
+  // Các ca nguy hiểm (`official_only` / >= 0.45 m) vẫn ẩn hoàn toàn với tài khoản cá nhân để bảo vệ tính mạng!
   if (action === 'responder_inbox') {
     const claims = verifyCitizenToken(request);
-    if (!claims) return jsonRes(request, { ok: false, error: 'Vui lòng đăng nhập trước.' }, 401);
+    if (!claims) return jsonRes(request, { ok: false, error: 'Vui lòng đăng nhập để bật cảnh báo hỗ trợ gần đây.' }, 401);
     const acc = allAccounts.find((a) => a.id === claims.id);
-    if (!acc || acc.status === 'suspended' || !['verified_responder', 'official_unit'].includes(acc.trustTier)) {
+    if (!acc || acc.status === 'suspended' || acc.trustTier === 'revoked') {
       return jsonRes(
         request,
         {
           ok: false,
           error:
-            'Chặn bảo mật Zero-Trust: Tài khoản chưa được xác minh Tình nguyện viên/Đội xung kích nên KHÔNG được xem danh sách ca cần hỗ trợ quanh khu vực (chống kẻ xấu lợi dụng).'
+            'Tài khoản đã bị tước quyền nhận thông báo hỗ trợ do vi phạm quy chuẩn an toàn cộng đồng.'
         },
         403
       );
@@ -245,9 +246,9 @@ export async function GET(request) {
       if (['resolved_shredded', 'cancelled_shredded', 'expired_shredded'].includes(t.status)) return false;
       const alreadyMine = (t.assignedResponders || []).some((r) => r.responderId === acc.id);
       if (alreadyMine) return true;
-      // Nếu người gặp nạn chọn "Chỉ đội chính thức", cá nhân verified_responder cũng không thấy!
+      // Ca bảo vệ tối đa hoặc ngập nguy hiểm >= 0.45m chỉ đội chuyên trách mới thấy!
       if (t.dispatchScope === 'official_only' && acc.trustTier !== 'official_unit') return false;
-      // Nếu đã đủ K chỗ hỗ trợ (locked_full) -> ẨN NGAY với tất cả người khác để tránh kéo tới gây tắc đường!
+      // Đủ K=2 người tới giúp -> Tự ẩn để tránh kéo đám đông gây tắc đường!
       if ((t.assignedResponders || []).length >= t.maxResponders) return false;
       if (!viewerGh5) return true;
       return String(t.geohash6 || '').startsWith(viewerGh5.slice(0, 4));
@@ -516,13 +517,13 @@ export async function POST(request) {
     return jsonRes(request, { ok: true, token, profile: liveSq });
   }
 
-  // 5. CẬP NHẬT Ô LƯỚI ẨN DANH CỦA TÌNH NGUYỆN VIÊN (KHÔNG LƯU GPS CHÍNH XÁC!)
+  // 5. CẬP NHẬT Ô LƯỚI ẨN DANH ĐỂ NHẬN CẢNH BÁO NGƯỜI GẶP NẠN Ở GẦN (KHÔNG LƯU GPS CHÍNH XÁC!)
   if (action === 'responder_heartbeat') {
     const claims = verifyCitizenToken(request);
-    if (!claims) return jsonRes(request, { ok: false, error: 'Chưa đăng nhập.' }, 401);
+    if (!claims) return jsonRes(request, { ok: false, error: 'Vui lòng đăng nhập để bật cảnh báo hỗ trợ gần đây.' }, 401);
     const acc = allAccounts.find((a) => a.id === claims.id);
-    if (!acc || acc.status === 'suspended' || !['verified_responder', 'official_unit'].includes(acc.trustTier)) {
-      return jsonRes(request, { ok: false, error: 'Chỉ Tình nguyện viên đã xác minh mới bật được chế độ trực hỗ trợ.' }, 403);
+    if (!acc || acc.status === 'suspended' || acc.trustTier === 'revoked') {
+      return jsonRes(request, { ok: false, error: 'Tài khoản đã bị khóa do vi phạm quy chuẩn an toàn.' }, 403);
     }
     const lat = Number(body.lat);
     const lng = Number(body.lng);
@@ -625,13 +626,13 @@ export async function POST(request) {
     });
   }
 
-  // 7. TÌNH NGUYỆN VIÊN ĐÃ XÁC MINH NHẬN CA (ATOMIC K-SLOT LOCK CHỐNG TẮC ĐƯỜNG + CAM KẾT 0 ĐỒNG)
+  // 7. NGƯỜI DÙNG Ở GẦN NHẬN HỖ TRỢ (ATOMIC K-SLOT LOCK CHỐNG TẮC ĐƯỜNG + CAM KẾT 0 ĐỒNG)
   if (action === 'claim_slot') {
     const claims = verifyCitizenToken(request);
     if (!claims) return jsonRes(request, { ok: false, error: 'Vui lòng đăng nhập.' }, 401);
     const acc = allAccounts.find((a) => a.id === claims.id);
-    if (!acc || acc.status === 'suspended' || !['verified_responder', 'official_unit'].includes(acc.trustTier)) {
-      return jsonRes(request, { ok: false, error: 'Chỉ Tình nguyện viên / Đội xung kích đã xác minh mới được nhận hỗ trợ.' }, 403);
+    if (!acc || acc.status === 'suspended' || acc.trustTier === 'revoked') {
+      return jsonRes(request, { ok: false, error: 'Tài khoản đã bị tước quyền hỗ trợ do vi phạm quy chuẩn an toàn.' }, 403);
     }
     if (!body.pledgedFreeSupport) {
       return jsonRes(request, { ok: false, error: 'Bắt buộc xác nhận cam kết hỗ trợ thiện nguyện 0 đồng (chống dịch vụ chặt chém).' }, 400);

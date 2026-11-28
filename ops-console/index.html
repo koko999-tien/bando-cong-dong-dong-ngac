@@ -167,6 +167,14 @@
           </article>
         </div>
 
+        <article class="card" style="margin-bottom:14px;">
+          <div class="card-head">
+            <h2 class="card-title">Trạng thái Khóa &amp; Dịch vụ Hạ tầng Production (Env Audit)</h2>
+            <span id="env-audit-summary" class="badge badge-info">Đang kiểm tra...</span>
+          </div>
+          <div id="ops-env-audit-grid" style="display:flex;flex-wrap:wrap;gap:8px;font-size:0.78rem;"></div>
+        </article>
+
         <article class="card">
           <div class="card-head">
             <h2 class="card-title">Bản đồ Chỉ huy Không gian Toàn quốc (Live Command Overview)</h2>
@@ -203,14 +211,14 @@
 
           <article class="card">
             <div class="card-head">
-              <h2 class="card-title">Nạp Lô Tệp .GeoJSON Lên Bản đồ Chính</h2>
+              <h2 class="card-title">Nạp Lô Tệp .GeoJSON / .CSV (Tự Lọc Trùng 50 m)</h2>
             </div>
             <div class="btn-row" style="margin-bottom:8px;">
-              <input type="file" id="ops-batch-geojson" accept=".geojson,.json,application/geo+json,application/json" class="input" style="flex:1;">
+              <input type="file" id="ops-batch-geojson" accept=".geojson,.json,.csv,application/geo+json,application/json,text/csv" class="input" style="flex:1;">
               <button type="button" id="btn-push-batch-geojson" class="btn btn-primary" disabled>Đẩy Lô Hợp lệ</button>
             </div>
             <div id="batch-geojson-status" class="mono" style="font-size:0.76rem;color:var(--ink-muted);">
-              Chọn tệp FeatureCollection (.geojson) — hệ thống tự lọc tọa độ thuộc lãnh thổ Việt Nam trước khi ghi lên Cloud.
+              Chọn tệp FeatureCollection (.geojson) hoặc bảng CSV (name,lat,lng,category,province,notes) — tự lọc tọa độ VN và loại điểm trùng &le; 50 m trước khi ghi Cloud.
             </div>
           </article>
         </div>

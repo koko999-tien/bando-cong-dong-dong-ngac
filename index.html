@@ -840,8 +840,8 @@
                   <label class="field-label">Dữ liệu tọa độ đẩy lên Bản đồ chính <span class="req">*</span></label>
                   <button type="button" id="btn-add-sample-study-pts" class="text-btn">+ Chèn 2 điểm mẫu quanh tâm tỉnh</button>
                 </div>
-                <span class="field-hint">Chạm lên bản đồ bên phải để gắn điểm hoặc nạp tệp <code>.geojson</code>.</span>
-                <input type="file" id="sub-geojson-file" accept=".geojson,.json,application/geo+json,application/json" class="text-input file-input">
+                <span class="field-hint">Chạm lên bản đồ bên phải để gắn điểm hoặc nạp hàng loạt tệp <code>.geojson</code> / <code>.csv</code> (tự lọc trùng 50 m).</span>
+                <input type="file" id="sub-geojson-file" accept=".geojson,.json,.csv,application/geo+json,application/json,text/csv" class="text-input file-input">
                 <div id="sub-points-preview" class="field-status-note">Chưa có điểm nào được gắn.</div>
               </div>
 
@@ -1009,16 +1009,16 @@
 
           <div class="sos-guarantees-grid">
             <div class="sos-guarantee-item">
-              <strong>1. Chống tắc đường đám đông (K-Slot Lock)</strong>
-              <span>Không phát loa đại trà. Hệ thống chỉ mở tối đa 2 vị trí hỗ trợ gần nhất và tự động đóng luồng ngay khi đủ người nhận.</span>
+              <strong>1. Phát cảnh báo Thẳng &amp; Chống tắc (K=2)</strong>
+              <span>Khi bạn gửi hỗ trợ, cảnh báo phát ngay tới mọi người dùng đang ở gần; chỉ mở tối đa 2 chỗ nhận để không kéo đám đông gây kẹt xe.</span>
             </div>
             <div class="sos-guarantee-item">
-              <strong>2. Chống kẻ xấu &amp; dịch vụ chặt chém</strong>
-              <span>Tài khoản lạ không thấy yêu cầu SOS. Chỉ Tình nguyện viên đã thẩm định &amp; cam kết 0 đồng mới nhận ca, đối chiếu PIN 4 số tại chỗ.</span>
+              <strong>2. An toàn 2 chiều &amp; Giới hạn &lt; 0,45 m</strong>
+              <span>Khóa kiểm tra PIN 4 số tại chỗ, 1 chạm khóa tức thì tài khoản đòi tiền. Ngập sâu &ge; 0,45 m / rò điện tự chuyển thẳng 112/114/115.</span>
             </div>
             <div class="sos-guarantee-item">
-              <strong>3. Không bao giờ lộ vị trí người tải App</strong>
-              <span>Không lưu GPS nền của người dùng (<span id="sos-zone-squad-count" class="mono-num">--</span> đội trực trong ô lưới thô; 0 tọa độ lộ ra ngoài). Vị trí phiên tự xóa trắng sau ca.</span>
+              <strong>3. Không bao giờ lộ vị trí nền</strong>
+              <span>Không lưu GPS nền (<span id="sos-zone-squad-count" class="mono-num">--</span> người trực quanh ô lưới). Tọa độ mờ 300 m trước khi nhận và tự xóa trắng sau ca.</span>
             </div>
           </div>
           <div class="sos-legal-strip">
@@ -1201,6 +1201,12 @@
               <div id="ai-inference-banner" class="field-status-note">
                 <strong id="ai-inference-headline" style="display:block;color:var(--ink);">Chưa ghi nhận bất thường trên hành trình</strong>
                 <span id="ai-inference-desc">AI chỉ chạy cục bộ trên thiết bị (Edge Inference), không gửi lịch sử đường đi của bạn lên máy chủ khi bình thường.</span>
+                <div class="btn-row" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                  <span class="muted-meta">Hiệu chuẩn AI thực địa:</span>
+                  <button type="button" class="filter-pill js-ai-calib" data-label="true_stall">Đúng là kẹt / chết máy</button>
+                  <button type="button" class="filter-pill js-ai-calib" data-label="false_redlight">Chỉ dừng đèn đỏ / bình thường</button>
+                  <span id="ai-calib-count" class="muted-meta mono-num"></span>
+                </div>
               </div>
 
               <div class="ai-charts-split">
@@ -1218,17 +1224,17 @@
               </div>
             </article>
 
-            <!-- HỘP THƯ ĐIỀU PHỐI CHỈ MỞ CHO ĐỘI XUNG KÍCH / TÌNH NGUYỆN VIÊN ĐÃ XÁC MINH -->
+            <!-- CẢNH BÁO HỖ TRỢ GẦN ĐÂY DÀNH CHO NGƯỜI DÙNG QUANH KHU VỰC -->
             <article class="card-panel">
               <div class="section-head-row">
                 <div>
-                  <h2 class="section-title">Hộp thư Điều phối Tình nguyện viên Đã xác minh</h2>
-                  <span class="muted-meta">Tài khoản chưa thẩm định hoàn toàn bị chặn xem danh sách này</span>
+                  <h2 class="section-title">Cảnh báo Hỗ trợ Gần Bạn (Phát thẳng Quanh khu vực)</h2>
+                  <span class="muted-meta">Người dùng đã đăng nhập bật nhận cảnh báo sẽ thấy ngay ca ngập nông quanh đây (tối đa 2 người nhận)</span>
                 </div>
-                <button type="button" id="btn-responder-heartbeat" class="btn btn-sm btn-secondary">Báo trực Ô lưới 30p</button>
+                <button type="button" id="btn-responder-heartbeat" class="btn btn-sm btn-secondary">Nhận cảnh báo gần đây (30p)</button>
               </div>
               <div id="responder-inbox-box" class="place-list">
-                <p class="muted-body">Chỉ mở cho Đội xung kích / Tình nguyện viên đã xác minh danh tính để chống kẻ xấu rình mò vị trí người gặp nạn.</p>
+                <p class="muted-body">Đăng nhập để tự động nhận cảnh báo khi có người gặp sự cố xe chết máy hoặc cần hỗ trợ ở gần khu vực của bạn.</p>
               </div>
             </article>
           </div>

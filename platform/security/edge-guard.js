@@ -179,3 +179,48 @@ export async function verifyTurnstileChallenge({ token = '', remoteIp = '', requ
     clearTimeout(timer);
   }
 }
+
+/**
+ * Đọc/ghi bộ nhớ đệm AI Copilot trên Cloudflare KV Edge (TTL 15 phút) để tiết kiệm quota Gemini.
+ */
+export async function readEdgeAiCache(cacheKey) {
+  const { url, token } = getCfEdgeConfig();
+  if (!url || !token || !cacheKey) return null;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 1400);
+  try {
+    const res = await fetch(`${url}/ai-cache/get`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: cacheKey }),
+      signal: ctrl.signal
+    });
+    if (!res.ok) return null;
+    const j = await res.json();
+    return j?.hit && j?.value ? j.value : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function writeEdgeAiCache(cacheKey, value, ttlSeconds = 900) {
+  const { url, token } = getCfEdgeConfig();
+  if (!url || !token || !cacheKey || !value) return false;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 1400);
+  try {
+    const res = await fetch(`${url}/ai-cache/set`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: cacheKey, value, ttlSeconds }),
+      signal: ctrl.signal
+    });
+    return res.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}

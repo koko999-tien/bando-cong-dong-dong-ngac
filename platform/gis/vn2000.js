@@ -1,6 +1,6 @@
 /**
  * HỆ QUY CHIẾU VÀ HỆ TỌA ĐỘ QUỐC GIA VN-2000 (THÔNG TƯ 973/2001/TT-TCĐC & QĐ 05/2007/QĐ-BTNMT)
- * - Bảng Kinh tuyến trục (L0) múi chiếu 3° đầy đủ 63 tỉnh/thành phố Việt Nam.
+ * - Bảng Kinh tuyến trục (L0) múi chiếu 3° đầy đủ 34 tỉnh/thành hiện hành (NQ 202/2025) & 63 địa bàn cũ.
  * - Phép biến đổi 7 tham số Bursa-Wolf Helmert giữa Ellipsoid WGS-84 toàn cầu và VN-2000
  *   (dùng làm bộ tính toán tức thì 0 ms và dự phòng ngoại tuyến chính xác cao cho vn2000.vn/api).
  */
@@ -37,6 +37,7 @@ export const VN2000_PROVINCE_MERIDIANS = {
   'Quảng Bình': 106.0,
   'Quảng Trị': 106.25,
   'Thừa Thiên Huế': 107.0,
+  'Huế': 107.0,
   'TP. Huế': 107.0,
   'Đà Nẵng': 107.75,
   'TP. Đà Nẵng': 107.75,

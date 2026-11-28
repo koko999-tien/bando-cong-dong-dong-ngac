@@ -122,14 +122,14 @@ export function evaluateDispatchPolicy({ category = 'stalled_vehicle', waterDept
     };
   }
 
-  // Hỗ trợ đẩy/kéo xe chết máy, chỉ đường thoát ngập nhẹ, hỗ trợ y tế nhẹ: Giới hạn cứng K = 2 chỗ chống ùn tắc!
+  // Hỗ trợ đẩy/kéo xe chết máy, chỉ đường thoát ngập nhẹ, hỗ trợ y tế nhẹ: phát cảnh báo tới mọi người dùng đang ở gần trong khu vực, giới hạn cứng K = 2 chỗ chống ùn tắc!
   const maxSlots = category === 'medical_heat' ? 2 : 2;
   return {
     effectiveScope: 'verified_peers',
     maxResponders: maxSlots,
-    waveSize: maxSlots + 2, // Chỉ mời tối đa 4 tình nguyện viên đã xác minh gần nhất ở đợt 1
+    waveSize: maxSlots + 2,
     escalate112: false,
-    policyReason: `Điều phối chống tắc đường: Chỉ mở tối đa ${maxSlots} vị trí hỗ trợ từ Tình nguyện viên đã xác minh danh tính & cam kết 0 đồng; tự động khóa luồng ngay khi đủ người nhận.`
+    policyReason: `Điều phối hỗ trợ gần đây: Hệ thống phát cảnh báo tới người dùng quanh khu vực, chỉ mở tối đa ${maxSlots} chỗ nhận hỗ trợ 0 đồng và tự động khóa luồng ngay khi đủ người để tránh tắc đường.`
   };
 }
 

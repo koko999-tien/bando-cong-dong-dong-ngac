@@ -5,7 +5,7 @@
  *
  * 1. Lưới địa hình vệ tinh mật độ cao:
  *    - Vùng lõi Đông Ngạc (≤ 2 km): Lưới 25×25 = 625 điểm Copernicus GLO-30 (0 ms offline).
- *    - Toàn lãnh thổ Việt Nam (63 tỉnh/thành): Lưới động 14×14 = 196 điểm Copernicus GLO-30
+ *    - Toàn lãnh thổ Việt Nam (34 tỉnh/thành sau NQ 202/2025): Lưới động 14×14 = 196 điểm Copernicus GLO-30
  *      (2 truy vấn song song 98 điểm qua Open-Meteo Elevation API, lưu đệm RAM + sessionStorage).
  * 2. Giải tích Địa hình Vi phân (∇z = ∂z/∂x, ∂z/∂y):
  *    - Tính độ dốc thực tế (Slope Angle °) và hướng dốc tụ thủy (Downhill Aspect rad).

@@ -1,6 +1,6 @@
 /**
  * NATIONAL MULTI-SOURCE GEOSPATIAL INTELLIGENCE SYNTHESIZER
- * Tổng hợp định lượng đa nguồn cho toàn bộ 63 tỉnh/thành Việt Nam (không khóa cứng Đông Ngạc):
+ * Tổng hợp định lượng đa nguồn cho 34 tỉnh/thành sau sáp nhập NQ 202/2025 (hỗ trợ cả 63 địa bàn cũ):
  * - Địa giới hành chính trước/sau sáp nhập & quy mô dân cư vòng khoanh (vn2000.vn / gis.vn)
  * - Phân bố cao độ & độ dốc địa hình vùng (min/p50/max, % vùng trũng thấp, độ dốc lớn nhất)
  * - Diễn biến mưa 24h & Lưu lượng dòng chảy sông 21 ngày (Copernicus GloFAS)
