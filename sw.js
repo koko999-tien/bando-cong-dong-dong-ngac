@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vn-resilience-gis-v31';
+const CACHE_NAME = 'vn-resilience-gis-v32';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -33,7 +33,8 @@ const CORE_ASSETS = [
   './icon.svg',
   './vendor/leaflet/leaflet.css',
   './vendor/leaflet/leaflet.js',
-  './vendor/turf/turf.min.js'
+  './vendor/turf/turf.min.js',
+  './vendor/chartjs/chart.umd.min.js'
 ];
 
 self.addEventListener('install', (event) => {

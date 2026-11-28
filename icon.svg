@@ -1,8 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect width="128" height="128" rx="24" fill="#0F766E"/>
-  <circle cx="64" cy="64" r="44" fill="none" stroke="#99F6E4" stroke-width="5"/>
-  <circle cx="64" cy="64" r="24" fill="none" stroke="#CCFBF1" stroke-width="3.5" stroke-dasharray="7 5"/>
-  <circle cx="64" cy="64" r="8" fill="#FFFFFF"/>
-  <path d="M64 12v10M64 106v10M12 64h10M106 64h10" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"/>
-  <polygon points="88,24 102,48 74,48" fill="#EA580C" stroke="#FFFFFF" stroke-width="3" stroke-linejoin="round"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#090F1E"/>
+      <stop offset="100%" stop-color="#0F766E"/>
+    </linearGradient>
+    <linearGradient id="sweep" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5EEAD4" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#5EEAD4" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <circle cx="64" cy="64" r="46" fill="none" stroke="#5EEAD4" stroke-opacity="0.35" stroke-width="2.5"/>
+  <circle cx="64" cy="64" r="32" fill="none" stroke="#99F6E4" stroke-opacity="0.65" stroke-width="3" stroke-dasharray="6 5"/>
+  <circle cx="64" cy="64" r="18" fill="none" stroke="#CCFBF1" stroke-width="2.5"/>
+  <path d="M64 64 L96 32 A45 45 0 0 1 109 64 Z" fill="url(#sweep)"/>
+  <path d="M64 14v12M64 102v12M14 64h12M102 64h12" stroke="#5EEAD4" stroke-width="4" stroke-linecap="round"/>
+  <path d="M28 84 Q46 72 64 84 T100 84" fill="none" stroke="#38BDF8" stroke-width="3.5" stroke-linecap="round"/>
+  <circle cx="64" cy="64" r="6.5" fill="#FFFFFF" stroke="#0F766E" stroke-width="2.5"/>
+  <circle cx="92" cy="36" r="8.5" fill="#EA580C" stroke="#FFFFFF" stroke-width="2.5"/>
 </svg>

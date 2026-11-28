@@ -85,13 +85,14 @@ const ALL_STATIC_BASINS = [...LOW_DEM_BASINS, ...VIETNAM_VERIFIED_BASINS];
 
 const BASEMAP_PROVIDERS = {
   osm: {
-    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
     maxZoom: 19,
     className: 'tiles-clean-atlas',
-    attribution: '&copy; OpenStreetMap contributors'
+    attribution: 'Tiles &copy; Esri World Street Map'
   },
   satellite: {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    labelUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
     maxZoom: 18,
     className: '',
     attribution: 'Tiles &copy; Esri World Imagery'
@@ -103,10 +104,11 @@ const BASEMAP_PROVIDERS = {
     attribution: 'Tiles &copy; Esri World Topo'
   },
   dark: {
-    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    maxZoom: 19,
-    className: 'tiles-dark-ops',
-    attribution: '&copy; OpenStreetMap · Dark Ops'
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    labelUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+    maxZoom: 16,
+    className: '',
+    attribution: 'Tiles &copy; Esri Dark Gray Canvas'
   }
 };
 
@@ -153,6 +155,7 @@ const state = {
     rainMm: 70,
     opacity: 0.75,
     preset: '70',
+    flowAnimated: true,
     demGrid: null
   },
   travelMode: 'bike',
@@ -175,6 +178,7 @@ const state = {
 
 let nationalMap = null;
 let baseTileLayer = null;
+let satelliteLabelLayer = null;
 let radarTileLayer = null;
 let hydroSurfaceLayer = null;
 let flowVectorsLayer = null;
@@ -186,6 +190,8 @@ let corridorsLayer = null;
 let zoneMarkersLayer = null;
 let mainRouteLayer = null;
 let spotMarker = null;
+let riverChartInstance = null;
+let aiSparkChartInstance = null;
 
 let routeMap = null;
 let routeLinesLayer = null;
@@ -801,6 +807,19 @@ function renderPublicOverview({ flyMap = false } = {}) {
   document.getElementById('env-zone-points-val').textContent = `${state.zonePoints.length} điểm · ${state.zoneCorridors.length} tuyến`;
   document.getElementById('env-zone-points-desc').textContent = `${riskCount} rủi ro · ${safeCount} y tế/trú · ${state.osmWaterways.length} thủy hệ`;
 
+  const rainPct = state.weather ? Math.min(100, Math.max(6, Math.round((Number(state.weather.dailyRainMm || 0) / 120) * 100))) : 8;
+  const heatPct = state.weather ? Math.min(100, Math.max(12, Math.round(((Number(state.weather.apparentTemp || 28) - 10) / 36) * 100))) : 40;
+  const aqiPct = Number.isFinite(state.aqi?.usAqi) ? Math.min(100, Math.max(8, Math.round((state.aqi.usAqi / 220) * 100))) : 18;
+  const ptsPct = Math.min(100, Math.max(10, Math.round((state.zonePoints.length / 70) * 100)));
+  const setMeter = (id, pct) => {
+    const el = document.getElementById(id);
+    if (el) el.style.width = `${pct}%`;
+  };
+  setMeter('meter-rain', rainPct);
+  setMeter('meter-heat', heatPct);
+  setMeter('meter-aqi', aqiPct);
+  setMeter('meter-points', ptsPct);
+
   renderVnCadastralCard();
   renderHourlyRainChart();
   renderRiverDischargeChart();
@@ -892,6 +911,106 @@ function renderRiverDischargeChart() {
     <span>TB mùa: <strong>×${rd.ratioVsMean.toFixed(2)}</strong></span>
   `;
 
+  if (typeof window !== 'undefined' && typeof window.Chart === 'function') {
+    if (riverChartInstance) {
+      riverChartInstance.destroy();
+      riverChartInstance = null;
+    }
+    svgMount.innerHTML = `<canvas id="river-hydrograph-canvas" role="img" aria-label="Đồ thị lưu lượng sông 21 ngày"></canvas>`;
+    const cvs = document.getElementById('river-hydrograph-canvas');
+    if (cvs) {
+      const ctx = cvs.getContext('2d');
+      const labels = rd.vals.map((_, i) => {
+        const d = i - rd.todayIdx;
+        return d === 0 ? 'Hôm nay' : d > 0 ? `+${d}d` : `${d}d`;
+      });
+      const pastSeries = rd.vals.map((v, i) => (i <= rd.todayIdx ? v : null));
+      const futSeries = rd.vals.map((v, i) => (i >= rd.todayIdx ? v : null));
+      const meanSeries = (rd.means || []).length === rd.vals.length ? rd.means : [];
+      const gradPast = ctx.createLinearGradient(0, 0, 0, 70);
+      gradPast.addColorStop(0, 'rgba(15, 118, 110, 0.28)');
+      gradPast.addColorStop(1, 'rgba(15, 118, 110, 0.01)');
+      const gradFut = ctx.createLinearGradient(0, 0, 0, 70);
+      gradFut.addColorStop(0, 'rgba(2, 132, 199, 0.22)');
+      gradFut.addColorStop(1, 'rgba(2, 132, 199, 0.01)');
+
+      riverChartInstance = new window.Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Quan trắc',
+              data: pastSeries,
+              borderColor: '#0F766E',
+              backgroundColor: gradPast,
+              borderWidth: 2,
+              fill: true,
+              tension: 0.32,
+              pointRadius: rd.vals.map((_, i) => (i === rd.todayIdx ? 3.5 : 0)),
+              pointBackgroundColor: '#E11D48',
+              pointBorderColor: '#FFFFFF',
+              pointBorderWidth: 1.5
+            },
+            {
+              label: 'Dự báo 14d',
+              data: futSeries,
+              borderColor: '#0284C7',
+              backgroundColor: gradFut,
+              borderWidth: 1.8,
+              borderDash: [4, 3],
+              fill: true,
+              tension: 0.32,
+              pointRadius: 0
+            },
+            ...(meanSeries.length
+              ? [
+                  {
+                    label: 'TB mùa',
+                    data: meanSeries,
+                    borderColor: '#94A3B8',
+                    borderWidth: 1.1,
+                    borderDash: [2, 3],
+                    fill: false,
+                    pointRadius: 0
+                  }
+                ]
+              : [])
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(9, 15, 30, 0.92)',
+              titleFont: { size: 10 },
+              bodyFont: { size: 11 },
+              padding: 6,
+              callbacks: {
+                label: (ctxItem) =>
+                  ctxItem.parsed.y != null ? `${ctxItem.dataset.label}: ${Number(ctxItem.parsed.y).toFixed(1)} m³/s` : null
+              }
+            }
+          },
+          scales: {
+            x: { display: false },
+            y: {
+              display: true,
+              ticks: { maxTicksLimit: 3, font: { size: 9 }, color: '#64748B' },
+              grid: { color: 'rgba(148, 163, 184, 0.16)', drawTicks: false },
+              border: { display: false }
+            }
+          }
+        }
+      });
+      return;
+    }
+  }
+
   svgMount.innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Đồ thị lưu lượng sông 21 ngày">
       <polygon fill="rgba(14, 165, 233, 0.14)" points="${areaPts}" />
@@ -915,10 +1034,18 @@ function ensureNationalMap() {
 
   const cfg = BASEMAP_PROVIDERS[state.basemap] || BASEMAP_PROVIDERS.osm;
   baseTileLayer = window.L.tileLayer(cfg.url, {
+    subdomains: cfg.subdomains || 'abc',
     maxZoom: cfg.maxZoom,
     className: cfg.className || '',
     attribution: cfg.attribution
   }).addTo(nationalMap);
+  if (cfg.labelUrl) {
+    satelliteLabelLayer = window.L.tileLayer(cfg.labelUrl, {
+      subdomains: cfg.subdomains || 'abcd',
+      maxZoom: 20,
+      pane: 'shadowPane'
+    }).addTo(nationalMap);
+  }
 
   // Lớp Mặt phủ ngập nước thủy văn 60fps Canvas (Mặc định bật)
   hydroSurfaceLayer = createNationalHydroSurfaceLayer(window.L, () => ({
@@ -937,6 +1064,8 @@ function ensureNationalMap() {
 
   flowVectorsLayer = createHydroFlowVectorsLayer(window.L, () => ({
     enabled: state.layers.flowVectors,
+    animated: state.hydroSim.flowAnimated,
+    simRainMm: state.hydroSim.rainMm,
     isDark: state.basemap === 'dark' || state.basemap === 'satellite',
     centerLat: state.zone.lat,
     centerLng: state.zone.lng,
@@ -985,13 +1114,26 @@ function setBasemap(key) {
   });
   if (!nationalMap) return;
   if (baseTileLayer) nationalMap.removeLayer(baseTileLayer);
+  if (satelliteLabelLayer) {
+    nationalMap.removeLayer(satelliteLabelLayer);
+    satelliteLabelLayer = null;
+  }
   const cfg = BASEMAP_PROVIDERS[key];
   baseTileLayer = window.L.tileLayer(cfg.url, {
+    subdomains: cfg.subdomains || 'abc',
     maxZoom: cfg.maxZoom,
     className: cfg.className || '',
     attribution: cfg.attribution
   }).addTo(nationalMap);
   baseTileLayer.bringToBack();
+  if (cfg.labelUrl) {
+    satelliteLabelLayer = window.L.tileLayer(cfg.labelUrl, {
+      subdomains: cfg.subdomains || 'abcd',
+      maxZoom: 20,
+      pane: 'shadowPane'
+    }).addTo(nationalMap);
+  }
+  flowVectorsLayer?.redraw();
 }
 
 function renderRadarFrame() {
@@ -2668,6 +2810,14 @@ function bindEvents() {
     if (lb) lb.textContent = `${pct}%`;
     hydroSurfaceLayer?.redraw();
   });
+  document.getElementById('btn-toggle-flow-anim')?.addEventListener('click', (ev) => {
+    const btn = ev.currentTarget;
+    state.hydroSim.flowAnimated = !state.hydroSim.flowAnimated;
+    btn.classList.toggle('is-active', state.hydroSim.flowAnimated);
+    btn.setAttribute('aria-pressed', String(state.hydroSim.flowAnimated));
+    btn.textContent = state.hydroSim.flowAnimated ? 'Dòng chảy động' : 'Tĩnh hướng chảy';
+    flowVectorsLayer?.setAnimated(state.hydroSim.flowAnimated);
+  });
 
   document.getElementById('btn-radar-prev')?.addEventListener('click', () => {
     if (!state.radarAnim.frames.length) return;
@@ -3558,13 +3708,97 @@ function runProactiveAiEvaluation(customOverride = null) {
 }
 
 function renderAiEscortSparkline() {
+  const gaugeMount = document.getElementById('ai-risk-gauge-svg');
   const mount = document.getElementById('ai-escort-sparkline');
-  if (!mount) return;
   const hist = appSafetyState.telemetryHistory;
   const padded = hist.length >= 2 ? hist : [{ probPct: hist[0]?.probPct ?? 8, dvProduct: 0 }, { probPct: hist[0]?.probPct ?? 8, dvProduct: 0 }];
+  const lastPt = padded[padded.length - 1];
+  const pct = Math.max(0, Math.min(100, Math.round(lastPt.probPct || 0)));
+  const lineCol = pct >= 62 ? '#E11D48' : pct >= 35 ? '#D97706' : '#0F766E';
+
+  if (gaugeMount) {
+    const deg = -90 + (pct / 100) * 180;
+    const statusTxt = pct >= 62 ? 'Nguy hiểm cao' : pct >= 35 ? 'Cần chú ý' : 'Ổn định';
+    gaugeMount.innerHTML = `
+      <svg viewBox="0 0 156 88" class="ai-gauge-svg" role="img" aria-label="Đồng hồ rủi ro AI ${pct}%">
+        <path d="M 24 62 A 54 54 0 0 1 132 62" fill="none" stroke="#E2E8F0" stroke-width="9" stroke-linecap="round"/>
+        <path d="M 24 62 A 54 54 0 0 1 54 14" fill="none" stroke="#0F766E" stroke-width="9" stroke-linecap="round"/>
+        <path d="M 54 14 A 54 54 0 0 1 98 12" fill="none" stroke="#F59E0B" stroke-width="9"/>
+        <path d="M 98 12 A 54 54 0 0 1 132 62" fill="none" stroke="#E11D48" stroke-width="9" stroke-linecap="round"/>
+        <g style="transform: rotate(${deg}deg); transform-origin: 78px 62px; transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);">
+          <polygon points="76,62 78,20 80,62" fill="#0B1324"/>
+          <circle cx="78" cy="62" r="4.5" fill="${lineCol}" stroke="#FFFFFF" stroke-width="1.5"/>
+        </g>
+        <text x="78" y="50" text-anchor="middle" font-size="13" font-weight="800" fill="${lineCol}" class="mono-num">${pct}%</text>
+        <text x="78" y="80" text-anchor="middle" font-size="10" font-weight="700" fill="${lineCol}">${statusTxt}</text>
+      </svg>`;
+  }
+
+  if (!mount) return;
+  if (typeof window !== 'undefined' && typeof window.Chart === 'function') {
+    if (aiSparkChartInstance) {
+      aiSparkChartInstance.destroy();
+      aiSparkChartInstance = null;
+    }
+    mount.innerHTML = `<canvas id="ai-escort-canvas" role="img" aria-label="Biểu đồ động học xác suất rủi ro AI"></canvas>`;
+    const cvs = document.getElementById('ai-escort-canvas');
+    if (cvs) {
+      const ctx = cvs.getContext('2d');
+      const labels = padded.map((_, i) => `T-${padded.length - 1 - i}`);
+      const grad = ctx.createLinearGradient(0, 0, 0, 68);
+      grad.addColorStop(0, pct >= 62 ? 'rgba(225, 29, 72, 0.32)' : 'rgba(15, 118, 110, 0.25)');
+      grad.addColorStop(1, 'rgba(15, 118, 110, 0.01)');
+      aiSparkChartInstance = new window.Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Rủi ro AI (%)',
+              data: padded.map((x) => x.probPct),
+              borderColor: lineCol,
+              backgroundColor: grad,
+              borderWidth: 2,
+              fill: true,
+              tension: 0.3,
+              pointRadius: padded.map((_, i) => (i === padded.length - 1 ? 3.5 : 0)),
+              pointBackgroundColor: lineCol
+            },
+            {
+              label: 'Ngưỡng hỏi thăm (62%)',
+              data: padded.map(() => 62),
+              borderColor: 'rgba(225, 29, 72, 0.55)',
+              borderWidth: 1.1,
+              borderDash: [4, 3],
+              fill: false,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { display: false },
+            y: {
+              min: 0,
+              max: 100,
+              ticks: { stepSize: 50, font: { size: 9 }, color: '#64748B' },
+              grid: { color: 'rgba(148, 163, 184, 0.16)', drawTicks: false },
+              border: { display: false }
+            }
+          }
+        }
+      });
+      return;
+    }
+  }
+
   const W = 320;
   const H = 56;
-  const thresholdY = H - 8 - (68 / 100) * (H - 16);
+  const thresholdY = H - 8 - (62 / 100) * (H - 16);
   const pts = padded
     .map((item, idx) => {
       const x = 8 + (idx / Math.max(1, padded.length - 1)) * (W - 16);
@@ -3572,8 +3806,6 @@ function renderAiEscortSparkline() {
       return `${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(' ');
-  const lastPt = padded[padded.length - 1];
-  const lineCol = lastPt.probPct >= 62 ? '#DC2626' : lastPt.probPct >= 35 ? '#D97706' : '#0F766E';
   mount.innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Biểu đồ động học xác suất rủi ro AI">
       <line x1="8" y1="${thresholdY.toFixed(1)}" x2="${W - 8}" y2="${thresholdY.toFixed(1)}" stroke="#EF4444" stroke-width="1" stroke-dasharray="3 3" />

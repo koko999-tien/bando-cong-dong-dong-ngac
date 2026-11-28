@@ -621,6 +621,7 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
 .advisory-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
+  border-top: 3px solid var(--ok-ink);
   border-radius: var(--radius-md);
   padding: 13px 14px;
   display: flex;
@@ -629,10 +630,12 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
 }
 .advisory-card.is-attention {
   border-color: #FDBA74;
+  border-top-color: #D97706;
   background: #FFFDFB;
 }
 .advisory-card.is-high {
   border-color: #FDA4AF;
+  border-top-color: #BE123C;
   background: #FFFCFD;
 }
 
@@ -806,10 +809,18 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   gap: 4px;
 }
 .env-card-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.73rem;
   font-weight: 600;
   color: var(--ink-muted);
 }
+.env-ico { flex-shrink: 0; }
+.env-ico.is-rain { color: #0284C7; }
+.env-ico.is-heat { color: #EA580C; }
+.env-ico.is-aqi { color: #6366F1; }
+.env-ico.is-pts { color: #0F766E; }
 .env-card-value {
   font-size: 1.08rem;
   font-weight: 700;
@@ -817,6 +828,24 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   letter-spacing: -0.02em;
   margin-top: 1px;
 }
+.env-meter {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: #E2E8F0;
+  overflow: hidden;
+  margin: 2px 0;
+}
+.env-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.env-meter-fill.is-rain { background: linear-gradient(90deg, #38BDF8, #0284C7); }
+.env-meter-fill.is-heat { background: linear-gradient(90deg, #FBBF24, #EA580C); }
+.env-meter-fill.is-aqi { background: linear-gradient(90deg, #34D399, #6366F1); }
+.env-meter-fill.is-pts { background: linear-gradient(90deg, #2DD4BF, #0F766E); }
 .env-card-desc {
   font-size: 0.74rem;
   color: var(--ink-secondary);
@@ -866,11 +895,13 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
 .discharge-meta-row strong { color: var(--ink); }
 .hydrograph-mount {
   width: 100%;
-  height: 60px;
+  height: 76px;
+  position: relative;
 }
-.hydrograph-mount svg {
-  width: 100%;
-  height: 100%;
+.hydrograph-mount svg,
+.hydrograph-mount canvas {
+  width: 100% !important;
+  height: 100% !important;
   display: block;
 }
 
@@ -1098,19 +1129,40 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   z-index: 1;
 }
 
-/* Chế tác Bản đồ nền Sáng Trực quan (Silver-Slate Cartography) & Tối (Dark Ops) */
+/* Chế tác Bản đồ nền CARTO Voyager & Tối (Dark Matter) */
 .tiles-clean-atlas {
-  filter: saturate(0.32) contrast(1.03) brightness(1.03);
+  filter: contrast(1.02) saturate(0.92);
 }
 .tiles-dark-ops {
   filter: invert(1) hue-rotate(182deg) saturate(0.55) brightness(0.88) contrast(1.08);
 }
 
-/* Ký hiệu bản đồ tương tác mượt */
+/* Ký hiệu bản đồ tương tác mượt & Radar Beacon cho điểm rủi ro nghiêm trọng */
 .vn-pictogram-marker {
   background: transparent;
   border: 0;
   filter: drop-shadow(0 2px 5px rgba(9, 15, 30, 0.28));
+}
+.vn-pictogram-marker.is-severe-beacon::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(225, 29, 72, 0.58);
+  animation: vn-beacon-pulse 2.2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes vn-beacon-pulse {
+  0% { transform: scale(0.82); opacity: 0.85; }
+  100% { transform: scale(1.65); opacity: 0; }
+}
+.map-compass-rose {
+  position: absolute;
+  top: 56px;
+  left: 12px;
+  z-index: 428;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 10px rgba(9, 15, 30, 0.28));
 }
 .vn-pictogram-marker svg {
   transition: transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -1877,7 +1929,8 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
 /* ================= PHÂN HỆ 2 (NGHIÊN CỨU) & PHÂN HỆ 3 (BẢN TIN) ================= */
 .section-banner, .news-header-banner {
   background:
-    radial-gradient(circle at 92% 18%, rgba(20, 184, 166, 0.14), transparent 42%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='120' viewBox='0 0 220 120'%3E%3Cpath d='M-10 95 Q 55 50 110 85 T 230 65 M-10 65 Q 65 18 135 55 T 230 32 M-10 30 Q 48 5 110 26 T 230 12' fill='none' stroke='rgba(94,234,212,0.08)' stroke-width='1.1'/%3E%3C/svg%3E"),
+    radial-gradient(circle at 92% 18%, rgba(20, 184, 166, 0.16), transparent 45%),
     linear-gradient(135deg, #0B1324 0%, #13203B 100%);
   border: 1px solid #1E2D4A;
   border-radius: var(--radius-lg);
@@ -2478,15 +2531,17 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   .map-overlay-controls {
     width: 100%;
     justify-content: space-between;
-    gap: 5px;
+    gap: 4px;
+    flex-wrap: wrap;
   }
   .hud-basemap-seg .map-ctrl-btn {
-    padding: 3px 6px;
-    font-size: 0.69rem;
+    padding: 3px 5.5px;
+    font-size: 0.66rem;
   }
   .hud-layers-trigger {
-    padding: 4px 8px;
-    font-size: 0.72rem;
+    padding: 4px 7px;
+    font-size: 0.67rem;
+    gap: 4px;
   }
   .zone-suggestions { right: 0; }
 }
@@ -2658,4 +2713,60 @@ html.is-large-text .subtab-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.ai-charts-split {
+  display: grid;
+  grid-template-columns: 152px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-dock);
+  border: 1px solid var(--border);
+}
+.ai-gauge-mount {
+  width: 148px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ai-gauge-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+@media (max-width: 520px) {
+  .ai-charts-split {
+    grid-template-columns: 1fr;
+  }
+  .ai-gauge-mount {
+    margin: 0 auto;
+  }
+}
+
+.hud-glass-btn,
+.hud-telemetry-pill,
+.hud-basemap-seg,
+.hydro-sim-strip {
+  box-shadow: var(--shadow-hud), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.hydro-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(148, 163, 184, 0.28);
+  border-radius: 999px;
+}
+.hydro-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #38BDF8;
+  border: 2px solid #090F1E;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
+  cursor: pointer;
 }

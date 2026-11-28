@@ -219,37 +219,53 @@
               <div class="env-grid">
                 <article class="env-card">
                   <div class="env-card-head">
-                    <span class="env-card-label">Mưa hiện tại / Ngày</span>
+                    <span class="env-card-label">
+                      <svg class="env-ico is-rain" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
+                      Mưa hiện tại / Ngày
+                    </span>
                     <span class="source-tag tone-forecast">Dự báo</span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-rain-val">--</strong>
+                  <div class="env-meter" aria-hidden="true"><span id="meter-rain" class="env-meter-fill is-rain" style="width:10%"></span></div>
                   <p class="env-card-desc" id="env-rain-desc">Đang tải lượng mưa...</p>
                 </article>
 
                 <article class="env-card">
                   <div class="env-card-head">
-                    <span class="env-card-label">Nhiệt độ &amp; Cảm nhận</span>
+                    <span class="env-card-label">
+                      <svg class="env-ico is-heat" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path></svg>
+                      Nhiệt độ &amp; Cảm nhận
+                    </span>
                     <span class="source-tag tone-forecast">Khí tượng</span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-heat-val">--</strong>
+                  <div class="env-meter" aria-hidden="true"><span id="meter-heat" class="env-meter-fill is-heat" style="width:45%"></span></div>
                   <p class="env-card-desc" id="env-heat-desc">Đang tải nhiệt độ...</p>
                 </article>
 
                 <article class="env-card">
                   <div class="env-card-head">
-                    <span class="env-card-label">Không khí (US AQI)</span>
+                    <span class="env-card-label">
+                      <svg class="env-ico is-aqi" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"></path></svg>
+                      Không khí (US AQI)
+                    </span>
                     <span class="source-tag tone-model">Mô hình</span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-aqi-val">--</strong>
+                  <div class="env-meter" aria-hidden="true"><span id="meter-aqi" class="env-meter-fill is-aqi" style="width:25%"></span></div>
                   <p class="env-card-desc" id="env-aqi-desc">Đang tải chỉ số bụi mịn...</p>
                 </article>
 
                 <article class="env-card">
                   <div class="env-card-head">
-                    <span class="env-card-label">Mật độ lớp bản đồ</span>
+                    <span class="env-card-label">
+                      <svg class="env-ico is-pts" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                      Mật độ lớp bản đồ
+                    </span>
                     <span class="source-tag tone-verified">Nội vùng</span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-zone-points-val">--</strong>
+                  <div class="env-meter" aria-hidden="true"><span id="meter-points" class="env-meter-fill is-pts" style="width:50%"></span></div>
                   <p class="env-card-desc" id="env-zone-points-desc">Đang tổng hợp điểm &amp; hành lang...</p>
                 </article>
               </div>
@@ -576,6 +592,16 @@
               </div>
             </div>
 
+            <!-- LA BÀN BẮC ĐỊA HÌNH CARTOGRAPHIC -->
+            <div id="map-compass-rose" class="map-compass-rose" aria-hidden="true" title="Hướng Bắc Địa lý">
+              <svg width="38" height="38" viewBox="0 0 40 40">
+                <circle cx="20" cy="20" r="17.5" fill="rgba(9,15,30,0.72)" stroke="rgba(148,163,184,0.34)" stroke-width="1"/>
+                <polygon points="20,5 23.2,20 20,17.2 16.8,20" fill="#38BDF8"/>
+                <polygon points="20,35 23.2,20 20,22.8 16.8,20" fill="#64748B"/>
+                <text x="20" y="13" text-anchor="middle" fill="#FFFFFF" font-size="6.5" font-weight="800" font-family="sans-serif">N</text>
+              </svg>
+            </div>
+
             <!-- THANH TUA CHUỖI ẢNH RADAR MƯA 2 GIỜ QUA (SVG THUẦN KHÔNG KÝ TỰ UNICODE THÔ) -->
             <div id="radar-timeline-bar" class="radar-timeline-bar" hidden role="region" aria-label="Điều khiển chuỗi thời gian Radar mưa">
               <span class="hydro-sim-tag">Radar 2h</span>
@@ -608,6 +634,7 @@
                   </div>
 
                   <div class="hydro-sim-sliders">
+                    <button type="button" id="btn-toggle-flow-anim" class="rain-preset-btn is-active" aria-pressed="true" title="Bật hoặc tạm dừng hiệu ứng hạt dòng chảy trên bản đồ">Dòng chảy động</button>
                     <label class="hydro-slider-item" for="hydro-rain-slider">
                       <span>Mưa <strong id="hydro-rain-label" class="mono-num">70 mm</strong></span>
                       <input type="range" id="hydro-rain-slider" class="hydro-range" min="0" max="200" step="5" value="70">
@@ -1167,7 +1194,10 @@
                 <span id="ai-inference-desc">AI chỉ chạy cục bộ trên thiết bị (Edge Inference), không gửi lịch sử đường đi của bạn lên máy chủ khi bình thường.</span>
               </div>
 
-              <div id="ai-escort-sparkline" class="hydrograph-mount" aria-label="Chuỗi biến thiên xác suất rủi ro hành trình AI"></div>
+              <div class="ai-charts-split">
+                <div id="ai-risk-gauge-svg" class="ai-gauge-mount" aria-label="Đồng hồ đo xác suất rủi ro hành trình AI"></div>
+                <div id="ai-escort-sparkline" class="hydrograph-mount" aria-label="Chuỗi biến thiên xác suất rủi ro hành trình AI"></div>
+              </div>
 
               <div>
                 <span class="field-hint" style="display:block;margin-bottom:6px;">Kiểm chứng thực nghiệm mô hình AI với 3 kịch bản động học ngoài đời thực:</span>
@@ -1356,6 +1386,7 @@
 
   <script src="./vendor/leaflet/leaflet.js"></script>
   <script src="./vendor/turf/turf.min.js"></script>
+  <script src="./vendor/chartjs/chart.umd.min.js"></script>
   <script type="module" src="./national-app.js"></script>
 </body>
 </html>
