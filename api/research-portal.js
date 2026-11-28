@@ -19,6 +19,7 @@ import {
   createBoundedRateLimiter
 } from '../platform/security/validators.js';
 import { withCors, handleCorsPreflight } from '../platform/security/cors.js';
+import { checkDistributedRateLimit } from '../platform/security/edge-guard.js';
 import {
   detectStorageBackend,
   hashPassword,
@@ -456,7 +457,13 @@ async function handleResearchPost(request) {
 
     // 1. Đăng ký tài khoản Nhà Nghiên cứu (Phần 2)
     if (action === 'register_researcher') {
-      if (!authLimiter.check(`reg:${ip}`).allowed) {
+      const regRl = await checkDistributedRateLimit({
+        key: `rreg:${ip}`,
+        maxRequests: 10,
+        windowMs: 15 * 60 * 1000,
+        fallbackLimiter: authLimiter
+      });
+      if (!regRl.allowed) {
         return Response.json({ ok: false, error: 'Bạn thao tác đăng ký quá nhanh. Vui lòng đợi ít phút.' }, { status: 429 });
       }
       const email = cleanText(body.email, 120).toLowerCase();
@@ -517,7 +524,13 @@ async function handleResearchPost(request) {
 
     // 2. Đăng nhập Nhà Nghiên cứu (Phần 2)
     if (action === 'login_researcher') {
-      if (!authLimiter.check(`rlogin:${ip}`).allowed) {
+      const loginRl = await checkDistributedRateLimit({
+        key: `rlogin:${ip}`,
+        maxRequests: 10,
+        windowMs: 15 * 60 * 1000,
+        fallbackLimiter: authLimiter
+      });
+      if (!loginRl.allowed) {
         return Response.json({ ok: false, error: 'Thử đăng nhập quá nhiều lần. Vui lòng đợi 15 phút.' }, { status: 429 });
       }
       const email = cleanText(body.email, 120).toLowerCase();
@@ -549,7 +562,13 @@ async function handleResearchPost(request) {
       if (!user) {
         return Response.json({ ok: false, error: 'Bạn phải đăng nhập tài khoản Nhà nghiên cứu để gửi dữ liệu & bài nghiên cứu.' }, { status: 401 });
       }
-      if (!submitLimiter.check(`sub:${user.id}`).allowed) {
+      const subRl = await checkDistributedRateLimit({
+        key: `rsub:${user.id}`,
+        maxRequests: 8,
+        windowMs: 15 * 60 * 1000,
+        fallbackLimiter: submitLimiter
+      });
+      if (!subRl.allowed) {
         return Response.json({ ok: false, error: 'Bạn gửi quá nhiều hồ sơ trong thời gian ngắn. Vui lòng đợi ít phút.' }, { status: 429 });
       }
 

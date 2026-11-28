@@ -1906,6 +1906,11 @@ async function handleNationalReportSubmit(e) {
     return;
   }
 
+  let turnstileToken = '';
+  if (typeof window.turnstile?.getResponse === 'function' && appSafetyState.repTurnstileWidgetId != null) {
+    turnstileToken = window.turnstile.getResponse(appSafetyState.repTurnstileWidgetId) || '';
+  }
+
   const payload = {
     name: locName,
     category,
@@ -1915,7 +1920,8 @@ async function handleNationalReportSubmit(e) {
     waterScale,
     notes,
     photoDataUrl: state.reportPhotoDataUrl || '',
-    reporterRole: 'Cư dân đóng góp'
+    reporterRole: 'Cư dân đóng góp',
+    turnstileToken
   };
 
   try {
@@ -1930,12 +1936,18 @@ async function handleNationalReportSubmit(e) {
       fb.hidden = false;
       fb.className = 'form-feedback is-error';
       fb.textContent = data?.error || 'Không gửi được phản ánh.';
+      if (typeof window.turnstile?.reset === 'function' && appSafetyState.repTurnstileWidgetId != null) {
+        window.turnstile.reset(appSafetyState.repTurnstileWidgetId);
+      }
       return;
     }
     fb.hidden = false;
     fb.className = 'form-feedback is-ok';
     fb.textContent = 'Đã tiếp nhận phản ánh! Điểm mới hiển thị trong vùng khoanh với nhãn “Phản ánh cộng đồng (chờ kiểm chứng)”.';
     document.getElementById('national-report-form').reset();
+    if (typeof window.turnstile?.reset === 'function' && appSafetyState.repTurnstileWidgetId != null) {
+      window.turnstile.reset(appSafetyState.repTurnstileWidgetId);
+    }
     document.querySelectorAll('.js-rep-chip.is-active').forEach((b) => {
       b.classList.remove('is-active');
       b.setAttribute('aria-pressed', 'false');
@@ -1946,7 +1958,7 @@ async function handleNationalReportSubmit(e) {
     refreshActiveZoneData({ flyMap: false });
   } catch {
     const queue = readJson(OFFLINE_QUEUE_KEY, []);
-    queue.push(createOfflineReportQueueItem(payload));
+    queue.push(createOfflineReportQueueItem({ ...payload, queuedOffline: true, turnstileToken: '' }));
     writeJson(OFFLINE_QUEUE_KEY, queue);
     updateOfflineStrip();
     fb.hidden = false;
@@ -4678,13 +4690,109 @@ function bindSosAndAppEvents() {
   syncCitizenSession();
 }
 
+function installMobileApiOriginBridge() {
+  const origin = typeof window !== 'undefined' ? window.__VN_API_ORIGIN__ : '';
+  if (!origin || window.__vnFetchPatched) return;
+  window.__vnFetchPatched = true;
+  const origFetch = window.fetch.bind(window);
+  window.fetch = (input, init) => {
+    if (typeof input === 'string' && input.startsWith('/api/')) {
+      return origFetch(`${origin}${input}`, init);
+    }
+    return origFetch(input, init);
+  };
+}
+
+function loadExternalScriptOnce(src, id) {
+  return new Promise((resolve, reject) => {
+    if (document.getElementById(id)) {
+      resolve();
+      return;
+    }
+    const s = document.createElement('script');
+    s.id = id;
+    s.src = src;
+    s.async = true;
+    s.defer = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error(`SCRIPT_LOAD_FAILED:${id}`));
+    document.head.appendChild(s);
+  });
+}
+
+async function initSecuritySdks() {
+  if (!location.protocol.startsWith('http')) return;
+  try {
+    const res = await fetch('/api/sos-dispatch?action=health');
+    if (!res.ok) return;
+    const h = await res.json();
+    appSafetyState.googleClientIdConfigured = Boolean(h?.googleClientIdConfigured);
+    appSafetyState.googleClientId = h?.googleClientId || '';
+    appSafetyState.turnstileSiteKey = h?.turnstileSiteKey || '';
+    appSafetyState.turnstileEnabled = Boolean(h?.turnstileEnabled && h?.turnstileSiteKey);
+
+    if (appSafetyState.turnstileEnabled) {
+      const box = document.getElementById('rep-turnstile-box');
+      if (box) {
+        await loadExternalScriptOnce('https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit', 'cf-turnstile-sdk').catch(() => {});
+        if (window.turnstile?.render) {
+          box.hidden = false;
+          appSafetyState.repTurnstileWidgetId = window.turnstile.render(box, {
+            sitekey: appSafetyState.turnstileSiteKey,
+            theme: 'light',
+            size: 'flexible'
+          });
+        }
+      }
+    }
+
+    if (appSafetyState.googleClientId) {
+      const gsiMount = document.getElementById('google-gsi-mount');
+      if (gsiMount) {
+        await loadExternalScriptOnce('https://accounts.google.com/gsi/client', 'google-gsi-sdk').catch(() => {});
+        if (window.google?.accounts?.id) {
+          window.google.accounts.id.initialize({
+            client_id: appSafetyState.googleClientId,
+            callback: async (resp) => {
+              if (!resp?.credential) return;
+              const authRes = await fetch('/api/sos-dispatch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'google_auth', idToken: resp.credential })
+              });
+              const data = await authRes.json();
+              if (authRes.ok && data?.ok) {
+                localStorage.setItem(CITIZEN_TOKEN_KEY, data.token);
+                appSafetyState.citizenToken = data.token;
+                document.getElementById('citizen-auth-dialog')?.close();
+                await syncCitizenSession();
+                showToast(`Đã đăng nhập Google: ${data.profile.fullName}`);
+              }
+            }
+          });
+          window.google.accounts.id.renderButton(gsiMount, {
+            theme: 'outline',
+            size: 'large',
+            width: 340,
+            text: 'continue_with'
+          });
+        }
+      }
+    }
+  } catch {
+    // non-fatal offline / local
+  }
+}
+
 function boot() {
+  installMobileApiOriginBridge();
   registerServiceWorker();
   applyLargeTextMode(Boolean(readJson(LARGE_TEXT_KEY, false)));
   populateProvinceSelects();
   bindEvents();
   selectZone(VIETNAM_ZONES[0], { radiusKm: 2, flyMap: true });
   loadPublicationsFeed();
+  initSecuritySdks();
 }
 
 boot();

@@ -191,3 +191,101 @@ create policy "Researcher create own submission"
 create policy "Researcher read own submissions"
   on public.research_submissions for select
   using (auth.uid() = researcher_id);
+
+-- =============================================================================
+-- 7. BẢNG CHUẨN HÓA THEO DÒNG CHO SOS ZERO-TRUST, EKYC, CỘNG ĐỒNG & ĐẨY TIN (P1.1)
+-- =============================================================================
+
+create table if not exists public.sos_accounts (
+  id text primary key,
+  email text not null unique,
+  full_name text not null,
+  organization text default '',
+  password_hash text,
+  auth_provider text not null default 'local',
+  trust_tier text not null default 'citizen' check (trust_tier in ('citizen', 'pending_responder', 'verified_responder', 'official_unit', 'revoked')),
+  status text not null default 'active' check (status in ('active', 'suspended')),
+  ekyc jsonb,
+  completed_helps integer not null default 0,
+  abuse_flags integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.sos_tickets (
+  id text primary key,
+  requester_id text not null,
+  requester_name text not null,
+  status text not null,
+  category text not null,
+  dispatch_scope text not null,
+  max_responders integer not null default 2,
+  escalate_112 boolean not null default false,
+  geohash6 text not null,
+  fuzzy_geom geometry(Point, 4326) not null,
+  exact_geom geometry(Point, 4326),
+  exact_coord_shredded boolean not null default false,
+  assigned_responders jsonb not null default '[]'::jsonb,
+  abuse_reports jsonb not null default '[]'::jsonb,
+  safety_pin text not null default '****',
+  note text default '',
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+
+create index if not exists idx_pg_sos_tickets_fuzzy on public.sos_tickets using gist (fuzzy_geom);
+create index if not exists idx_pg_sos_tickets_gh on public.sos_tickets (geohash6, status);
+
+create table if not exists public.sos_ephemeral_cells (
+  responder_id text primary key,
+  geohash5 text not null,
+  trust_tier text not null,
+  expires_at timestamptz not null
+);
+
+create index if not exists idx_pg_sos_cells_gh5 on public.sos_ephemeral_cells (geohash5, expires_at);
+
+create table if not exists public.community_reports (
+  id text primary key,
+  region_id text not null default 'vn-national',
+  province text not null,
+  category text not null,
+  name text not null,
+  geom geometry(Point, 4326) not null,
+  water_scale text default 'half_wheel',
+  confidence_tier text not null default 'C',
+  status text not null default 'pending',
+  notes text default '',
+  confirm_count integer not null default 1,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_pg_community_geom on public.community_reports using gist (geom);
+
+create table if not exists public.push_subscriptions (
+  sub_hash text primary key,
+  responder_id text not null,
+  geohash5 text not null,
+  subscription jsonb not null,
+  expires_at timestamptz not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.audit_logs (
+  id bigserial primary key,
+  ts text not null,
+  actor text default 'ops-admin',
+  action text not null,
+  detail text default '',
+  created_at timestamptz not null default now()
+);
+
+alter table public.sos_accounts enable row level security;
+alter table public.sos_tickets enable row level security;
+alter table public.sos_ephemeral_cells enable row level security;
+alter table public.community_reports enable row level security;
+alter table public.push_subscriptions enable row level security;
+alter table public.audit_logs enable row level security;
+
+create policy "Public read approved community reports"
+  on public.community_reports for select
+  using (status = 'approved');

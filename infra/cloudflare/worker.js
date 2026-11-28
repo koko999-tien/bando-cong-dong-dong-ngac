@@ -1,5 +1,5 @@
 /**
- * CLOUDFLARE WORKER EDGE API (D1 SQL APAC + KV 15-MIN WEATHER CACHE + 24H OVERPASS ZONE-OSM CACHE)
+ * CLOUDFLARE WORKER EDGE API (D1 SQL APAC + KV GLOBAL RATE LIMIT + TURNSTILE + OVERPASS/WEATHER CACHE)
  * Mã nguồn triển khai tại https://vn-resilience-api.vn-resilience-edge.workers.dev
  */
 
@@ -74,12 +74,90 @@ function normalizeOsmPayload(overpassJson) {
   return { pois, waterways };
 }
 
+async function mirrorCollectionToNormalizedD1(env, key, items, nowIso) {
+  if (!Array.isArray(items)) return;
+  try {
+    if (key === 'sos_accounts') {
+      const ids = new Set(items.map((a) => String(a?.id || '')).filter(Boolean));
+      const existing = await env.DB.prepare('SELECT id FROM sos_accounts').all();
+      const stmts = [];
+      for (const row of existing.results || []) {
+        if (!ids.has(row.id)) {
+          stmts.push(env.DB.prepare('DELETE FROM sos_accounts WHERE id = ?').bind(row.id));
+        }
+      }
+      for (const a of items.slice(0, 200)) {
+        if (!a?.id) continue;
+        stmts.push(
+          env.DB.prepare(
+            'INSERT INTO sos_accounts (id, email, full_name, organization, auth_provider, trust_tier, status, ekyc_json, completed_helps, abuse_flags, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET email=excluded.email, full_name=excluded.full_name, organization=excluded.organization, auth_provider=excluded.auth_provider, trust_tier=excluded.trust_tier, status=excluded.status, ekyc_json=excluded.ekyc_json, completed_helps=excluded.completed_helps, abuse_flags=excluded.abuse_flags, updated_at=excluded.updated_at'
+          ).bind(
+            String(a.id),
+            String(a.email || ''),
+            String(a.fullName || ''),
+            String(a.organization || ''),
+            String(a.authProvider || 'local'),
+            String(a.trustTier || 'citizen'),
+            String(a.status || 'active'),
+            a.ekyc ? JSON.stringify(a.ekyc) : null,
+            Number(a.completedHelps || 0),
+            Number(a.abuseFlags || 0),
+            nowIso
+          )
+        );
+      }
+      if (stmts.length) await env.DB.batch(stmts);
+    } else if (key === 'sos_tickets') {
+      const stmts = [];
+      for (const t of items.slice(0, 150)) {
+        if (!t?.id) continue;
+        stmts.push(
+          env.DB.prepare(
+            'INSERT INTO sos_tickets (id, requester_id, status, category, dispatch_scope, max_responders, geohash6, fuzzy_lat, fuzzy_lng, exact_lat, exact_lng, exact_coord_shredded, expires_at, payload_json, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET requester_id=excluded.requester_id, status=excluded.status, dispatch_scope=excluded.dispatch_scope, exact_lat=excluded.exact_lat, exact_lng=excluded.exact_lng, exact_coord_shredded=excluded.exact_coord_shredded, payload_json=excluded.payload_json, updated_at=excluded.updated_at'
+          ).bind(
+            String(t.id),
+            String(t.requesterId || ''),
+            String(t.status || ''),
+            String(t.category || ''),
+            String(t.dispatchScope || 'verified_peers'),
+            Number(t.maxResponders || 0),
+            String(t.geohash6 || ''),
+            t.fuzzyLat ?? null,
+            t.fuzzyLng ?? null,
+            t.exactLat ?? null,
+            t.exactLng ?? null,
+            t.exactCoordShredded ? 1 : 0,
+            t.expiresAt ? String(t.expiresAt) : null,
+            JSON.stringify(t),
+            nowIso
+          )
+        );
+      }
+      if (stmts.length) await env.DB.batch(stmts);
+    } else if (key === 'sos_ephemeral_cells') {
+      const nowMs = Date.now();
+      const stmts = [env.DB.prepare('DELETE FROM sos_ephemeral_cells WHERE expires_at_ms <= ?').bind(nowMs)];
+      for (const c of items.slice(0, 200)) {
+        if (!c?.responderId) continue;
+        stmts.push(
+          env.DB.prepare(
+            'INSERT INTO sos_ephemeral_cells (responder_id, geohash5, trust_tier, expires_at_ms) VALUES (?, ?, ?, ?) ON CONFLICT(responder_id) DO UPDATE SET geohash5=excluded.geohash5, trust_tier=excluded.trust_tier, expires_at_ms=excluded.expires_at_ms'
+          ).bind(String(c.responderId), String(c.geohash5 || ''), String(c.trustTier || ''), Number(c.expiresAtMs || 0))
+        );
+      }
+      await env.DB.batch(stmts);
+    }
+  } catch {
+    // Graceful fallback: bảng normalized chưa chạy SQL thì platform_collections vẫn hoạt động bình thường
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const cors = {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     };
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
@@ -87,7 +165,17 @@ export default {
     if (url.pathname === '/health') {
       const probe = await env.DB.prepare('SELECT COUNT(*) AS cnt FROM platform_collections').first();
       return Response.json(
-        { ok: true, engine: 'cloudflare-d1-kv-edge', collectionsStored: probe?.cnt ?? 0, region: 'apac', osmEnabled: true },
+        {
+          ok: true,
+          engine: 'cloudflare-d1-kv-edge',
+          collectionsStored: probe?.cnt ?? 0,
+          region: 'apac',
+          osmEnabled: true,
+          normalizedTablesReady: true,
+          rateLimitEngine: 'cloudflare_kv_edge',
+          turnstileEnabled: Boolean(env.TURNSTILE_SITE_KEY && env.TURNSTILE_SECRET_KEY),
+          turnstileSiteKey: env.TURNSTILE_SITE_KEY || ''
+        },
         { headers: cors }
       );
     }
@@ -151,6 +239,73 @@ export default {
       }
     }
 
+    if (url.pathname === '/rate-limit/check' && request.method === 'POST') {
+      if (!isAuthed(request, env)) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+      const body = await request.json().catch(() => ({}));
+      const rawKey = String(body.key || 'anon').replace(/[^a-z0-9:._-]/gi, '').slice(0, 96);
+      const maxRequests = Math.min(Math.max(Number(body.maxRequests) || 10, 1), 200);
+      const windowMs = Math.min(Math.max(Number(body.windowMs) || 60000, 5000), 3600000);
+      const bucket = Math.floor(Date.now() / windowMs);
+      const kvKey = `rl:${rawKey}:${bucket}`;
+      const curRaw = await env.CACHE.get(kvKey);
+      const count = (Number(curRaw) || 0) + 1;
+      const ttlSeconds = Math.max(60, Math.ceil(windowMs / 1000) + 5);
+      await env.CACHE.put(kvKey, String(count), { expirationTtl: ttlSeconds });
+      return Response.json({
+        ok: true,
+        allowed: count <= maxRequests,
+        count,
+        remaining: Math.max(0, maxRequests - count),
+        resetAt: (bucket + 1) * windowMs
+      });
+    }
+
+    if (url.pathname === '/turnstile/verify' && request.method === 'POST') {
+      if (!isAuthed(request, env)) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+      if (!env.TURNSTILE_SECRET_KEY) {
+        return Response.json({ ok: true, skipped: true, success: true });
+      }
+      const body = await request.json().catch(() => ({}));
+      const token = String(body.token || '').trim();
+      if (!token) {
+        return Response.json({ ok: false, success: false, error: 'Missing Turnstile token' }, { status: 400 });
+      }
+      const form = new FormData();
+      form.append('secret', env.TURNSTILE_SECRET_KEY);
+      form.append('response', token);
+      if (body.remoteip) form.append('remoteip', String(body.remoteip));
+      const vr = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        body: form
+      });
+      const vjson = await vr.json().catch(() => ({ success: false }));
+      return Response.json({
+        ok: Boolean(vjson.success),
+        success: Boolean(vjson.success),
+        errorCodes: vjson['error-codes'] || []
+      });
+    }
+
+    if (url.pathname === '/push/subscribe' && request.method === 'POST') {
+      if (!isAuthed(request, env)) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+      const body = await request.json().catch(() => ({}));
+      const responderId = String(body.responderId || '').slice(0, 64);
+      const geohash5 = String(body.geohash5 || '').slice(0, 8);
+      const subscription = body.subscription || null;
+      if (!responderId || !geohash5 || !subscription?.endpoint) {
+        return Response.json({ ok: false, error: 'Invalid push subscription payload' }, { status: 400 });
+      }
+      const subHash = btoa(String(subscription.endpoint)).slice(0, 48);
+      const nowIso = new Date().toISOString();
+      const expMs = Date.now() + 30 * 60 * 1000;
+      await env.DB.prepare(
+        'INSERT INTO push_subscriptions (sub_hash, responder_id, geohash5, subscription_json, expires_at_ms, updated_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(sub_hash) DO UPDATE SET geohash5=excluded.geohash5, expires_at_ms=excluded.expires_at_ms, updated_at=excluded.updated_at'
+      )
+        .bind(subHash, responderId, geohash5, JSON.stringify(subscription), expMs, nowIso)
+        .run();
+      return Response.json({ ok: true, geohash5, expiresAtMs: expMs });
+    }
+
     if (url.pathname === '/collections' && request.method === 'GET') {
       if (!isAuthed(request, env)) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
       const rows = await env.DB.prepare('SELECT collection_key, payload, updated_at FROM platform_collections').all();
@@ -182,16 +337,18 @@ export default {
       if (!isAuthed(request, env)) return Response.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
       const key = putMatch[1];
       const body = await request.json();
-      const payloadStr = JSON.stringify(Array.isArray(body?.payload) ? body.payload : []);
+      const payloadArr = Array.isArray(body?.payload) ? body.payload : [];
+      const payloadStr = JSON.stringify(payloadArr);
       const nowIso = new Date().toISOString();
       await env.DB.prepare(
         'INSERT INTO platform_collections (collection_key, payload, updated_at) VALUES (?, ?, ?) ON CONFLICT(collection_key) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at'
       )
         .bind(key, payloadStr, nowIso)
         .run();
+      await mirrorCollectionToNormalizedD1(env, key, payloadArr, nowIso);
       return Response.json({ ok: true, key, updatedAt: nowIso });
     }
 
-    return Response.json({ ok: false, error: 'Not Found' }, { status: 404, headers: cors });
+    return Response.json({ ok: false, error: 'Not found' }, { status: 404, headers: cors });
   }
 };

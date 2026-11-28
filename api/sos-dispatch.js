@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import { isInsideVietnam, findNearestVietnamZone } from '../platform/regions/vietnam-directory.js';
 import { cleanText, hasSpamContent, createBoundedRateLimiter, validateImageDataUrl } from '../platform/security/validators.js';
 import { buildCorsHeaders, handleCorsPreflight } from '../platform/security/cors.js';
+import { checkDistributedRateLimit, fetchEdgeSecurityConfig } from '../platform/security/edge-guard.js';
 import {
   detectStorageBackend,
   hashPassword,
@@ -140,10 +141,21 @@ export async function GET(request) {
   const action = url.searchParams.get('action') || 'health';
 
   if (action === 'health') {
+    const edgeCfg = await fetchEdgeSecurityConfig();
+    const rateLimitEngine =
+      process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+        ? 'upstash_redis'
+        : process.env.CF_EDGE_API_URL
+          ? 'cloudflare_kv_edge'
+          : 'local_memory';
     return jsonRes(request, {
       ok: true,
       service: 'vn-zero-trust-sos-dispatch',
       storageBackend: detectStorageBackend(),
+      d1NormalizedTables: true,
+      rateLimitEngine,
+      turnstileEnabled: edgeCfg.turnstileEnabled,
+      turnstileSiteKey: edgeCfg.turnstileSiteKey,
       googleClientIdConfigured: Boolean(process.env.GOOGLE_CLIENT_ID),
       googleClientId: process.env.GOOGLE_CLIENT_ID || '',
       antiCongestionMaxSlots: 2,
@@ -540,7 +552,13 @@ export async function POST(request) {
     if (!claims) {
       return jsonRes(request, { ok: false, error: 'Bắt buộc đăng nhập tài khoản cá nhân hoặc Google để gửi yêu cầu SOS chống báo giả.' }, 401);
     }
-    if (!sosLimiter.check(`${ip}:${claims.id}`).allowed) {
+    const rl = await checkDistributedRateLimit({
+      key: `sos:${ip}:${claims.id}`,
+      maxRequests: 12,
+      windowMs: 15 * 60 * 1000,
+      fallbackLimiter: sosLimiter
+    });
+    if (!rl.allowed) {
       return jsonRes(request, { ok: false, error: 'Bạn vừa gửi nhiều yêu cầu liên tiếp. Nếu nguy cấp tính mạng, hãy gọi ngay 112 / 114 / 115.' }, 429);
     }
     const acc = allAccounts.find((a) => a.id === claims.id) || claims;

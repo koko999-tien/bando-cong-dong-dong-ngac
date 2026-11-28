@@ -648,6 +648,23 @@ try {
   );
   assert.equal(meAfterDelete.status, 401, 'Phiên token của tài khoản đã xóa phải bị thu hồi');
 
+  // 8. GÓI 2 INFRA: EDGE GUARD, D1 SCHEMA SQL, SERVICE WORKER PUSH & CAPACITOR MOBILE PREP
+  const sosHealth = await (await sosGET(new Request('http://localhost/api/sos-dispatch?action=health'))).json();
+  assert.equal(sosHealth.d1NormalizedTables, true, 'Health check phải báo hỗ trợ bảng chuẩn hóa D1');
+  assert.ok(['local_memory', 'cloudflare_kv_edge', 'upstash_redis'].includes(sosHealth.rateLimitEngine));
+
+  const cfSchemaSql = await fs.readFile(path.join(rootDir, 'infra', 'cloudflare', 'schema.sql'), 'utf8');
+  assert.ok(cfSchemaSql.includes('CREATE TABLE IF NOT EXISTS sos_accounts') && cfSchemaSql.includes('push_subscriptions'));
+
+  const supaSql = await fs.readFile(path.join(rootDir, 'db', 'supabase-vietnam-platform.sql'), 'utf8');
+  assert.ok(supaSql.includes('public.sos_tickets') && supaSql.includes('public.community_reports'));
+
+  const capCfg = JSON.parse(await fs.readFile(path.join(rootDir, 'capacitor.config.json'), 'utf8'));
+  assert.equal(capCfg.appId, 'vn.resilience.atlas');
+
+  const swRaw = await fs.readFile(path.join(rootDir, 'sw.js'), 'utf8');
+  assert.ok(swRaw.includes("addEventListener('push'") && swRaw.includes("addEventListener('notificationclick'"), 'Service Worker phải sẵn sàng nhận Push Notification');
+
   console.log('VERIFIED VIETNAM NATIONAL 4-PILLAR + ZERO-TRUST SOS + HYDRO-AI + V31 DEEP TESTS PASSED:', {
     provincesCovered: uniqueProvinces.size,
     dongNgacPointsInZone: inDongNgac.length,

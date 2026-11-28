@@ -11,6 +11,7 @@ import {
   createBoundedRateLimiter
 } from '../platform/security/validators.js';
 import { withCors, handleCorsPreflight } from '../platform/security/cors.js';
+import { checkDistributedRateLimit, verifyTurnstileChallenge } from '../platform/security/edge-guard.js';
 
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const LIVE_PULSE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -408,15 +409,32 @@ async function handleCommunityPost(request) {
       });
     }
 
-    // 3. Người dân gửi điểm mới lên Bản đồ Cộng đồng (Multi-Region + Vá SEC-01, SEC-04, SEC-06)
+    // 3. Người dân gửi điểm mới lên Bản đồ Cộng đồng (Multi-Region + Vá SEC-01, SEC-04, SEC-06, Turnstile & Edge Rate Limit)
     if (action === 'submit_report') {
       const isAuthedOperator = verifyAdminToken(request);
+      const clientIp = getClientIp(request);
       if (!isAuthedOperator) {
-        const rl = reportRateLimiter.check(`report:${getClientIp(request)}`);
+        const rl = await checkDistributedRateLimit({
+          key: `report:${clientIp}`,
+          maxRequests: 5,
+          windowMs: 10 * 60 * 1000,
+          fallbackLimiter: reportRateLimiter
+        });
         if (!rl.allowed) {
           return Response.json(
             { ok: false, error: 'Bạn đang gửi báo cáo quá nhanh. Vui lòng đợi ít phút trước khi gửi tiếp.' },
             { status: 429 }
+          );
+        }
+        const tsCheck = await verifyTurnstileChallenge({
+          token: body.turnstileToken,
+          remoteIp: clientIp,
+          requireInProd: !body.queuedOffline
+        });
+        if (!tsCheck.verified) {
+          return Response.json(
+            { ok: false, error: tsCheck.reason || 'Xác minh chống bot chưa hợp lệ.' },
+            { status: 400 }
           );
         }
       }

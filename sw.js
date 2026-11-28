@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vn-resilience-gis-v33';
+const CACHE_NAME = 'vn-resilience-gis-v34';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -87,4 +87,35 @@ self.addEventListener('fetch', (event) => {
         .catch(() => caches.match(req))
     );
   }
+});
+
+self.addEventListener('push', (event) => {
+  let data = { title: 'VN Resilience SOS', body: 'Có yêu cầu hỗ trợ giao thông thiên tai mới trong ô lưới trực của bạn.', url: './index.html#sos' };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch {
+    // ignore malformed push
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: './icon-192.png',
+      badge: './icon-96.png',
+      tag: 'vn-resilience-sos-alert',
+      data: { url: data.url || './index.html#sos' }
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification?.data?.url || './index.html#sos';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if ('focus' in w) return w.focus();
+      }
+      return self.clients.openWindow ? self.clients.openWindow(targetUrl) : undefined;
+    })
+  );
 });
