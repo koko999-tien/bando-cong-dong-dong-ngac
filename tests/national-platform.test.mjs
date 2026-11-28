@@ -16,6 +16,7 @@ import {
   filterCorridorsInZone
 } from '../platform/data/vietnam-verified-hotspots.js';
 import { GET as researchGET, POST as researchPOST } from '../api/research-portal.js';
+import { ensureZoneDemGrid, sampleAnyDemGrid } from '../platform/gis/hydro-surface.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -74,10 +75,30 @@ try {
   assert.ok(!html.includes('2. Nghiên cứu'), 'Phải bỏ cách đánh số kiểu bài tập "2. Nghiên cứu"');
   assert.ok(!html.includes('3. Bản tin'), 'Phải bỏ cách đánh số kiểu bài tập "3. Bản tin"');
   assert.ok(html.includes('data-basemap="satellite"'), 'Phải có nút chuyển nền Vệ tinh chuyên sâu');
+  assert.ok(html.includes('data-basemap="dark"'), 'Phải có nút chuyển nền Tối (Dark Ops)');
+  assert.ok(html.includes('data-map-layer="hydroSurface"'), 'Phải có nút bật/tắt Mặt phủ ngập nước');
+  assert.ok(html.includes('data-map-layer="basins"'), 'Phải có nút bật/tắt Rốn trũng & Vành đai');
+  assert.ok(html.includes('data-map-layer="heatmap"'), 'Phải có nút bật/tắt Nhiệt rủi ro');
+  assert.ok(html.includes('id="hydro-sim-strip"'), 'Phải có thanh điều khiển mô phỏng mặt nước (USGS/NOAA style)');
+  assert.ok(html.includes('id="pillar-dev"'), 'Phải có Phân khu 4 Quản trị & Dev riêng biệt');
+  assert.ok(html.includes('id="dev-ops-workspace"'), 'Phải có không gian Quản trị đám mây & API Sandbox');
   assert.ok(html.includes('id="hourly-rain-bars"'), 'Phải có biểu đồ lượng mưa 24 giờ tới');
   assert.ok(!html.includes('Đề tài 08'), 'Phải bỏ nhãn bài tập Đề tài 08 trên nền tảng thực tế');
   assert.ok(!html.includes('Pre-test'), 'Phải bỏ thẻ khảo sát học thuật Pre-test');
   assert.ok(!html.includes('Video 45s'), 'Phải bỏ thẻ Video 45s sáo rỗng');
+
+  // 2B. KIỂM TRA LỚP MẶT PHỦ NGẬP NƯỚC ĐỊA HÌNH & CSS THANH CUỘN MẢNH (KHÔNG CÒN NÚT ▼ WINDOWS)
+  const coreDem = await ensureZoneDemGrid(21.072514, 105.77387, 2);
+  assert.equal(coreDem.source, 'core_dem_625', 'Vùng lõi Đông Ngạc phải dùng lưới DEM 25x25 (625 điểm)');
+  assert.equal(coreDem.rows, 25);
+  assert.equal(coreDem.cols, 25);
+  const humgElev = sampleAnyDemGrid(coreDem, 21.072514, 105.77387);
+  assert.ok(Number.isFinite(humgElev) && humgElev > 0 && humgElev < 30, 'Nội suy song tuyến tính cao độ HUMG hợp lệ');
+  assert.ok(coreDem.stats.lowlandPct > 20, 'Thống kê tỷ lệ vùng trũng hợp lệ');
+
+  const css = await fs.readFile(path.join(rootDir, 'citizen.css'), 'utf8');
+  assert.ok(css.includes('::-webkit-scrollbar-button'), 'CSS phải ẩn nút mũi tên ▼ thanh cuộn mặc định Windows');
+  assert.ok(css.includes('scrollbar-width: thin'), 'CSS phải dùng thanh cuộn mảnh toàn cục');
 
   // 3. PHẦN 2: BẮT BUỘC ĐĂNG KÝ & ĐĂNG NHẬP NHÀ NGHIÊN CỨU
   const mkPost = (body, headers = {}) =>

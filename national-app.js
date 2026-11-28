@@ -1,17 +1,31 @@
 /**
- * VN RESILIENCE ATLAS — NATIONAL 3-PILLAR GEOSPATIAL WORKBENCH CONTROLLER
- * - Phân hệ 1 (Công khai): Bản đồ khoanh vùng chống lag + Đa nền + Radar mưa + Hạ tầng OSM sống + Spot Inspector
- * - Phân hệ 2 (Nhà Nghiên cứu): Đăng ký / Đăng nhập, Khoanh vùng, GeoJSON, Mặt cắt địa hình, Hàng đợi kiểm định
+ * VN RESILIENCE ATLAS — NATIONAL 4-PILLAR GEOSPATIAL & DEVOPS WORKBENCH CONTROLLER
+ * - Phân hệ 1 (Bản đồ & Cảnh báo): Khoanh vùng chống lag + Mặt phủ ngập nước 3 tầng (DEM Bilinear)
+ *   + Rốn trũng & Vành đai cự ly + Ký hiệu SVG + Đa nền (Phố/Vệ tinh/Địa hình/Nền Tối) + Radar mưa + Spot Inspector
+ * - Phân hệ 2 (Cổng Nghiên cứu): Đăng ký / Đăng nhập, Khoanh vùng, GeoJSON, Mặt cắt địa hình, Hàng đợi kiểm định
  * - Phân hệ 3 (Bản tin & Công bố): Bản tin thiên tai & công trình khoa học liên kết 1 chạm tới Bản đồ chính
+ * - Phân hệ 4 (Quản trị & Dev): Giám sát độ trễ API đa đám mây, Sổ đăng ký lớp GIS, Xóa Cache SW,
+ *   Kiểm duyệt & Thêm điểm Cloud, Duyệt nghiên cứu, Phát cảnh báo khẩn cấp & API JSON Sandbox
  */
 
 import { PROJECT_CONFIG } from './config.js';
-import { SAMPLE_HUMG_POINTS, FLOOD_STREET_CORRIDORS } from './humg-data.js';
+import {
+  SAMPLE_HUMG_POINTS,
+  FLOOD_STREET_CORRIDORS,
+  LOW_DEM_BASINS,
+  SAFE_DETOUR_ROUTES
+} from './humg-data.js';
 import {
   VIETNAM_VERIFIED_HOTSPOTS,
   VIETNAM_VERIFIED_CORRIDORS,
   filterCorridorsInZone
 } from './platform/data/vietnam-verified-hotspots.js';
+import {
+  ensureZoneDemGrid,
+  createNationalHydroSurfaceLayer,
+  createNationalHeatmapLayer,
+  buildMapPictogramIcon
+} from './platform/gis/hydro-surface.js';
 import { roundPrivacyCoord, analyzePolylineCorridor } from './gis-utils.js';
 import { synthesizeSituationalAnswer } from './knowledge-engine.js';
 import {
@@ -48,17 +62,26 @@ const BASEMAP_PROVIDERS = {
   osm: {
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     maxZoom: 19,
+    className: '',
     attribution: '&copy; OpenStreetMap contributors'
   },
   satellite: {
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     maxZoom: 18,
+    className: '',
     attribution: 'Tiles &copy; Esri World Imagery'
   },
   topo: {
     url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
     maxZoom: 17,
+    className: '',
     attribution: '&copy; OpenTopoMap (CC-BY-SA)'
+  },
+  dark: {
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    maxZoom: 19,
+    className: 'tiles-dark-ops',
+    attribution: '&copy; OpenStreetMap · Dark Ops'
   }
 };
 
@@ -66,7 +89,6 @@ const state = {
   pillar: 'public',
   pubTab: 'overview',
   zone: { ...VIETNAM_ZONES[0], radiusKm: VIETNAM_ZONES[0].defaultRadiusKm || 2 },
-  // Chỉ chứa các đối tượng nằm TRONG vòng khoanh đang xem (chống lag toàn quốc!)
   zonePoints: [],
   osmPois: [],
   osmWaterways: [],
@@ -85,10 +107,19 @@ const state = {
   mapMobileMode: 'map',
   basemap: 'osm',
   layers: {
-    radar: false,
+    hydroSurface: true,
+    basins: true,
     corridors: true,
     waterways: true,
-    osmPoi: true
+    osmPoi: true,
+    heatmap: false,
+    radar: false
+  },
+  hydroSim: {
+    rainMm: 70,
+    opacity: 0.75,
+    preset: '70',
+    demGrid: null
   },
   travelMode: 'bike',
   reportPin: { lat: VIETNAM_ZONES[0].lat, lng: VIETNAM_ZONES[0].lng },
@@ -103,13 +134,22 @@ const state = {
   newsKind: 'all',
   newsRegion: 'all',
   publications: [],
-  newsStats: { disasterNewsCount: 0, researchArticleCount: 0, verifiedResearchersCount: 0 }
+  newsStats: { disasterNewsCount: 0, researchArticleCount: 0, verifiedResearchersCount: 0 },
+  // Phân hệ 4: Dev & Quản trị Hệ thống
+  devTab: 'mod',
+  devAllRows: [],
+  devAuditLog: [],
+  devReviewQueue: [],
+  devStorageBackend: '--'
 };
 
 let nationalMap = null;
 let baseTileLayer = null;
 let radarTileLayer = null;
+let hydroSurfaceLayer = null;
+let heatmapLayer = null;
 let zoneCircleLayer = null;
+let basinsLayer = null;
 let waterwaysLayer = null;
 let corridorsLayer = null;
 let zoneMarkersLayer = null;
@@ -168,6 +208,18 @@ function formatTimeHm(iso) {
   return `${d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} · ${d.toLocaleDateString('vi-VN')}`;
 }
 
+function downloadFile(content, fileName, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function registerServiceWorker() {
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -175,10 +227,10 @@ function registerServiceWorker() {
 }
 
 /* =========================================================================
-   1. ĐIỀU HƯỚNG 3 PHÂN HỆ & 4 CHẾ ĐỘ VÙNG
+   1. ĐIỀU HƯỚNG 4 PHÂN HỆ & 4 TAB CON TRONG VÙNG
    ========================================================================= */
 function switchPillar(pillarName) {
-  const valid = ['public', 'research', 'news'];
+  const valid = ['public', 'research', 'news', 'dev'];
   const next = valid.includes(pillarName) ? pillarName : 'public';
   state.pillar = next;
 
@@ -195,11 +247,16 @@ function switchPillar(pillarName) {
   });
 
   if (next === 'public') {
-    setTimeout(() => nationalMap?.invalidateSize(), 60);
+    setTimeout(() => {
+      nationalMap?.invalidateSize();
+      hydroSurfaceLayer?.redraw();
+    }, 60);
   } else if (next === 'research') {
     renderResearchPillar();
   } else if (next === 'news') {
     loadPublicationsFeed();
+  } else if (next === 'dev') {
+    renderDevConsole();
   }
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
@@ -217,7 +274,6 @@ function switchPublicTab(tabName) {
     btn.classList.toggle('is-active', btn.dataset.pubtab === next);
   });
 
-  // Khi người dân mở tab Lộ trình / Nơi ở / Báo sự cố trên mobile, tự chuyển sang chế độ hiển thị form
   if (next !== 'overview' && window.innerWidth < 1024) {
     state.mapMobileMode = 'list';
     const layout = document.getElementById('map-split-layout');
@@ -238,10 +294,14 @@ function applyLargeTextMode(enabled) {
   document.documentElement.classList.toggle('is-large-text', Boolean(enabled));
   document.getElementById('btn-toggle-large-text')?.setAttribute('aria-pressed', String(Boolean(enabled)));
   writeJson(LARGE_TEXT_KEY, Boolean(enabled));
+  setTimeout(() => {
+    nationalMap?.invalidateSize();
+    hydroSurfaceLayer?.redraw();
+  }, 60);
 }
 
 /* =========================================================================
-   2. KHOANH VÙNG ĐỘNG TOÀN VIỆT NAM & LÀM GIÀU DỮ LIỆU VÙNG KHOANH
+   2. KHOANH VÙNG ĐỘNG TOÀN VIỆT NAM & ĐỒNG BỘ LƯỚI ĐỊA HÌNH VỆ TINH 10x10
    ========================================================================= */
 function selectZone(zoneObj, { radiusKm, flyMap = true } = {}) {
   const r = Number(radiusKm || zoneObj.radiusKm || zoneObj.defaultRadiusKm || 5);
@@ -255,6 +315,7 @@ function selectZone(zoneObj, { radiusKm, flyMap = true } = {}) {
     state.aqi = null;
     state.osmPois = [];
     state.osmWaterways = [];
+    state.hydroSim.demGrid = null;
     state.lastUpdatedAt = null;
     const selBox = document.getElementById('map-selected-card');
     if (selBox) selBox.hidden = true;
@@ -323,7 +384,6 @@ function mergeZonePoints({ baselineInZone, commRes, researchRes, osmPois, lat, l
     }
   }
 
-  // Hợp nhất hạ tầng y tế & cứu hộ OSM thực tế trong vòng khoanh (chống trùng lặp trong bán kính < 85 m)
   if (state.layers.osmPoi && Array.isArray(osmPois) && osmPois.length > 0) {
     const existingSafe = [...combinedById.values()].filter((p) => p.layerGroup === 'safe');
     for (const op of osmPois) {
@@ -343,16 +403,36 @@ function mergeZonePoints({ baselineInZone, commRes, researchRes, osmPois, lat, l
     .sort((a, b) => (a.distanceMeters || 0) - (b.distanceMeters || 0));
 }
 
+function updateHydroSummaryBar() {
+  const el = document.getElementById('hydro-terrain-summary');
+  if (!el) return;
+  const g = state.hydroSim.demGrid;
+  if (!g?.stats) {
+    el.textContent = 'Đang quét địa hình vùng...';
+    return;
+  }
+  el.textContent = `Trũng ~${g.stats.lowlandPct}% · Nền ${g.stats.minM}–${g.stats.maxM} m (${g.rows}×${g.cols})`;
+}
+
 async function refreshActiveZoneData({ flyMap = true } = {}) {
   state.isOffline = !navigator.onLine;
   updateOfflineStrip();
 
   const { lat, lng, radiusKm } = state.zone;
 
-  // Bước 1: Lọc tức thì kho điểm kiểm chứng & hành lang trong vòng khoanh (0 ms, 0 lag!)
   const baselineInZone = filterFeaturesInZone(ALL_STATIC_POINTS, lat, lng, radiusKm, 200);
   state.zoneCorridors = filterCorridorsInZone(ALL_STATIC_CORRIDORS, lat, lng, radiusKm);
   state.zonePoints = baselineInZone;
+
+  // Khởi tạo tức thì lưới DEM lõi Đông Ngạc nếu nằm trong vùng 2km
+  ensureZoneDemGrid(lat, lng, radiusKm).then((demObj) => {
+    if (demObj && Math.abs(state.zone.lat - lat) < 0.001) {
+      state.hydroSim.demGrid = demObj;
+      updateHydroSummaryBar();
+      hydroSurfaceLayer?.redraw();
+    }
+  });
+
   renderPublicOverview({ flyMap });
 
   if (state.isOffline) return;
@@ -360,7 +440,6 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
   const osmStatusEl = document.getElementById('osm-enrich-status');
   if (osmStatusEl) osmStatusEl.textContent = 'Đang tải OSM...';
 
-  // Bước 2: Gọi song song thời tiết 24h + AQI + cộng đồng + nghiên cứu xuất bản + hạ tầng OSM trong vùng
   const [weatherRes, aqiRes, commRes, researchRes, osmRes] = await Promise.allSettled([
     fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,apparent_temperature,precipitation,rain,wind_speed_10m&hourly=precipitation,precipitation_probability,temperature_2m&forecast_hours=24&daily=precipitation_sum,temperature_2m_max&timezone=Asia%2FBangkok&forecast_days=2`
@@ -393,6 +472,14 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
     if (Number.isFinite(Number(weatherRes.value.elevation))) {
       state.zoneElevationM = Math.round(Number(weatherRes.value.elevation));
     }
+    if (state.hydroSim.preset === 'live') {
+      const liveSim = Math.max(0, Math.round(state.weather.dailyRainMm || state.weather.rainMm * 4));
+      state.hydroSim.rainMm = liveSim;
+      const sl = document.getElementById('hydro-rain-slider');
+      const lb = document.getElementById('hydro-rain-label');
+      if (sl) sl.value = String(liveSim);
+      if (lb) lb.textContent = `${liveSim} mm`;
+    }
   }
 
   if (aqiRes.status === 'fulfilled' && aqiRes.value?.current) {
@@ -407,6 +494,7 @@ async function refreshActiveZoneData({ flyMap = true } = {}) {
   }
 
   const researchOk = researchRes.status === 'fulfilled' && researchRes.value?.ok ? researchRes.value : null;
+  if (researchOk?.storageBackend) state.devStorageBackend = researchOk.storageBackend;
   state.publishedStudiesInZone = researchOk ? researchOk.publishedStudiesInZone || [] : [];
 
   const osmOk = osmRes.status === 'fulfilled' && osmRes.value?.ok ? osmRes.value : null;
@@ -491,7 +579,7 @@ function renderPublicOverview({ flyMap = false } = {}) {
     weather: state.weather,
     aqi: state.aqi,
     livePulseFeed: zonePulseFeed,
-    broadcast: state.zone.id === 'vn-hn-dong-ngac' ? state.broadcast : null,
+    broadcast: state.broadcast,
     nearbyFloodCount: riskCount,
     updatedAtLabel: updatedStr,
     isOffline: state.isOffline
@@ -558,14 +646,36 @@ function renderPublicOverview({ flyMap = false } = {}) {
 }
 
 /* =========================================================================
-   3. BẢN ĐỒ ĐA LỚP (PHỐ / VỆ TINH / ĐỊA HÌNH + RADAR + HÀNH LANG + SPOT INSPECTOR)
+   3. BẢN ĐỒ ĐA LỚP + MẶT PHỦ NGẬP NƯỚC 3 TẦNG + RỐN TRŨNG & VÀNH ĐAI + KÝ HIỆU SVG
    ========================================================================= */
 function ensureNationalMap() {
   if (nationalMap || typeof window.L === 'undefined') return;
   nationalMap = window.L.map('national-map', { zoomControl: true }).setView([state.zone.lat, state.zone.lng], 14);
-  const cfg = BASEMAP_PROVIDERS[state.basemap] || BASEMAP_PROVIDERS.osm;
-  baseTileLayer = window.L.tileLayer(cfg.url, { maxZoom: cfg.maxZoom, attribution: cfg.attribution }).addTo(nationalMap);
+  window.L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(nationalMap);
 
+  const cfg = BASEMAP_PROVIDERS[state.basemap] || BASEMAP_PROVIDERS.osm;
+  baseTileLayer = window.L.tileLayer(cfg.url, {
+    maxZoom: cfg.maxZoom,
+    className: cfg.className || '',
+    attribution: cfg.attribution
+  }).addTo(nationalMap);
+
+  // Lớp Mặt phủ ngập nước thủy văn 60fps Canvas (Mặc định bật)
+  hydroSurfaceLayer = createNationalHydroSurfaceLayer(window.L, () => ({
+    enabled: state.layers.hydroSurface,
+    simRainMm: state.hydroSim.rainMm,
+    opacity: state.hydroSim.opacity,
+    centerLat: state.zone.lat,
+    centerLng: state.zone.lng,
+    radiusKm: state.zone.radiusKm,
+    demGrid: state.hydroSim.demGrid,
+    points: state.zonePoints,
+    waterways: state.osmWaterways
+  })).addTo(nationalMap);
+
+  heatmapLayer = createNationalHeatmapLayer(window.L, () => state.zonePoints);
+
+  basinsLayer = window.L.layerGroup().addTo(nationalMap);
   zoneCircleLayer = window.L.layerGroup().addTo(nationalMap);
   waterwaysLayer = window.L.layerGroup().addTo(nationalMap);
   corridorsLayer = window.L.layerGroup().addTo(nationalMap);
@@ -593,7 +703,11 @@ function setBasemap(key) {
   if (!nationalMap) return;
   if (baseTileLayer) nationalMap.removeLayer(baseTileLayer);
   const cfg = BASEMAP_PROVIDERS[key];
-  baseTileLayer = window.L.tileLayer(cfg.url, { maxZoom: cfg.maxZoom, attribution: cfg.attribution }).addTo(nationalMap);
+  baseTileLayer = window.L.tileLayer(cfg.url, {
+    maxZoom: cfg.maxZoom,
+    className: cfg.className || '',
+    attribution: cfg.attribution
+  }).addTo(nationalMap);
   baseTileLayer.bringToBack();
 }
 
@@ -744,6 +858,7 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
   }
 
   if (!nationalMap) return;
+  basinsLayer.clearLayers();
   zoneCircleLayer.clearLayers();
   waterwaysLayer.clearLayers();
   corridorsLayer.clearLayers();
@@ -752,11 +867,72 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
   const ring = window.L.circle([state.zone.lat, state.zone.lng], {
     radius: state.zone.radiusKm * 1000,
     color: '#0F766E',
-    weight: 2.2,
+    weight: 2.3,
     dashArray: '7 5',
     fillColor: '#0F766E',
-    fillOpacity: 0.05
+    fillOpacity: 0.03
   }).addTo(zoneCircleLayer);
+
+  // Vành đai cự ly đồng tâm + Đa giác rốn trũng địa hình + Tuyến thoát hiểm nền cao
+  if (state.layers.basins) {
+    for (const frac of [0.25, 0.5, 0.75]) {
+      const subKm = Math.round(state.zone.radiusKm * frac * 100) / 100;
+      window.L.circle([state.zone.lat, state.zone.lng], {
+        radius: subKm * 1000,
+        color: '#475569',
+        weight: 1,
+        dashArray: '4 6',
+        fill: false,
+        interactive: false
+      }).addTo(basinsLayer);
+
+      const labelLat = state.zone.lat + (subKm / 110.574);
+      window.L.marker([labelLat, state.zone.lng], {
+        interactive: false,
+        icon: window.L.divIcon({
+          className: '',
+          html: `<span class="ring-dist-label">${subKm >= 1 ? `${subKm} km` : `${Math.round(subKm * 1000)} m`}</span>`,
+          iconSize: [44, 16],
+          iconAnchor: [22, 8]
+        })
+      }).addTo(basinsLayer);
+    }
+
+    // Vẽ các rốn trũng vệ tinh LOW_DEM_BASINS nếu giao cắt vùng đang khoanh
+    for (const basin of LOW_DEM_BASINS) {
+      const hit = (basin.coordinates || []).some(
+        ([bLat, bLng]) => haversineMeters(state.zone.lat, state.zone.lng, bLat, bLng) <= state.zone.radiusKm * 1000 + 800
+      );
+      if (!hit) continue;
+      window.L.polygon(basin.coordinates, {
+        color: '#0284C7',
+        weight: 1.6,
+        dashArray: '5 4',
+        fillColor: '#0EA5E9',
+        fillOpacity: 0.12
+      })
+        .bindPopup(
+          `<strong>${esc(basin.name)}</strong><br><small>Ngưỡng mưa tích nước tham chiếu: ~${basin.rainThresholdMm} mm · Cao độ nền: ${esc(basin.demRange.replace('DSM', ''))}</small>`
+        )
+        .addTo(basinsLayer);
+    }
+
+    // Tuyến di chuyển ưu tiên nền cao tại Đông Ngạc (nếu nằm trong vùng)
+    for (const dr of SAFE_DETOUR_ROUTES) {
+      const latLngs = (dr.coordinates || []).map(([lng, lat]) => [lat, lng]);
+      if (!latLngs.length) continue;
+      const near = latLngs.some(([la, ln]) => haversineMeters(state.zone.lat, state.zone.lng, la, ln) <= state.zone.radiusKm * 1000);
+      if (!near) continue;
+      window.L.polyline(latLngs, {
+        color: '#15803D',
+        weight: 4,
+        dashArray: '6 5',
+        opacity: 0.85
+      })
+        .bindTooltip(dr.name)
+        .addTo(basinsLayer);
+    }
+  }
 
   window.L.circleMarker([state.zone.lat, state.zone.lng], {
     radius: 6,
@@ -765,23 +941,21 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
     fillColor: '#FFFFFF',
     fillOpacity: 1
   })
-    .bindTooltip(`Tâm vùng: ${state.zone.name}`)
+    .bindTooltip(`Tâm vùng khoanh: ${state.zone.name}`)
     .addTo(zoneCircleLayer);
 
-  // Lớp thủy hệ (sông / kênh thoát nước OSM trong vùng khoanh)
   if (state.layers.waterways && state.osmWaterways.length > 0) {
     for (const ww of state.osmWaterways) {
       window.L.polyline(ww.coordinates, {
         color: '#0284C7',
-        weight: 2.6,
-        opacity: 0.72
+        weight: 2.8,
+        opacity: 0.8
       })
         .bindTooltip(`${ww.name} (${ww.waterwayType})`)
         .addTo(waterwaysLayer);
     }
   }
 
-  // Lớp hành lang ngập / sạt lở kiểm chứng nằm trong vùng khoanh
   if (state.layers.corridors && state.zoneCorridors.length > 0) {
     for (const cor of state.zoneCorridors) {
       const latLngs = (cor.coordinates || []).map(([lng, lat]) => [lat, lng]);
@@ -789,28 +963,18 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
       window.L.polyline(latLngs, {
         color: cor.severity === 'severe' ? '#DC2626' : '#D97706',
         weight: 5,
-        opacity: 0.8
+        opacity: 0.85
       })
         .bindPopup(`<strong>${esc(cor.name)}</strong><br><small>Ngưỡng mưa tham chiếu ~${cor.rainThresholdMm} mm · ${esc(cor.source)}</small><br>${esc(cor.note)}`)
         .addTo(corridorsLayer);
     }
   }
 
-  // Các điểm rủi ro & hạ tầng y tế/cứu hộ trong vùng khoanh
+  // Ký hiệu bản đồ trực quan bằng SVG Pictograms
   for (const pt of filtered) {
-    const color =
-      pt.layerGroup === 'safe'
-        ? '#16A34A'
-        : pt.confidenceTier === 'C'
-          ? '#D97706'
-          : '#DC2626';
-
-    window.L.circleMarker([Number(pt.lat), Number(pt.lng)], {
-      radius: pt.isOsmLive ? 6.5 : 7.5,
-      color: '#FFFFFF',
-      weight: 2,
-      fillColor: color,
-      fillOpacity: 0.94
+    window.L.marker([Number(pt.lat), Number(pt.lng)], {
+      icon: buildMapPictogramIcon(window.L, pt),
+      title: pt.name
     })
       .on('click', (ev) => {
         window.L.DomEvent.stopPropagation(ev);
@@ -818,6 +982,9 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
       })
       .addTo(zoneMarkersLayer);
   }
+
+  hydroSurfaceLayer?.redraw();
+  if (state.layers.heatmap) heatmapLayer?.redraw();
 
   if (flyMap && ring.getBounds().isValid()) {
     nationalMap.fitBounds(ring.getBounds(), { padding: [24, 24], maxZoom: 15 });
@@ -1084,7 +1251,6 @@ async function runNationalRouteComparison(e) {
         if (b.isValid()) routeMap.fitBounds(b, { padding: [20, 20] });
       }, 80);
 
-      // Đồng bộ vẽ tuyến lên bản đồ chính bên phải để quan sát rộng hơn trên desktop
       if (nationalMap && mainRouteLayer) {
         mainRouteLayer.clearLayers();
         const ml1 = window.L.polyline(directCoords, { color: dRisk > 0 ? '#DC2626' : '#64748B', weight: 4.5, dashArray: '7 5' }).addTo(mainRouteLayer);
@@ -1236,7 +1402,7 @@ async function handleNationalReportSubmit(e) {
 }
 
 /* =========================================================================
-   6. PHÂN HỆ 2: CỔNG NHÀ NGHIÊN CỨU (ĐĂNG KÝ / ĐĂNG NHẬP / ĐẨY DỮ LIỆU LÊN MAP)
+   6. PHÂN HỆ 2: CỔNG NHÀ NGHIÊN CỨU
    ========================================================================= */
 function populateProvinceSelects() {
   const opts = VIETNAM_ZONES.map(
@@ -1526,28 +1692,11 @@ async function handleStudySubmission(e) {
   renderResearchPillar();
 }
 
-async function loadReviewerQueue() {
-  const queueBox = document.getElementById('reviewer-queue-list');
-  if (!state.reviewerToken || !queueBox) return;
-  const res = await fetch('/api/research-portal?action=review_queue', {
-    headers: { Authorization: `Bearer ${state.reviewerToken}` }
-  });
-  const data = await res.json();
-  if (!res.ok || !data?.ok) {
-    sessionStorage.removeItem(REVIEWER_TOKEN_KEY);
-    state.reviewerToken = '';
-    queueBox.hidden = true;
-    showToast(data?.error || 'Phiên kiểm duyệt đã hết hạn.');
-    return;
+function renderReviewerSubmissionCards(list) {
+  if (!Array.isArray(list) || list.length === 0) {
+    return `<p class="muted-body">Hiện chưa có hồ sơ nghiên cứu nào trong hàng đợi.</p>`;
   }
-  document.getElementById('reviewer-auth-row').hidden = true;
-  queueBox.hidden = false;
-  const list = data.submissions || [];
-  if (list.length === 0) {
-    queueBox.innerHTML = `<p class="muted-body">Hiện chưa có hồ sơ nghiên cứu nào trong hàng đợi.</p>`;
-    return;
-  }
-  queueBox.innerHTML = list
+  return list
     .map(
       (s) => `
       <article class="place-card ${s.status === 'published' ? 'is-safe' : 'is-heat'}">
@@ -1571,6 +1720,34 @@ async function loadReviewerQueue() {
     .join('');
 }
 
+async function loadReviewerQueue() {
+  const queueBox = document.getElementById('reviewer-queue-list');
+  if (!state.reviewerToken) return;
+  const res = await fetch('/api/research-portal?action=review_queue', {
+    headers: { Authorization: `Bearer ${state.reviewerToken}` }
+  });
+  const data = await res.json();
+  if (!res.ok || !data?.ok) {
+    sessionStorage.removeItem(REVIEWER_TOKEN_KEY);
+    state.reviewerToken = '';
+    if (queueBox) queueBox.hidden = true;
+    showToast(data?.error || 'Phiên kiểm duyệt đã hết hạn.');
+    return;
+  }
+  const authRow = document.getElementById('reviewer-auth-row');
+  if (authRow) authRow.hidden = true;
+  state.devReviewQueue = data.submissions || [];
+  const html = renderReviewerSubmissionCards(state.devReviewQueue);
+  if (queueBox) {
+    queueBox.hidden = false;
+    queueBox.innerHTML = html;
+  }
+  const devRev = document.getElementById('dev-review-list');
+  if (devRev) devRev.innerHTML = html;
+  const pendCnt = document.getElementById('dev-pending-studies-cnt');
+  if (pendCnt) pendCnt.textContent = String(state.devReviewQueue.filter((x) => x.status === 'pending_review').length);
+}
+
 /* =========================================================================
    7. PHÂN HỆ 3: BẢN TIN THIÊN TAI & CÔNG BỐ KHOA HỌC MỞ
    ========================================================================= */
@@ -1585,6 +1762,7 @@ async function loadPublicationsFeed() {
     if (res.ok && data?.ok) {
       state.publications = data.items || [];
       state.newsStats = data.stats || state.newsStats;
+      if (data.storageBackend) state.devStorageBackend = data.storageBackend;
     }
   } catch {
     // giữ danh sách đã tải
@@ -1632,7 +1810,281 @@ async function loadPublicationsFeed() {
 }
 
 /* =========================================================================
-   8. TRỢ LÝ DIỄN GIẢI DỮ LIỆU & TRẠNG THÁI NGOẠI TUYẾN
+   8. PHÂN HỆ 4: KHU VỰC QUẢN TRỊ HỆ THỐNG & DEVELOPER CONSOLE
+   ========================================================================= */
+function renderDevRegistryTable() {
+  const totalBase = ALL_STATIC_POINTS.length + ALL_STATIC_CORRIDORS.length + LOW_DEM_BASINS.length;
+  const featStat = document.getElementById('dev-stat-features');
+  if (featStat) featStat.textContent = String(totalBase + state.osmPois.length);
+
+  const tbody = document.getElementById('dev-registry-tbody');
+  if (!tbody) return;
+  const g = state.hydroSim.demGrid;
+  const rows = [
+    ['SAMPLE_HUMG_POINTS', `${SAMPLE_HUMG_POINTS.length} điểm`, 'OBSERVED_DATA (Hạng A)'],
+    ['VIETNAM_VERIFIED_HOTSPOTS', `${VIETNAM_VERIFIED_HOTSPOTS.length} điểm`, 'OBSERVED_DATA (15 tỉnh/thành)'],
+    ['FLOOD_CORRIDORS_ALL', `${ALL_STATIC_CORRIDORS.length} tuyến`, 'OBSERVED_DATA (LineString)'],
+    ['LOW_TERRAIN_BASINS', `${LOW_DEM_BASINS.length} đa giác`, 'SATELLITE_DATA (Copernicus 30m)'],
+    ['ACTIVE_ZONE_DEM_GRID', g ? `${g.rows}×${g.cols} (${g.rows * g.cols} ô)` : 'Đang nạp', g?.source || 'Copernicus GLO-30'],
+    ['ACTIVE_ZONE_OSM_LIVE', `${state.osmPois.length} POI · ${state.osmWaterways.length} sông`, 'OBSERVED_DATA (ODbL)']
+  ];
+  tbody.innerHTML = rows
+    .map(
+      ([code, cnt, cls]) => `
+      <tr>
+        <td class="mono-num"><strong>${esc(code)}</strong></td>
+        <td class="mono-num">${esc(cnt)}</td>
+        <td><span class="source-tag tone-verified">${esc(cls)}</span></td>
+      </tr>`
+    )
+    .join('');
+}
+
+async function runDevHealthChecks() {
+  const tbody = document.getElementById('dev-health-tbody');
+  const pingTime = document.getElementById('dev-last-ping-time');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="4" class="muted-meta">Đang gửi gói tin kiểm tra độ trễ tới các dịch vụ...</td></tr>`;
+
+  const probes = [
+    {
+      name: 'Community Sync API (/api/community)',
+      run: async () => {
+        const r = await fetch(`/api/community?action=public_sync&lat=${state.zone.lat}&lng=${state.zone.lng}&radiusKm=2`);
+        const j = await r.json();
+        return { ok: r.ok && j?.ok, detail: `HTTP ${r.status} · ${(j?.reports || []).length} phản ánh` };
+      }
+    },
+    {
+      name: 'Research & Cloud Store (/api/research-portal)',
+      run: async () => {
+        const r = await fetch('/api/research-portal?action=publications');
+        const j = await r.json();
+        if (j?.storageBackend) state.devStorageBackend = j.storageBackend;
+        return { ok: r.ok && j?.ok, detail: `Backend: ${j?.storageBackend || 'ok'} · ${(j?.items || []).length} bài` };
+      }
+    },
+    {
+      name: 'OSM / Photon Spatial Engine (zone_osm)',
+      run: async () => {
+        const r = await fetch(`/api/research-portal?action=zone_osm&lat=${state.zone.lat}&lng=${state.zone.lng}&radiusKm=4`);
+        const j = await r.json();
+        return { ok: r.ok && j?.ok, detail: `Nguồn: ${j?.source || 'ok'} · ${(j?.pois || []).length} POI` };
+      }
+    },
+    {
+      name: 'Open-Meteo Forecast & Elevation API',
+      run: async () => {
+        const r = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${state.zone.lat.toFixed(4)}&longitude=${state.zone.lng.toFixed(4)}`);
+        const j = await r.json();
+        return { ok: r.ok, detail: `HTTP ${r.status} · Cao độ ${j?.elevation?.[0] ?? '--'} m` };
+      }
+    },
+    {
+      name: 'Service Worker & Offline Cache',
+      run: async () => {
+        const keys = 'caches' in window ? await caches.keys() : [];
+        const q = readJson(OFFLINE_QUEUE_KEY, []);
+        return { ok: true, detail: `Cache: ${keys.join(', ') || 'none'} · Hàng đợi offline: ${q.length}` };
+      }
+    }
+  ];
+
+  const results = [];
+  for (const p of probes) {
+    const t0 = performance.now();
+    try {
+      const out = await p.run();
+      results.push({ name: p.name, ok: out.ok, ms: Math.round(performance.now() - t0), detail: out.detail });
+    } catch (err) {
+      results.push({ name: p.name, ok: false, ms: Math.round(performance.now() - t0), detail: err.message });
+    }
+  }
+
+  const avgMs = Math.round(results.reduce((acc, r) => acc + r.ms, 0) / Math.max(1, results.length));
+  document.getElementById('dev-stat-latency').textContent = `${avgMs} ms`;
+  document.getElementById('dev-stat-backend').textContent = state.devStorageBackend;
+  if (pingTime) pingTime.textContent = formatTimeHm(new Date().toISOString());
+
+  tbody.innerHTML = results
+    .map(
+      (r) => `
+      <tr>
+        <td><strong>${esc(r.name)}</strong></td>
+        <td><span class="source-tag ${r.ok ? 'tone-verified' : 'tone-simulated'}">${r.ok ? 'ONLINE' : 'DEGRADED'}</span></td>
+        <td class="mono-num">${r.ms} ms</td>
+        <td class="muted-meta">${esc(r.detail)}</td>
+      </tr>`
+    )
+    .join('');
+}
+
+async function loadDevAdminWorkspace() {
+  const authForm = document.getElementById('dev-login-form');
+  const opsWrap = document.getElementById('dev-ops-workspace');
+  const logoutBtn = document.getElementById('btn-dev-logout');
+  const authStat = document.getElementById('dev-stat-auth');
+
+  if (!state.reviewerToken) {
+    if (authForm) authForm.hidden = false;
+    if (opsWrap) opsWrap.hidden = true;
+    if (logoutBtn) logoutBtn.hidden = true;
+    if (authStat) authStat.textContent = 'Chế độ Đọc';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${PROJECT_CONFIG.communityApiUrl || '/api/community'}?action=admin_full`, {
+      headers: { Authorization: `Bearer ${state.reviewerToken}` },
+      cache: 'no-store'
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      sessionStorage.removeItem(REVIEWER_TOKEN_KEY);
+      state.reviewerToken = '';
+      if (authForm) authForm.hidden = false;
+      if (opsWrap) opsWrap.hidden = true;
+      if (logoutBtn) logoutBtn.hidden = true;
+      if (authStat) authStat.textContent = 'Chế độ Đọc';
+      return;
+    }
+
+    if (authForm) authForm.hidden = true;
+    if (opsWrap) opsWrap.hidden = false;
+    if (logoutBtn) logoutBtn.hidden = false;
+    if (authStat) authStat.textContent = 'Admin Mở khóa';
+
+    const modMap = data.moderationMap || {};
+    const byId = new Map();
+    for (const pt of ALL_STATIC_POINTS) {
+      byId.set(pt.id, { ...pt, ...(modMap[pt.id] || {}) });
+    }
+    for (const rep of data.reports || []) {
+      byId.set(rep.id, rep);
+    }
+    state.devAllRows = [...byId.values()];
+    state.devAuditLog = Array.isArray(data.auditLog) ? data.auditLog : [];
+
+    if (data.broadcast?.active && data.broadcast.message) {
+      document.getElementById('dev-bc-level').value = data.broadcast.level || 'yellow';
+      document.getElementById('dev-bc-msg').value = data.broadcast.message;
+    }
+
+    renderDevModerationList();
+    renderDevAuditTable();
+    await loadReviewerQueue();
+  } catch {
+    showToast('Không tải được dữ liệu quản trị từ máy chủ.');
+  }
+}
+
+function renderDevModerationList() {
+  const listEl = document.getElementById('dev-mod-list');
+  if (!listEl) return;
+  const q = (document.getElementById('dev-mod-search')?.value || '').trim().toLowerCase();
+  const f = document.getElementById('dev-mod-filter')?.value || 'all';
+
+  const filtered = state.devAllRows.filter((r) => {
+    const isHidden = r.status === 'hidden';
+    const isPending = !isHidden && (r.confidenceTier === 'C' || r.status === 'pending');
+    if (f === 'pending' && !isPending) return false;
+    if (f === 'approved' && (isHidden || isPending)) return false;
+    if (f === 'hidden' && !isHidden) return false;
+    if (q) {
+      const hay = `${r.id || ''} ${r.name || ''} ${r.province || ''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    listEl.innerHTML = `<p class="muted-body">Không có điểm dữ liệu nào khớp bộ lọc hiện tại.</p>`;
+    return;
+  }
+
+  listEl.innerHTML = filtered
+    .slice(0, 60)
+    .map(
+      (pt) => `
+      <article class="place-card ${pt.status === 'hidden' ? '' : pt.layerGroup === 'safe' ? 'is-safe' : 'is-risk'}">
+        <div class="place-card-top">
+          <h3 class="place-card-title"><span class="mono-num">[${esc(pt.id)}]</span> ${esc(pt.name)}</h3>
+          <span class="source-tag ${pt.status === 'hidden' ? 'tone-simulated' : pt.confidenceTier === 'C' ? 'tone-community' : 'tone-verified'}">
+            ${pt.status === 'hidden' ? 'Đã ẩn' : `Hạng ${esc(pt.confidenceTier || 'A')}`}
+          </span>
+        </div>
+        <p class="place-card-desc">${esc(pt.province || 'Đông Ngạc, Hà Nội')} · <span class="mono-num">${Number(pt.lat).toFixed(4)}, ${Number(pt.lng).toFixed(4)}</span></p>
+        <div class="place-card-actions">
+          <button type="button" class="btn btn-sm btn-secondary js-dev-mod-act" data-id="${esc(pt.id)}" data-act="approveA">Duyệt Hạng A</button>
+          <button type="button" class="btn btn-sm btn-secondary js-dev-mod-act" data-id="${esc(pt.id)}" data-act="approveB">Duyệt Hạng B</button>
+          <button type="button" class="btn btn-sm btn-secondary js-dev-mod-act" data-id="${esc(pt.id)}" data-act="hide">Ẩn</button>
+          ${!/^(R|S|VN)-/.test(String(pt.id)) ? `<button type="button" class="btn btn-sm btn-secondary js-dev-mod-act" data-id="${esc(pt.id)}" data-act="delete">Xóa</button>` : ''}
+        </div>
+      </article>`
+    )
+    .join('');
+}
+
+function renderDevAuditTable() {
+  const tbody = document.getElementById('dev-audit-tbody');
+  if (!tbody) return;
+  if (state.devAuditLog.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="muted-meta">Chưa có bản ghi kiểm toán nào trong phiên máy chủ.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = state.devAuditLog
+    .slice(0, 30)
+    .map(
+      (item) => `
+      <tr>
+        <td class="mono-num">${esc(item.ts || '')}</td>
+        <td><span class="source-tag tone-model">${esc(item.mode || 'cloud')}</span></td>
+        <td class="mono-num"><strong>${esc(item.action || '')}</strong></td>
+        <td class="muted-meta">${esc(item.detail || '')}</td>
+      </tr>`
+    )
+    .join('');
+}
+
+function renderDevConsole() {
+  renderDevRegistryTable();
+  runDevHealthChecks();
+  loadDevAdminWorkspace();
+}
+
+function exportFullDatasetGeoJson() {
+  const features = [
+    ...ALL_STATIC_POINTS.map((p) => ({
+      type: 'Feature',
+      properties: { id: p.id, name: p.name, category: p.category, layerGroup: p.layerGroup, province: p.province || 'Hà Nội', dataClass: p.dataClass || 'OBSERVED_DATA', sourceCitation: p.sourceCitation || '' },
+      geometry: { type: 'Point', coordinates: [Number(p.lng), Number(p.lat)] }
+    })),
+    ...ALL_STATIC_CORRIDORS.map((c) => ({
+      type: 'Feature',
+      properties: { id: c.id, name: c.name, severity: c.severity, rainThresholdMm: c.rainThresholdMm, source: c.source },
+      geometry: { type: 'LineString', coordinates: c.coordinates }
+    }))
+  ];
+  downloadFile(JSON.stringify({ type: 'FeatureCollection', exportedAt: new Date().toISOString(), features }, null, 2), 'vn-resilience-atlas-dataset.geojson', 'application/geo+json;charset=utf-8');
+  showToast(`Đã xuất ${features.length} đối tượng ra tệp GeoJSON.`);
+}
+
+function exportFullDatasetCsv() {
+  const header = ['id', 'name', 'province', 'layerGroup', 'category', 'lat', 'lng', 'confidenceTier', 'sourceCitation'];
+  const csvRows = [
+    header.join(','),
+    ...ALL_STATIC_POINTS.map((p) =>
+      header
+        .map((k) => `"${String(p[k] ?? (k === 'province' ? 'Hà Nội' : '')).replace(/"/g, '""')}"`)
+        .join(',')
+    )
+  ];
+  downloadFile('\uFEFF' + csvRows.join('\n'), 'vn-resilience-atlas-points.csv', 'text/csv;charset=utf-8');
+  showToast(`Đã xuất ${ALL_STATIC_POINTS.length} điểm ra tệp CSV.`);
+}
+
+/* =========================================================================
+   9. TRỢ LÝ DIỄN GIẢI DỮ LIỆU & TRẠNG THÁI NGOẠI TUYẾN
    ========================================================================= */
 function updateOfflineStrip() {
   const strip = document.getElementById('offline-status-strip');
@@ -1700,7 +2152,7 @@ async function askAssistant(question) {
 }
 
 /* =========================================================================
-   9. GẮN SỰ KIỆN & KHỞI CHẠY
+   10. GẮN SỰ KIỆN & KHỞI CHẠY
    ========================================================================= */
 function bindEvents() {
   document.querySelectorAll('[data-pillar]').forEach((btn) => {
@@ -1755,7 +2207,7 @@ function bindEvents() {
     );
   });
 
-  // Bộ chuyển nền bản đồ & bật tắt lớp chuyên đề
+  // Bộ chuyển nền bản đồ & lớp chuyên đề
   document.querySelectorAll('[data-basemap]').forEach((btn) => {
     btn.addEventListener('click', () => setBasemap(btn.dataset.basemap));
   });
@@ -1766,8 +2218,21 @@ function bindEvents() {
       state.layers[layer] = next;
       btn.classList.toggle('is-active', next);
       btn.setAttribute('aria-pressed', String(next));
+
       if (layer === 'radar') {
         toggleRadarOverlay(next);
+      } else if (layer === 'hydroSurface') {
+        const strip = document.getElementById('hydro-sim-strip');
+        if (strip) strip.hidden = !next;
+        setTimeout(() => {
+          nationalMap?.invalidateSize();
+          hydroSurfaceLayer?.redraw();
+        }, 40);
+      } else if (layer === 'heatmap') {
+        if (nationalMap && heatmapLayer) {
+          if (next) heatmapLayer.addTo(nationalMap);
+          else nationalMap.removeLayer(heatmapLayer);
+        }
       } else {
         const baselineInZone = filterFeaturesInZone(ALL_STATIC_POINTS, state.zone.lat, state.zone.lng, state.zone.radiusKm, 200);
         state.zonePoints = mergeZonePoints({
@@ -1784,6 +2249,41 @@ function bindEvents() {
     });
   });
 
+  // Thanh điều khiển mô phỏng Mặt phủ ngập thủy văn (Presets + Rainfall Slider + Opacity Slider)
+  document.querySelectorAll('[data-rain-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const p = btn.dataset.rainPreset;
+      state.hydroSim.preset = p;
+      document.querySelectorAll('[data-rain-preset]').forEach((b) => b.classList.toggle('is-active', b === btn));
+      const mm =
+        p === 'live'
+          ? Math.max(0, Math.round(state.weather?.dailyRainMm || (state.weather?.rainMm || 0) * 4))
+          : Number(p);
+      state.hydroSim.rainMm = mm;
+      const sl = document.getElementById('hydro-rain-slider');
+      const lb = document.getElementById('hydro-rain-label');
+      if (sl) sl.value = String(mm);
+      if (lb) lb.textContent = `${mm} mm`;
+      hydroSurfaceLayer?.redraw();
+    });
+  });
+  document.getElementById('hydro-rain-slider')?.addEventListener('input', (ev) => {
+    const mm = Number(ev.target.value);
+    state.hydroSim.rainMm = mm;
+    state.hydroSim.preset = 'custom';
+    document.querySelectorAll('[data-rain-preset]').forEach((b) => b.classList.remove('is-active'));
+    const lb = document.getElementById('hydro-rain-label');
+    if (lb) lb.textContent = `${mm} mm`;
+    hydroSurfaceLayer?.redraw();
+  });
+  document.getElementById('hydro-opacity-slider')?.addEventListener('input', (ev) => {
+    const pct = Number(ev.target.value);
+    state.hydroSim.opacity = pct / 100;
+    const lb = document.getElementById('hydro-opacity-label');
+    if (lb) lb.textContent = `${pct}%`;
+    hydroSurfaceLayer?.redraw();
+  });
+
   // Lọc đối tượng & chế độ mobile
   document.querySelectorAll('[data-map-filter]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -1797,7 +2297,12 @@ function bindEvents() {
       state.mapMobileMode = btn.dataset.mapMode;
       document.getElementById('map-split-layout').dataset.mobileMode = state.mapMobileMode;
       document.querySelectorAll('[data-map-mode]').forEach((b) => b.classList.toggle('is-active', b === btn));
-      if (state.mapMobileMode === 'map') setTimeout(() => nationalMap?.invalidateSize(), 60);
+      if (state.mapMobileMode === 'map') {
+        setTimeout(() => {
+          nationalMap?.invalidateSize();
+          hydroSurfaceLayer?.redraw();
+        }, 60);
+      }
     });
   });
   document.getElementById('zone-local-filter')?.addEventListener('input', (ev) => {
@@ -1805,7 +2310,7 @@ function bindEvents() {
     renderZoneMapAndList({ flyMap: false });
   });
 
-  // Lộ trình
+  // Lộ trình, Nơi ở, Báo sự cố
   document.querySelectorAll('[data-travel]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.travelMode = btn.dataset.travel;
@@ -1822,7 +2327,6 @@ function bindEvents() {
   });
   document.getElementById('national-route-form')?.addEventListener('submit', runNationalRouteComparison);
 
-  // Kiểm tra nơi ở
   document.getElementById('rental-checklist-groups')?.addEventListener('change', (ev) => {
     const chk = ev.target.closest('.js-rental-chk');
     if (!chk) return;
@@ -1853,7 +2357,6 @@ function bindEvents() {
     }
   });
 
-  // Báo sự cố
   document.querySelectorAll('input[name="repCategory"]').forEach((r) => {
     r.addEventListener('change', () => {
       document.querySelectorAll('.cat-tile').forEach((t) => t.classList.remove('is-selected'));
@@ -1905,7 +2408,7 @@ function bindEvents() {
   });
   document.getElementById('national-report-form')?.addEventListener('submit', handleNationalReportSubmit);
 
-  // Phân hệ 2: Nhà Nghiên cứu & Kiểm duyệt
+  // Phân hệ 2: Nhà Nghiên cứu
   document.querySelectorAll('[data-authmode]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const mode = btn.dataset.authmode;
@@ -1994,7 +2497,7 @@ function bindEvents() {
     loadReviewerQueue();
   });
 
-  // Phân hệ 3: Lọc bản tin & bài nghiên cứu
+  // Phân hệ 3: Bản tin
   document.querySelectorAll('[data-news-kind]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.newsKind = btn.dataset.newsKind;
@@ -2011,6 +2514,161 @@ function bindEvents() {
   });
   document.getElementById('btn-news-to-publish')?.addEventListener('click', () => switchPillar('research'));
 
+  // Phân hệ 4: Dev & Quản trị Hệ thống
+  document.getElementById('btn-dev-run-health')?.addEventListener('click', runDevHealthChecks);
+  document.getElementById('btn-dev-purge-sw')?.addEventListener('click', async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      showToast('Đã xóa sạch Cache Service Worker — đang làm mới...');
+      setTimeout(() => location.reload(), 600);
+    } catch {
+      showToast('Không thể xóa Cache trên trình duyệt này.');
+    }
+  });
+  document.getElementById('btn-dev-export-geojson')?.addEventListener('click', exportFullDatasetGeoJson);
+  document.getElementById('btn-dev-export-csv')?.addEventListener('click', exportFullDatasetCsv);
+
+  document.getElementById('dev-login-form')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const fb = document.getElementById('dev-login-feedback');
+    const pass = document.getElementById('dev-pass-input')?.value || '';
+    const res = await fetch(PROJECT_CONFIG.communityApiUrl || '/api/community', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'admin_login', pass })
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      fb.hidden = false;
+      fb.className = 'form-feedback is-error';
+      fb.textContent = data?.error || 'Mã ADMIN_PASSCODE không chính xác.';
+      return;
+    }
+    fb.hidden = true;
+    state.reviewerToken = data.token;
+    sessionStorage.setItem(REVIEWER_TOKEN_KEY, data.token);
+    document.getElementById('dev-pass-input').value = '';
+    showToast('Đã mở khóa Quyền Điều hành Dev / Admin!');
+    loadDevAdminWorkspace();
+  });
+
+  document.getElementById('btn-dev-logout')?.addEventListener('click', () => {
+    sessionStorage.removeItem(REVIEWER_TOKEN_KEY);
+    state.reviewerToken = '';
+    loadDevAdminWorkspace();
+    showToast('Đã khóa phiên Quản trị viên.');
+  });
+
+  document.querySelectorAll('[data-devtab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.devtab;
+      state.devTab = target;
+      document.querySelectorAll('[data-devtab]').forEach((b) => b.classList.toggle('is-active', b === btn));
+      ['mod', 'research', 'broadcast', 'api'].forEach((k) => {
+        const pane = document.getElementById(`devpane-${k}`);
+        if (pane) pane.hidden = k !== target;
+      });
+    });
+  });
+
+  document.getElementById('dev-mod-search')?.addEventListener('input', renderDevModerationList);
+  document.getElementById('dev-mod-filter')?.addEventListener('change', renderDevModerationList);
+
+  document.getElementById('btn-dev-use-active-zone')?.addEventListener('click', () => {
+    document.getElementById('dev-pt-lat').value = state.zone.lat.toFixed(6);
+    document.getElementById('dev-pt-lng').value = state.zone.lng.toFixed(6);
+    document.getElementById('dev-pt-province').value = state.zone.province;
+  });
+
+  document.getElementById('dev-add-point-form')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const cat = document.getElementById('dev-pt-cat').value;
+    const point = {
+      id: `DEV-${Date.now().toString(36).toUpperCase()}`,
+      name: document.getElementById('dev-pt-name').value.trim(),
+      province: document.getElementById('dev-pt-province').value.trim() || 'Hà Nội',
+      category: cat,
+      layerGroup: ['medical', 'shelter'].includes(cat) ? 'safe' : 'risk',
+      lat: Number(document.getElementById('dev-pt-lat').value),
+      lng: Number(document.getElementById('dev-pt-lng').value),
+      confidenceTier: 'A',
+      dataClass: 'OBSERVED_DATA',
+      status: 'approved',
+      confirmCount: 3,
+      sourceType: 'Quản trị viên Hệ thống xác thực',
+      sourceCitation: 'Dev & Admin Console',
+      notes: document.getElementById('dev-pt-notes').value.trim()
+    };
+    const res = await fetch(PROJECT_CONFIG.communityApiUrl || '/api/community', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${state.reviewerToken}`
+      },
+      body: JSON.stringify({ action: 'admin_upsert_point', point })
+    });
+    const d = await res.json();
+    if (res.ok && d?.ok) {
+      showToast(`Đã ghi điểm ${point.name} lên Cloud!`);
+      document.getElementById('dev-add-point-form').reset();
+      loadDevAdminWorkspace();
+      refreshActiveZoneData({ flyMap: false });
+    } else {
+      showToast(d?.error || 'Không thể ghi điểm lên Cloud.');
+    }
+  });
+
+  const pushBroadcast = async (active) => {
+    const level = document.getElementById('dev-bc-level')?.value || 'yellow';
+    const message = (document.getElementById('dev-bc-msg')?.value || '').trim();
+    if (active && message.length < 5) {
+      showToast('Vui lòng nhập nội dung cảnh báo (tối thiểu 5 ký tự).');
+      return;
+    }
+    const res = await fetch(PROJECT_CONFIG.communityApiUrl || '/api/community', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${state.reviewerToken}`
+      },
+      body: JSON.stringify({ action: 'admin_broadcast', active, level, message })
+    });
+    const d = await res.json();
+    if (res.ok && d?.ok) {
+      showToast(active ? 'Đã phát thông báo cảnh báo trực tiếp!' : 'Đã tắt thông báo cảnh báo.');
+      refreshActiveZoneData({ flyMap: false });
+      loadDevAdminWorkspace();
+    } else {
+      showToast(d?.error || 'Không thể cập nhật thông báo.');
+    }
+  };
+  document.getElementById('btn-dev-bc-send')?.addEventListener('click', () => pushBroadcast(true));
+  document.getElementById('btn-dev-bc-off')?.addEventListener('click', () => pushBroadcast(false));
+
+  document.getElementById('btn-dev-api-call')?.addEventListener('click', async () => {
+    const url = document.getElementById('dev-api-endpoint')?.value || '/api/research-portal?action=publications';
+    const out = document.getElementById('dev-api-json-out');
+    out.textContent = `// Đang gọi ${url} ...`;
+    const t0 = performance.now();
+    try {
+      const res = await fetch(url, {
+        headers: state.reviewerToken ? { Authorization: `Bearer ${state.reviewerToken}` } : {}
+      });
+      const json = await res.json();
+      const ms = Math.round(performance.now() - t0);
+      out.textContent = `// HTTP ${res.status} · ${ms} ms\n` + JSON.stringify(json, null, 2).slice(0, 6000);
+    } catch (err) {
+      out.textContent = `// ERROR: ${err.message}`;
+    }
+  });
+
   // Tiện ích toàn cục
   document.getElementById('btn-toggle-large-text')?.addEventListener('click', () => {
     applyLargeTextMode(!document.documentElement.classList.contains('is-large-text'));
@@ -2023,7 +2681,7 @@ function bindEvents() {
     askAssistant(document.getElementById('assistant-input')?.value || '');
   });
 
-  // Đóng gợi ý khi click ra ngoài
+  // Sự kiện ủy quyền
   document.addEventListener('click', async (ev) => {
     if (!ev.target.closest('.zone-search-box')) {
       const sug = document.getElementById('vn-zone-suggestions');
@@ -2068,6 +2726,29 @@ function bindEvents() {
       state.reportPin = { lat: Number(spotReport.dataset.lat), lng: Number(spotReport.dataset.lng) };
       document.getElementById('rep-location-status').textContent = `Đã gắn tọa độ từ bản đồ (${state.reportPin.lat.toFixed(4)}°N, ${state.reportPin.lng.toFixed(4)}°E · tự làm tròn ~20 m).`;
       switchPublicTab('report');
+      return;
+    }
+
+    const devModBtn = ev.target.closest('.js-dev-mod-act');
+    if (devModBtn && state.reviewerToken) {
+      const res = await fetch(PROJECT_CONFIG.communityApiUrl || '/api/community', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${state.reviewerToken}`
+        },
+        body: JSON.stringify({
+          action: 'admin_bulk_moderate',
+          ids: [devModBtn.dataset.id],
+          act: devModBtn.dataset.act
+        })
+      });
+      const d = await res.json();
+      if (res.ok && d?.ok) {
+        showToast(`Đã cập nhật trạng thái cho ${devModBtn.dataset.id}.`);
+        loadDevAdminWorkspace();
+        refreshActiveZoneData({ flyMap: false });
+      }
       return;
     }
 
@@ -2139,7 +2820,7 @@ function bindEvents() {
       if (res.ok && d?.ok) {
         showToast(reviewBtn.dataset.decision === 'publish' ? 'Đã duyệt & xuất bản dữ liệu!' : 'Đã ghi nhận yêu cầu bổ sung.');
         loadReviewerQueue();
-        renderResearchPillar();
+        if (state.pillar === 'research') renderResearchPillar();
       } else {
         showToast(d?.error || 'Không thể xử lý quyết định kiểm duyệt.');
       }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vn-resilience-gis-v24';
+const CACHE_NAME = 'vn-resilience-gis-v25';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const CORE_ASSETS = [
   './national-app.js',
   './platform/regions/vietnam-directory.js',
   './platform/data/vietnam-verified-hotspots.js',
+  './platform/gis/hydro-surface.js',
   './chuyen-gia.html',
   './styles.css',
   './config.js',
@@ -49,12 +50,12 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // Không lưu bộ nhớ đệm cho API động hoặc bản đồ vệ tinh/radar bên ngoài
   if (
     url.pathname.startsWith('/api/') ||
     url.hostname.includes('script.google.com') ||
     url.hostname.includes('nominatim.openstreetmap.org') ||
     url.hostname.includes('overpass-api.de') ||
+    url.hostname.includes('photon.komoot.io') ||
     url.hostname.includes('api.open-meteo.com') ||
     url.hostname.includes('air-quality-api.open-meteo.com') ||
     url.hostname.includes('rainviewer.com') ||
