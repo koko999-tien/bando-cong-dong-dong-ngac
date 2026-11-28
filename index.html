@@ -153,78 +153,78 @@
               <button type="button" class="subtab-btn subtab-report" data-pubtab="report">+ Báo sự cố</button>
             </nav>
 
-            <!-- TAB 1A: TỔNG QUAN VÙNG + BIỂU ĐỒ MƯA 24H + DANH SÁCH ĐỐI TƯỢNG -->
+            <!-- TAB 1A: TỔNG QUAN VÙNG + CHỈ SỐ + ĐỊA ĐIỂM + DANH SÁCH -->
             <div id="pubpane-overview" class="pubpane dock-scroll">
-              <section id="my-saved-places-card" class="telemetry-panel my-places-panel" aria-label="Địa điểm cá nhân lưu trên thiết bị">
-                <div class="section-head-row">
-                  <strong class="panel-label">Địa điểm Của Tôi (Lưu riêng tư tại máy)</strong>
-                  <button type="button" id="btn-safe-route-home" class="btn btn-sm btn-primary" hidden>Đường về Nhà an toàn</button>
-                </div>
-                <div id="my-places-slots" class="my-places-grid"></div>
-              </section>
-
               <article id="advisory-hero" class="advisory-card is-normal" aria-live="polite">
                 <div class="advisory-top-row">
                   <span id="advisory-level-pill" class="status-pill is-normal">Đang kiểm tra</span>
                   <div class="advisory-freshness">
                     <span id="advisory-updated-time" class="mono-num">--:--</span>
-                    <button type="button" id="btn-share-zone-link" class="text-btn" title="Sao chép đường dẫn mở thẳng khu vực đang khoanh">Chép link</button>
-                    <button type="button" id="btn-share-zone-png" class="text-btn" title="Tạo ảnh thẻ tóm tắt cảnh báo gửi nhanh qua Zalo/Messenger">Ảnh Zalo</button>
-                    <button type="button" id="btn-export-zone-dossier" class="text-btn" title="Tải hồ sơ chẩn đoán hành chính & thiên tai của vùng đang khoanh">Xuất hồ sơ</button>
                     <button type="button" id="btn-refresh-zone" class="text-btn">Làm mới</button>
+                    <details class="action-popover">
+                      <summary class="text-btn">Chia sẻ ▾</summary>
+                      <div class="action-popover-menu">
+                        <button type="button" id="btn-share-zone-link" class="popover-item">Sao chép link vùng</button>
+                        <button type="button" id="btn-share-zone-png" class="popover-item">Tải ảnh thẻ gửi Zalo</button>
+                        <button type="button" id="btn-export-zone-dossier" class="popover-item">Xuất hồ sơ vùng (.md)</button>
+                      </div>
+                    </details>
                   </div>
                 </div>
                 <h2 id="advisory-headline" class="advisory-headline">Đang đồng bộ dữ liệu vùng khoanh...</h2>
-                <dl class="advisory-facts-grid">
-                  <div>
-                    <dt>Phạm vi khoanh vùng</dt>
-                    <dd id="advisory-area">Phường Đông Ngạc, Hà Nội</dd>
-                  </div>
-                  <div>
-                    <dt>Mốc dữ liệu</dt>
-                    <dd id="advisory-time" class="mono-num">--</dd>
-                  </div>
-                  <div class="advisory-fact-wide">
-                    <dt>Diễn biến ghi nhận</dt>
-                    <dd id="advisory-cause">Đang tải thời tiết, không khí và điểm dữ liệu nội vùng.</dd>
-                  </div>
-                  <div class="advisory-fact-wide">
-                    <dt>Khuyến nghị vận hành</dt>
-                    <dd id="advisory-action">Quan sát thực địa khi di chuyển qua đoạn đường trũng thấp hoặc sườn dốc.</dd>
-                  </div>
-                  <div class="advisory-fact-wide advisory-source-row">
-                    <dt>Nguồn &amp; Độ tin cậy</dt>
-                    <dd>
-                      <span id="advisory-source-badge" class="source-badge tone-forecast">Dự báo &amp; Vùng</span>
-                      <span id="advisory-source-text" class="advisory-source-text"></span>
-                    </dd>
-                  </div>
-                </dl>
-                <p id="advisory-honesty-note" class="honesty-note">
-                  Không có cảnh báo hiện tại không đồng nghĩa khu vực an toàn tuyệt đối.
-                </p>
-              </article>
+                <p id="advisory-cause" class="advisory-summary-text">Đang tải thời tiết, không khí và điểm dữ liệu nội vùng.</p>
+                <div class="advisory-action-box">
+                  <span class="advisory-action-lbl">Khuyến nghị di chuyển</span>
+                  <p id="advisory-action">Quan sát thực địa khi di chuyển qua đoạn đường trũng thấp hoặc sườn dốc.</p>
+                </div>
 
-              <!-- ĐỊA GIỚI HÀNH CHÍNH TRƯỚC/SAU SÁP NHẬP & DÂN CƯ VÒNG KHOANH (GIS.VN / VN2000) -->
-              <article id="vn-cadastral-card" class="telemetry-panel cadastral-card" aria-live="polite">
-                <div class="section-head-row">
-                  <strong class="panel-label">Địa giới Hành chính &amp; Dân cư Vùng Khoanh</strong>
-                  <span id="vn-cadastral-badge" class="source-tag tone-verified">Địa chính VN</span>
-                </div>
-                <div class="cadastral-grid">
-                  <div class="cadastral-row">
-                    <span>Đơn vị hiện hành (Sau sáp nhập):</span>
-                    <strong id="vn-admin-post">Đang tra cứu xã/phường...</strong>
+                <details class="clean-disclosure">
+                  <summary>Địa giới hành chính, dân cư &amp; nguồn dữ liệu</summary>
+                  <div class="disclosure-body">
+                    <dl class="advisory-facts-grid">
+                      <div>
+                        <dt>Phạm vi khoanh vùng</dt>
+                        <dd id="advisory-area">Phường Đông Ngạc, Hà Nội</dd>
+                      </div>
+                      <div>
+                        <dt>Mốc dữ liệu</dt>
+                        <dd id="advisory-time" class="mono-num">--</dd>
+                      </div>
+                      <div class="advisory-fact-wide advisory-source-row">
+                        <dt>Nguồn &amp; Độ tin cậy</dt>
+                        <dd>
+                          <span id="advisory-source-badge" class="source-badge tone-forecast">Dự báo &amp; Vùng</span>
+                          <span id="advisory-source-text" class="advisory-source-text"></span>
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <div id="vn-cadastral-card" class="cadastral-card" aria-live="polite">
+                      <div class="section-head-row" style="margin-bottom:4px;">
+                        <strong class="panel-label">Địa giới Hành chính &amp; Dân cư Vùng Khoanh</strong>
+                        <span id="vn-cadastral-badge" class="source-tag tone-verified">Địa chính VN</span>
+                      </div>
+                      <div class="cadastral-grid">
+                        <div class="cadastral-row">
+                          <span>Đơn vị hiện hành (Sau sáp nhập):</span>
+                          <strong id="vn-admin-post">Đang tra cứu xã/phường...</strong>
+                        </div>
+                        <div class="cadastral-row">
+                          <span>Địa giới cũ (Trước sáp nhập):</span>
+                          <strong id="vn-admin-pre">--</strong>
+                        </div>
+                        <div class="cadastral-row">
+                          <span>Quy mô dân cư trong vòng khoanh:</span>
+                          <strong id="vn-zone-pop" class="mono-num">Đang ước tính...</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p id="advisory-honesty-note" class="honesty-note">
+                      Không có cảnh báo hiện tại không đồng nghĩa khu vực an toàn tuyệt đối.
+                    </p>
                   </div>
-                  <div class="cadastral-row">
-                    <span>Địa giới cũ (Trước sáp nhập):</span>
-                    <strong id="vn-admin-pre">--</strong>
-                  </div>
-                  <div class="cadastral-row">
-                    <span>Quy mô dân cư trong vòng khoanh:</span>
-                    <strong id="vn-zone-pop" class="mono-num">Đang ước tính...</strong>
-                  </div>
-                </div>
+                </details>
               </article>
 
               <!-- MA TRẬN 4 CHỈ SỐ ĐỊNH LƯỢNG TRONG VÙNG -->
@@ -235,7 +235,6 @@
                       <svg class="env-ico is-rain" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
                       Mưa hiện tại / Ngày
                     </span>
-                    <span class="source-tag tone-forecast">Dự báo</span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-rain-val">--</strong>
                   <div class="env-meter" aria-hidden="true"><span id="meter-rain" class="env-meter-fill is-rain" style="width:10%"></span></div>
@@ -248,7 +247,6 @@
                       <svg class="env-ico is-heat" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path></svg>
                       Nhiệt độ &amp; Cảm nhận
                     </span>
-                    <span class="source-tag tone-forecast">Khí tượng</span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-heat-val">--</strong>
                   <div class="env-meter" aria-hidden="true"><span id="meter-heat" class="env-meter-fill is-heat" style="width:45%"></span></div>
@@ -261,7 +259,6 @@
                       <svg class="env-ico is-aqi" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"></path></svg>
                       Không khí (US AQI)
                     </span>
-                    <span class="source-tag tone-model">Mô hình</span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-aqi-val">--</strong>
                   <div class="env-meter" aria-hidden="true"><span id="meter-aqi" class="env-meter-fill is-aqi" style="width:25%"></span></div>
@@ -274,7 +271,6 @@
                       <svg class="env-ico is-pts" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
                       Mật độ lớp bản đồ
                     </span>
-                    <span class="source-tag tone-verified">Nội vùng</span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-zone-points-val">--</strong>
                   <div class="env-meter" aria-hidden="true"><span id="meter-points" class="env-meter-fill is-pts" style="width:50%"></span></div>
@@ -282,42 +278,55 @@
                 </article>
               </div>
 
-              <!-- BIỂU ĐỒ LƯỢNG MƯA 24 GIỜ TỚI -->
-              <article id="hourly-rain-card" class="telemetry-panel">
+              <section id="my-saved-places-card" class="telemetry-panel my-places-panel" aria-label="Địa điểm cá nhân lưu trên thiết bị">
                 <div class="section-head-row">
-                  <strong class="panel-label">Diễn biến mưa 24 giờ tới (mm/h)</strong>
-                  <span id="hourly-rain-peak" class="mono-badge subtle">Đỉnh -- mm</span>
+                  <strong class="panel-label">Địa điểm Của Tôi (Lưu riêng tại máy)</strong>
+                  <button type="button" id="btn-safe-route-home" class="btn btn-sm btn-primary" hidden>Đường về Nhà an toàn</button>
                 </div>
-                <div id="hourly-rain-bars" class="hourly-bars-grid" aria-label="Biểu đồ dự báo lượng mưa 24 giờ tới"></div>
-                <div class="hourly-axis-labels mono-num">
-                  <span>Bây giờ</span>
-                  <span>+6h</span>
-                  <span>+12h</span>
-                  <span>+18h</span>
-                  <span>+24h</span>
-                </div>
-                <p id="hourly-scrub-hint" class="field-hint" style="margin:4px 0 0;">Chạm vào cột giờ bất kỳ để xem mô phỏng mặt phủ ngập theo lượng mưa dự báo giờ đó.</p>
-              </article>
+                <div id="my-places-slots" class="my-places-grid"></div>
+              </section>
 
-              <!-- CHUỖI LƯU LƯỢNG DÒNG CHẢY LƯU VỰC SÔNG 21 NGÀY (COPERNICUS GLOFAS) -->
-              <article id="river-discharge-card" class="telemetry-panel">
-                <div class="section-head-row">
-                  <strong class="panel-label">Lưu lượng dòng chảy lưu vực (m³/s)</strong>
-                  <span id="river-discharge-badge" class="mono-badge subtle">Đang tải chuỗi 21 ngày</span>
+              <details class="clean-disclosure" id="telemetry-charts-disclosure">
+                <summary>Biểu đồ mưa 24 giờ &amp; Lưu lượng sông 21 ngày</summary>
+                <div class="disclosure-body">
+                  <!-- BIỂU ĐỒ LƯỢNG MƯA 24 GIỜ TỚI -->
+                  <article id="hourly-rain-card" class="telemetry-subblock">
+                    <div class="section-head-row">
+                      <strong class="panel-label">Diễn biến mưa 24 giờ tới (mm/h)</strong>
+                      <span id="hourly-rain-peak" class="mono-badge subtle">Đỉnh -- mm</span>
+                    </div>
+                    <div id="hourly-rain-bars" class="hourly-bars-grid" aria-label="Biểu đồ dự báo lượng mưa 24 giờ tới"></div>
+                    <div class="hourly-axis-labels mono-num">
+                      <span>Bây giờ</span>
+                      <span>+6h</span>
+                      <span>+12h</span>
+                      <span>+18h</span>
+                      <span>+24h</span>
+                    </div>
+                    <p id="hourly-scrub-hint" class="field-hint" style="margin:4px 0 0;">Chạm vào cột giờ bất kỳ để xem mô phỏng mặt phủ ngập theo lượng mưa dự báo giờ đó.</p>
+                  </article>
+
+                  <!-- CHUỖI LƯU LƯỢNG DÒNG CHẢY LƯU VỰC SÔNG 21 NGÀY -->
+                  <article id="river-discharge-card" class="telemetry-subblock">
+                    <div class="section-head-row">
+                      <strong class="panel-label">Lưu lượng dòng chảy lưu vực (m³/s)</strong>
+                      <span id="river-discharge-badge" class="mono-badge subtle">Đang tải chuỗi 21 ngày</span>
+                    </div>
+                    <div id="river-discharge-meta" class="discharge-meta-row mono-num">
+                      <span>Hiện tại: <strong>--</strong></span>
+                      <span>Đỉnh 14 ngày: <strong>--</strong></span>
+                      <span>So với TB mùa: <strong>--</strong></span>
+                    </div>
+                    <div id="river-hydrograph-svg" class="hydrograph-mount" aria-label="Đồ thị thủy văn lưu lượng dòng chảy 7 ngày qua và 14 ngày tới"></div>
+                    <div class="hourly-axis-labels mono-num">
+                      <span>-7 ngày</span>
+                      <span>Hôm nay</span>
+                      <span>+7 ngày</span>
+                      <span>+14 ngày</span>
+                    </div>
+                  </article>
                 </div>
-                <div id="river-discharge-meta" class="discharge-meta-row mono-num">
-                  <span>Hiện tại: <strong>--</strong></span>
-                  <span>Đỉnh 14 ngày: <strong>--</strong></span>
-                  <span>So với TB mùa: <strong>--</strong></span>
-                </div>
-                <div id="river-hydrograph-svg" class="hydrograph-mount" aria-label="Đồ thị thủy văn lưu lượng dòng chảy 7 ngày qua và 14 ngày tới"></div>
-                <div class="hourly-axis-labels mono-num">
-                  <span>-7 ngày</span>
-                  <span>Hôm nay</span>
-                  <span>+7 ngày</span>
-                  <span>+14 ngày</span>
-                </div>
-              </article>
+              </details>
 
               <!-- BỘ LỌC & DANH SÁCH ĐỐI TƯỢNG TRONG VÒNG KHOANH -->
               <div class="map-toolbar-card">
@@ -638,12 +647,12 @@
             <!-- PHIẾU THÔNG TIN CHI TIẾT ĐIỂM HOẶC TRA CỨU TỌA ĐỘ CHẠM -->
             <div id="map-selected-card" class="map-detail-card" hidden></div>
 
-            <!-- DOCK NỔI ĐÁY BẢN ĐỒ: MÔ PHỎNG THỦY VĂN + CHÚ GIẢI GỌN TRÊN 2 DÒNG MẢNH -->
+            <!-- DOCK NỔI ĐÁY BẢN ĐỒ: VIÊN NANG GỌN, XỔ THANH TRƯỢT KHI CẦN -->
             <div class="map-hud-bottom">
-              <div id="hydro-sim-strip" class="hydro-sim-strip" role="region" aria-label="Điều chỉnh kịch bản lượng mưa và độ đậm mặt phủ nước">
+              <div id="hydro-sim-strip" class="hydro-sim-strip is-compact" role="region" aria-label="Điều chỉnh kịch bản lượng mưa và độ đậm mặt phủ nước">
                 <div class="hydro-sim-main">
                   <div class="hydro-sim-left">
-                    <span class="hydro-sim-tag">Kịch bản mưa</span>
+                    <span class="hydro-sim-tag">Mưa</span>
                     <div class="hydro-preset-group" role="group" aria-label="Mức mưa giả định">
                       <button type="button" class="rain-preset-btn" data-rain-preset="live" title="Theo lượng mưa dự báo lúc này">Thực tế</button>
                       <button type="button" class="rain-preset-btn" data-rain-preset="40">40mm</button>
@@ -651,6 +660,7 @@
                       <button type="button" class="rain-preset-btn" data-rain-preset="120">120mm</button>
                       <button type="button" class="rain-preset-btn" data-rain-preset="180">180mm</button>
                     </div>
+                    <button type="button" id="btn-toggle-hydro-drawer" class="rain-preset-btn" aria-expanded="false">Thanh trượt ▴</button>
                   </div>
 
                   <div class="hydro-sim-sliders">
@@ -671,15 +681,15 @@
                     <span><span class="dot dot-water-shallow"></span>Đọng nhẹ</span>
                     <span><span class="dot dot-water-mid"></span>Ngập vừa</span>
                     <span><span class="dot dot-water-deep"></span>Rốn sâu</span>
-                    <span><span class="flow-arrow-glyph" aria-hidden="true">→</span>Hướng chảy</span>
+                    <span class="legend-extra"><span class="flow-arrow-glyph" aria-hidden="true">→</span>Hướng chảy</span>
                     <span><span class="dot dot-red"></span>Rủi ro</span>
                     <span><span class="dot dot-green"></span>Y tế / Trú</span>
-                    <span><span class="dot dot-amber"></span>Chờ duyệt</span>
+                    <span class="legend-extra"><span class="dot dot-amber"></span>Chờ duyệt</span>
                   </div>
                   <div class="hud-bottom-meta mono-num">
                     <span id="hydro-terrain-summary" class="hydro-terrain-meta">Trũng --%</span>
                     <span class="hud-sep" aria-hidden="true">·</span>
-                    <span id="map-cursor-coords" class="map-coords-hint">Chạm bản đồ tra cao độ &amp; địa giới</span>
+                    <span id="map-cursor-coords" class="map-coords-hint">Chạm bản đồ xem chi tiết</span>
                   </div>
                 </div>
               </div>
@@ -967,18 +977,18 @@
           </div>
         </div>
 
-        <div class="card-panel" style="margin-bottom:12px;">
-          <div class="section-head-row">
-            <div>
-              <h2 class="section-title">Theo dõi Tự động 7 Lưu vực Trọng điểm &amp; GDACS Quốc tế</h2>
+        <details class="clean-disclosure news-basins-disclosure" open style="margin-bottom:12px;">
+          <summary>Theo dõi Tự động 7 Lưu vực Trọng điểm &amp; GDACS Quốc tế</summary>
+          <div class="disclosure-body">
+            <div class="section-head-row">
               <span id="live-basin-sync-meta" class="muted-meta">Tổng hợp tự động mưa, gió giật (Open-Meteo), lưu lượng sông (Copernicus GloFAS) &amp; cảnh báo khu vực</span>
+              <button type="button" id="btn-refresh-basin-feed" class="btn btn-sm btn-secondary">Làm mới Lưu vực</button>
             </div>
-            <button type="button" id="btn-refresh-basin-feed" class="btn btn-sm btn-secondary">Làm mới Lưu vực</button>
+            <div id="live-basin-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:8px;margin-top:8px;">
+              <p class="muted-body">Đang tải số liệu 7 lưu vực...</p>
+            </div>
           </div>
-          <div id="live-basin-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:8px;margin-top:8px;">
-            <p class="muted-body">Đang tải số liệu 7 lưu vực...</p>
-          </div>
-        </div>
+        </details>
 
         <div class="map-toolbar-card">
           <div class="filter-pills" role="group" aria-label="Lọc loại công bố">
@@ -1010,7 +1020,7 @@
         <div class="section-banner sos-hero-banner">
           <div>
             <h1>Hộ tống Đường đi Thông minh &amp; Điều phối Cứu trợ Chống Tắc đường</h1>
-            <p>Thiết kế chuẩn hóa để vận hành trực tiếp hoặc đóng gói thành Ứng dụng Di động: Bảo vệ tuyệt đối vị trí người dùng bằng ô lưới ẩn danh tự hủy, khóa cứng hạn ngạch tối đa 2 người hỗ trợ tránh ùn tắc và xác thực 2 chiều chống kẻ xấu lợi dụng.</p>
+            <p>Phát tín hiệu hỗ trợ 1 chạm kèm mã PIN đối chiếu và tự động bảo vệ ẩn danh vị trí quanh ô lưới khu vực.</p>
           </div>
           <div class="sos-shield-badges">
             <span class="hud-count-pill mono-num">Ẩn vị trí nền: Geohash-6 (Tự hủy 30p)</span>
@@ -1037,24 +1047,29 @@
             </div>
           </div>
 
-          <div class="sos-guarantees-grid">
-            <div class="sos-guarantee-item">
-              <strong>1. Phát cảnh báo Thẳng &amp; Chống tắc (K=2)</strong>
-              <span>Khi bạn gửi hỗ trợ, cảnh báo phát ngay tới mọi người dùng đang ở gần; chỉ mở tối đa 2 chỗ nhận để không kéo đám đông gây kẹt xe.</span>
+          <details class="clean-disclosure" style="margin-top:8px;">
+            <summary>Quy chế bảo vệ ẩn danh 300 m, khóa K=2 chỗ &amp; pháp lý NĐ 13/2023 (<span id="sos-zone-squad-count" class="mono-num">--</span> người trực)</summary>
+            <div class="disclosure-body">
+              <div class="sos-guarantees-grid">
+                <div class="sos-guarantee-item">
+                  <strong>1. Phát cảnh báo Thẳng &amp; Chống tắc (K=2)</strong>
+                  <span>Khi bạn gửi hỗ trợ, cảnh báo phát ngay tới mọi người dùng đang ở gần; chỉ mở tối đa 2 chỗ nhận để không kéo đám đông gây kẹt xe.</span>
+                </div>
+                <div class="sos-guarantee-item">
+                  <strong>2. An toàn 2 chiều &amp; Giới hạn &lt; 0,45 m</strong>
+                  <span>Khóa kiểm tra PIN 4 số tại chỗ, 1 chạm khóa tức thì tài khoản đòi tiền. Ngập sâu &ge; 0,45 m / rò điện tự chuyển thẳng 112/114/115.</span>
+                </div>
+                <div class="sos-guarantee-item">
+                  <strong>3. Không bao giờ lộ vị trí nền</strong>
+                  <span>Không lưu GPS nền. Tọa độ mờ 300 m trước khi nhận và tự xóa trắng sau ca.</span>
+                </div>
+              </div>
+              <div class="sos-legal-strip">
+                <span>Minh bạch Nghị định 13/2023/NĐ-CP: Tọa độ SOS tự xóa trắng sau 45 phút; quyền xóa vĩnh viễn tài khoản trong 1 chạm.</span>
+                <a href="./phap-ly.html" class="text-btn">Xem Chính sách Bảo mật &amp; Quy chuẩn An toàn ↗</a>
+              </div>
             </div>
-            <div class="sos-guarantee-item">
-              <strong>2. An toàn 2 chiều &amp; Giới hạn &lt; 0,45 m</strong>
-              <span>Khóa kiểm tra PIN 4 số tại chỗ, 1 chạm khóa tức thì tài khoản đòi tiền. Ngập sâu &ge; 0,45 m / rò điện tự chuyển thẳng 112/114/115.</span>
-            </div>
-            <div class="sos-guarantee-item">
-              <strong>3. Không bao giờ lộ vị trí nền</strong>
-              <span>Không lưu GPS nền (<span id="sos-zone-squad-count" class="mono-num">--</span> người trực quanh ô lưới). Tọa độ mờ 300 m trước khi nhận và tự xóa trắng sau ca.</span>
-            </div>
-          </div>
-          <div class="sos-legal-strip">
-            <span>Minh bạch Nghị định 13/2023/NĐ-CP: Tọa độ SOS tự xóa trắng sau 45 phút; quyền xóa vĩnh viễn tài khoản trong 1 chạm.</span>
-            <a href="./phap-ly.html" class="text-btn">Xem Chính sách Bảo mật &amp; Quy chuẩn An toàn ↗</a>
-          </div>
+          </details>
         </div>
 
         <div class="research-two-col">
@@ -1194,13 +1209,31 @@
             </div>
           </div>
 
-          <!-- CỘT PHẢI: AI HỘ TỐNG HÀNH TRÌNH THỰC CHỨNG (D×V, MANNING, QCVN) + HỘP THƯ ĐỘI XUNG KÍCH -->
+          <!-- CỘT PHẢI: CẢNH BÁO HỖ TRỢ GẦN BẠN LÊN ĐẦU + AI HỘ TỐNG HÀNH TRÌNH -->
           <div class="stack-panel">
+            <!-- CẢNH BÁO HỖ TRỢ GẦN ĐÂY DÀNH CHO NGƯỜI DÙNG QUANH KHU VỰC -->
+            <article class="card-panel">
+              <div class="section-head-row">
+                <div>
+                  <h2 class="section-title">Cảnh báo Hỗ trợ Gần Bạn (Phát thẳng Quanh khu vực)</h2>
+                  <span class="muted-meta">Người dùng đã đăng nhập bật nhận cảnh báo sẽ thấy ngay ca ngập nông quanh đây (tối đa 2 người nhận)</span>
+                </div>
+                <div class="form-actions-row">
+                  <button type="button" id="btn-responder-heartbeat" class="btn btn-sm btn-secondary">Nhận cảnh báo gần đây (30p)</button>
+                  <button type="button" id="btn-enable-web-push" class="btn btn-sm btn-primary">Bật Chuông Đẩy Nền</button>
+                </div>
+              </div>
+              <p id="web-push-status-note" class="field-hint" style="margin:4px 0 6px;">Nhấn "Bật Chuông Đẩy Nền" để nhận cảnh báo ngay cả khi tắt màn hình hoặc thu nhỏ trình duyệt.</p>
+              <div id="responder-inbox-box" class="place-list">
+                <p class="muted-body">Đăng nhập để tự động nhận cảnh báo khi có người gặp sự cố xe chết máy hoặc cần hỗ trợ ở gần khu vực của bạn.</p>
+              </div>
+            </article>
+
             <article class="card-panel ai-guardian-card">
               <div class="section-head-row">
                 <div>
                   <h2 class="section-title">AI Hộ tống &amp; Phát hiện Bất thường Hành trình (Thực chứng)</h2>
-                  <span class="muted-meta">Dựa trên thủy động lực học Manning, tiêu chuẩn mất ổn định Martínez-Gomariz (2016) &amp; QCVN 05:2023/BTNMT</span>
+                  <span class="muted-meta">Phân tích thủy lực dòng chảy &amp; chất lượng không khí cục bộ trên thiết bị</span>
                 </div>
                 <button type="button" id="btn-toggle-ai-escort" class="btn btn-sm btn-primary" aria-pressed="false">Bật GPS Hộ tống</button>
               </div>
@@ -1230,46 +1263,34 @@
 
               <div id="ai-inference-banner" class="field-status-note">
                 <strong id="ai-inference-headline" style="display:block;color:var(--ink);">Chưa ghi nhận bất thường trên hành trình</strong>
-                <span id="ai-inference-desc">AI chỉ chạy cục bộ trên thiết bị (Edge Inference), không gửi lịch sử đường đi của bạn lên máy chủ khi bình thường.</span>
-                <div class="btn-row" style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
-                  <span class="muted-meta">Hiệu chuẩn AI thực địa:</span>
-                  <button type="button" class="filter-pill js-ai-calib" data-label="true_stall">Đúng là kẹt / chết máy</button>
-                  <button type="button" class="filter-pill js-ai-calib" data-label="false_redlight">Chỉ dừng đèn đỏ / bình thường</button>
-                  <span id="ai-calib-count" class="muted-meta mono-num"></span>
-                </div>
+                <span id="ai-inference-desc">AI chỉ chạy cục bộ trên thiết bị, không gửi lịch sử đường đi của bạn lên máy chủ khi bình thường.</span>
               </div>
 
-              <div class="ai-charts-split">
-                <div id="ai-risk-gauge-svg" class="ai-gauge-mount" aria-label="Đồng hồ đo xác suất rủi ro hành trình AI"></div>
-                <div id="ai-escort-sparkline" class="hydrograph-mount" aria-label="Chuỗi biến thiên xác suất rủi ro hành trình AI"></div>
-              </div>
+              <details class="clean-disclosure">
+                <summary>Biểu đồ động học &amp; Kiểm thử kịch bản AI</summary>
+                <div class="disclosure-body">
+                  <div class="btn-row" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                    <span class="muted-meta">Hiệu chuẩn AI thực địa:</span>
+                    <button type="button" class="filter-pill js-ai-calib" data-label="true_stall">Đúng là kẹt / chết máy</button>
+                    <button type="button" class="filter-pill js-ai-calib" data-label="false_redlight">Chỉ dừng đèn đỏ / bình thường</button>
+                    <span id="ai-calib-count" class="muted-meta mono-num"></span>
+                  </div>
 
-              <div>
-                <span class="field-hint" style="display:block;margin-bottom:6px;">Kiểm chứng thực nghiệm mô hình AI với 3 kịch bản động học ngoài đời thực:</span>
-                <div class="filter-pills">
-                  <button type="button" class="filter-pill js-sim-kinematic" data-sim="normal_ride">Đi xe 24 km/h bình thường</button>
-                  <button type="button" class="filter-pill js-sim-kinematic" data-sim="dry_redlight">Dừng đèn đỏ 95s đường khô (Chống báo giả)</button>
-                  <button type="button" class="filter-pill js-sim-kinematic" data-sim="flood_stall">Đột ngột kẹt đứng 125s giữa rốn ngập mưa 85mm</button>
-                </div>
-              </div>
-            </article>
+                  <div class="ai-charts-split">
+                    <div id="ai-risk-gauge-svg" class="ai-gauge-mount" aria-label="Đồng hồ đo xác suất rủi ro hành trình AI"></div>
+                    <div id="ai-escort-sparkline" class="hydrograph-mount" aria-label="Chuỗi biến thiên xác suất rủi ro hành trình AI"></div>
+                  </div>
 
-            <!-- CẢNH BÁO HỖ TRỢ GẦN ĐÂY DÀNH CHO NGƯỜI DÙNG QUANH KHU VỰC -->
-            <article class="card-panel">
-              <div class="section-head-row">
-                <div>
-                  <h2 class="section-title">Cảnh báo Hỗ trợ Gần Bạn (Phát thẳng Quanh khu vực)</h2>
-                  <span class="muted-meta">Người dùng đã đăng nhập bật nhận cảnh báo sẽ thấy ngay ca ngập nông quanh đây (tối đa 2 người nhận)</span>
+                  <div>
+                    <span class="field-hint" style="display:block;margin-bottom:6px;">Kiểm chứng thực nghiệm mô hình AI với 3 kịch bản động học ngoài đời thực:</span>
+                    <div class="filter-pills">
+                      <button type="button" class="filter-pill js-sim-kinematic" data-sim="normal_ride">Đi xe 24 km/h bình thường</button>
+                      <button type="button" class="filter-pill js-sim-kinematic" data-sim="dry_redlight">Dừng đèn đỏ 95s đường khô (Chống báo giả)</button>
+                      <button type="button" class="filter-pill js-sim-kinematic" data-sim="flood_stall">Đột ngột kẹt đứng 125s giữa rốn ngập mưa 85mm</button>
+                    </div>
+                  </div>
                 </div>
-                <div class="form-actions-row">
-                  <button type="button" id="btn-responder-heartbeat" class="btn btn-sm btn-secondary">Nhận cảnh báo gần đây (30p)</button>
-                  <button type="button" id="btn-enable-web-push" class="btn btn-sm btn-primary">Bật Chuông Đẩy Nền</button>
-                </div>
-              </div>
-              <p id="web-push-status-note" class="field-hint" style="margin:4px 0 6px;">Nhấn "Bật Chuông Đẩy Nền" để nhận cảnh báo ngay cả khi tắt màn hình hoặc thu nhỏ trình duyệt.</p>
-              <div id="responder-inbox-box" class="place-list">
-                <p class="muted-body">Đăng nhập để tự động nhận cảnh báo khi có người gặp sự cố xe chết máy hoặc cần hỗ trợ ở gần khu vực của bạn.</p>
-              </div>
+              </details>
             </article>
           </div>
         </div>

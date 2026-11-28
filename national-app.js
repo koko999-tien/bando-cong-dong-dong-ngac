@@ -889,6 +889,12 @@ async function exportZoneZaloPngCard() {
 
 function renderPublicOverview({ flyMap = false } = {}) {
   renderMySavedPlaces();
+  const chartsDisc = document.getElementById('telemetry-charts-disclosure');
+  if (chartsDisc && !chartsDisc.dataset.userToggled) {
+    const rainNow = Number(state.weather?.rainMm || 0);
+    const rainDay = Number(state.weather?.dailyRainMm || 0);
+    chartsDisc.open = rainNow > 0 || rainDay >= 15;
+  }
   const updatedStr = state.lastUpdatedAt ? formatTimeHm(state.lastUpdatedAt) : 'Dữ liệu sẵn có';
   const riskCount = state.zonePoints.filter((p) => p.layerGroup === 'risk').length;
   const safeCount = state.zonePoints.filter((p) => p.layerGroup === 'safe').length;
@@ -1633,7 +1639,7 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
   }
 }
 
-function renderPointCardHtml(pt) {
+function renderPointCardHtml(pt, { expandedActions = false } = {}) {
   const ver = describePointVerificationPlain(pt);
   const pulse = state.livePulse?.byPoint?.[pt.id];
   const cardType = pt.layerGroup === 'safe' ? 'is-safe' : pt.category === 'heat' ? 'is-heat' : 'is-risk';
@@ -1678,20 +1684,35 @@ function renderPointCardHtml(pt) {
             <span class="place-card-dist">${esc(formatDistancePlain(pt.distanceMeters))}</span>
           </div>
           <div class="place-card-meta">
-            <span class="source-tag ${pt.layerGroup === 'safe' ? 'tone-verified' : 'tone-community'}">${esc(catNames[pt.category] || 'Điểm ghi nhận')}</span>
-            ${osmTag || `<span class="source-tag tone-${ver.badgeTone}">${esc(ver.label)}</span>`}
-            ${researchTag}
-            ${pulseTag}
+            ${
+              expandedActions
+                ? `<span class="source-tag ${pt.layerGroup === 'safe' ? 'tone-verified' : 'tone-community'}">${esc(catNames[pt.category] || 'Điểm ghi nhận')}</span>
+                   ${osmTag || `<span class="source-tag tone-${ver.badgeTone}">${esc(ver.label)}</span>`}
+                   ${researchTag}
+                   ${pulseTag}`
+                : `<span class="source-tag ${pt.layerGroup === 'safe' ? 'tone-verified' : 'tone-community'}">${esc(catNames[pt.category] || 'Điểm ghi nhận')}</span>
+                   ${pulseTag || osmTag || `<span class="source-tag tone-${ver.badgeTone}">${esc(ver.label)}</span>`}`
+            }
           </div>
           <p class="place-card-desc">${esc((pt.notes || '').slice(0, 165))}</p>
           <div class="place-card-actions">
             <button type="button" class="checkin-btn is-locate js-focus-map-pt" data-lat="${pt.lat}" data-lng="${pt.lng}" data-ptid="${esc(pt.id)}">Định vị</button>
             ${
               pt.layerGroup === 'risk'
-                ? `<button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="flooding">Đang ngập</button>
-                   <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="receding">Đang rút</button>
-                   <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="clear">Khô ráo</button>
-                   <button type="button" class="checkin-btn js-confirm-national-pt" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}">+1 (${Number(pt.confirmCount) || 1})</button>`
+                ? expandedActions
+                  ? `<button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="flooding">Đang ngập</button>
+                     <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="receding">Đang rút</button>
+                     <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="clear">Khô ráo</button>
+                     <button type="button" class="checkin-btn js-confirm-national-pt" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}">+1 (${Number(pt.confirmCount) || 1})</button>`
+                  : `<details class="inline-checkin-popover">
+                       <summary class="checkin-btn">Cập nhật (${Number(pt.confirmCount) || 1}) ▾</summary>
+                       <div class="inline-checkin-row">
+                         <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="flooding">Đang ngập</button>
+                         <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="receding">Đang rút</button>
+                         <button type="button" class="checkin-btn js-live-checkin" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}" data-status="clear">Khô ráo</button>
+                         <button type="button" class="checkin-btn js-confirm-national-pt" data-ptid="${esc(pt.id)}" data-ptname="${esc(pt.name)}">+1 Xác nhận</button>
+                       </div>
+                     </details>`
                 : ''
             }
           </div>
@@ -1709,7 +1730,7 @@ function showSelectedPointCard(pt) {
       <strong>Chi tiết đối tượng trong vùng khoanh</strong>
       <button type="button" id="btn-close-selected-pt" class="text-btn">Đóng</button>
     </div>
-    ${renderPointCardHtml(pt)}
+    ${renderPointCardHtml(pt, { expandedActions: true })}
   `;
   document.getElementById('btn-close-selected-pt')?.addEventListener('click', () => {
     box.hidden = true;
@@ -3100,6 +3121,32 @@ function bindEvents() {
     btn.setAttribute('aria-pressed', String(state.hydroSim.flowAnimated));
     btn.textContent = state.hydroSim.flowAnimated ? 'Dòng chảy động' : 'Tĩnh hướng chảy';
     flowVectorsLayer?.setAnimated(state.hydroSim.flowAnimated);
+  });
+
+  document.getElementById('btn-toggle-hydro-drawer')?.addEventListener('click', (ev) => {
+    const strip = document.getElementById('hydro-sim-strip');
+    if (!strip) return;
+    const compact = strip.classList.toggle('is-compact');
+    ev.currentTarget.setAttribute('aria-expanded', String(!compact));
+    ev.currentTarget.textContent = compact ? 'Thanh trượt ▴' : 'Thu gọn ▾';
+  });
+
+  const chartsDisc = document.getElementById('telemetry-charts-disclosure');
+  chartsDisc?.addEventListener('toggle', () => {
+    chartsDisc.dataset.userToggled = '1';
+    if (chartsDisc.open) {
+      setTimeout(() => renderRiverDischargeChart(), 30);
+    }
+  });
+
+  document.addEventListener('click', (ev) => {
+    const clickedActionItem = ev.target.closest('.action-popover-menu button');
+    if (clickedActionItem) {
+      clickedActionItem.closest('.action-popover')?.removeAttribute('open');
+    }
+    document.querySelectorAll('details.action-popover[open], details.inline-checkin-popover[open]').forEach((el) => {
+      if (!el.contains(ev.target)) el.removeAttribute('open');
+    });
   });
 
   document.getElementById('btn-radar-prev')?.addEventListener('click', () => {
