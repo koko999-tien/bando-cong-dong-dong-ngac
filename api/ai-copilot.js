@@ -14,6 +14,8 @@ import { CATEGORY_LABELS } from '../gis-utils.js';
 import { DATA_CLASSES } from '../platform/data/provenance-catalog.js';
 import { applyScientificGuardrails } from '../platform/ai/provider-layer.js';
 import { createBoundedRateLimiter } from '../platform/security/validators.js';
+import { buildCorsHeaders } from '../platform/security/cors.js';
+import { buildNationalGroundedBrief, sanitizeCitizenJargon } from '../platform/ai/national-intelligence.js';
 
 const AI_CONFIG_PATH = 'config/ai-provider.enc.json';
 const FAST_MODELS = ['gemini-3.5-flash-lite', 'gemini-4-hydrogen', 'gemini-4-argon'];
@@ -266,31 +268,43 @@ function buildGroundedContextString(extraReports = [], liveWeather = null, broad
     .join('\n');
 }
 
-export async function GET() {
+export async function OPTIONS(request) {
+  return new Response(null, {
+    status: 204,
+    headers: buildCorsHeaders(request)
+  });
+}
+
+export async function GET(request) {
+  const cors = buildCorsHeaders(request);
   try {
     const resolved = await resolveGeminiApiKey();
     return Response.json(
       {
         ok: true,
-        aiReady: Boolean(resolved.key),
+        aiReady: true,
+        deterministicEngineReady: true,
+        llmVaultConfigured: Boolean(resolved.key),
+        nationalCoverageProvinces: 63,
         keySource: resolved.source,
-        engine: 'Google Gemini Interactions API v1',
-        models: FAST_MODELS
+        engine: resolved.key ? 'Google Gemini Interactions API v1 + Grounded 63-Province Synthesizer' : 'VN Resilience Multi-Source Deterministic Engine (63 Provinces)',
+        models: resolved.key ? FAST_MODELS : ['multi-source-deterministic-v2']
       },
-      { headers: { 'Cache-Control': 'no-store, max-age=0' } }
+      { headers: { 'Cache-Control': 'no-store, max-age=0', ...cors } }
     );
   } catch (err) {
     console.error('[api/ai-copilot GET error]', err);
-    return Response.json({ ok: false, aiReady: false }, { status: 500 });
+    return Response.json({ ok: false, aiReady: false }, { status: 500, headers: cors });
   }
 }
 
 export async function POST(request) {
+  const cors = buildCorsHeaders(request);
   try {
     if (!checkRateLimit(request, 18)) {
       return Response.json(
         { ok: false, error: 'Bạn đang gửi yêu cầu AI quá nhanh. Vui lòng đợi vài giây rồi thử lại.' },
-        { status: 429 }
+        { status: 429, headers: cors }
       );
     }
 
@@ -300,11 +314,11 @@ export async function POST(request) {
     // 1. Quản trị viên lưu/cập nhật khóa Gemini mã hóa AES-256-GCM vào Private Blob
     if (action === 'admin_set_ai_key') {
       if (!verifyAdminToken(request)) {
-        return Response.json({ ok: false, error: 'Yêu cầu đăng nhập quyền Quản trị viên.' }, { status: 401 });
+        return Response.json({ ok: false, error: 'Yêu cầu đăng nhập quyền Quản trị viên.' }, { status: 401, headers: cors });
       }
       const candidateKey = String(body.apiKey || '').trim();
       if (candidateKey.length < 15) {
-        return Response.json({ ok: false, error: 'Khóa API không hợp lệ.' }, { status: 400 });
+        return Response.json({ ok: false, error: 'Khóa API không hợp lệ.' }, { status: 400, headers: cors });
       }
 
       // Kiểm chứng khóa hoạt động thực tế trước khi lưu mã hóa
@@ -316,80 +330,118 @@ export async function POST(request) {
 
       const encryptedPayload = encryptSecret(candidateKey);
       await writePrivateJson(AI_CONFIG_PATH, encryptedPayload);
-      return Response.json({ ok: true, modelVerified: probe.modelUsed });
+      return Response.json({ ok: true, modelVerified: probe.modelUsed }, { headers: cors });
     }
 
     const { key: apiKey } = await resolveGeminiApiKey();
+
+    // 2. Trợ lý Hỏi-Đáp Thực chứng Đa nguồn Toàn quốc (63 Tỉnh/Thành)
+    if (action === 'ask_copilot') {
+      const question = cleanText(body.question, 500);
+      if (question.length < 3) {
+        return Response.json({ ok: false, error: 'Vui lòng nhập câu hỏi cụ thể hơn.' }, { status: 400, headers: cors });
+      }
+
+      const zCtx = body.zoneContext && typeof body.zoneContext === 'object' ? body.zoneContext : {};
+      const brief = buildNationalGroundedBrief({
+        question,
+        zone: zCtx.zone || { name: 'Phường Đông Ngạc, Hà Nội', province: 'Hà Nội', lat: HUMG_CENTER.lat, lng: HUMG_CENTER.lng, radiusKm: 2 },
+        weather: zCtx.weather || body.liveWeather || null,
+        hourlyForecast: zCtx.hourlyForecast || null,
+        riverDischarge: zCtx.riverDischarge || null,
+        aqi: zCtx.aqi || body.liveAqi || null,
+        demStats: zCtx.demStats || null,
+        vnZoneIntel: zCtx.vnZoneIntel || null,
+        zonePoints: Array.isArray(zCtx.zonePoints) ? zCtx.zonePoints : SAMPLE_HUMG_POINTS,
+        zoneCorridors: Array.isArray(zCtx.zoneCorridors) ? zCtx.zoneCorridors : []
+      });
+
+      const activeZoneName = cleanText(zCtx.zone?.name || 'Việt Nam', 120);
+      const isCoreDongNgac = !zCtx.zone?.province || /Đông Ngạc|Hà Nội/i.test(activeZoneName);
+
+      if (apiKey) {
+        try {
+          const { extraReports, broadcast, livePulse } = await loadCloudCommunitySnapshot();
+          const dongNgacAppendix = isCoreDongNgac
+            ? `\n--- DỮ LIỆU THAM CHIẾU HÀ NỘI/ĐÔNG NGẠC ---\n${buildGroundedContextString(extraReports, zCtx.weather || body.liveWeather || null, broadcast, body.spotContext || null, zCtx.aqi || body.liveAqi || null, livePulse)}`
+            : '';
+
+          const sysPrompt = [
+            `Bạn là Trợ lý Địa không gian Thực chứng của nền tảng VN Resilience Atlas đang phân tích khu vực: "${activeZoneName}".`,
+            'NGUYÊN TẮC KỶ LUẬT CHỐNG ẢO GIÁC (BẮT BUỘC 100%):',
+            '1. CHỈ sử dụng số liệu thực tế được cung cấp trong HỒ SƠ TỔNG HỢP VÙNG bên dưới. Tuyệt đối KHÔNG tự bịa số đo ngoài dữ liệu, KHÔNG nhầm dữ liệu Hà Nội vào tỉnh/thành khác.',
+            '2. Khi nhắc tới địa điểm có trong vùng, ghi kèm mã điểm trong ngoặc vuông (ví dụ: [R-01], [S-05], [OSM-...]) để người dùng bấm bay tới vị trí đó.',
+            '3. Trả lời bằng tiếng Việt tự nhiên, súc tích, tránh thuật ngữ viết tắt khó hiểu cho người dân, chia 3–5 gạch đầu dòng rõ ràng.'
+          ].join('\n');
+
+          const fullInput = `HỒ SƠ TỔNG HỢP VÙNG (${activeZoneName}):\n${brief.answerText}${dongNgacAppendix}\n\nCÂU HỎI CỦA NGƯỜI DÙNG: "${question}"`;
+          const { text, modelUsed } = await runGeminiInteractionWithFallback(apiKey, {
+            models: FAST_MODELS,
+            systemInstruction: sysPrompt,
+            input: fullInput
+          });
+
+          const knownPointIds = [
+            ...SAMPLE_HUMG_POINTS,
+            ...extraReports,
+            ...(Array.isArray(zCtx.zonePoints) ? zCtx.zonePoints : [])
+          ].map((p) => p.id);
+          const activeDataClasses = [
+            DATA_CLASSES.OBSERVED_DATA,
+            DATA_CLASSES.SATELLITE_DATA,
+            DATA_CLASSES.MODELLED_DATA,
+            DATA_CLASSES.FORECAST_DATA
+          ];
+          const guarded = applyScientificGuardrails(text, {
+            knownPointIds,
+            dataClasses: activeDataClasses,
+            hasHumanOfficialApproval: false
+          });
+
+          return Response.json(
+            {
+              ok: true,
+              mode: 'cloud_llm',
+              answer: sanitizeCitizenJargon(guarded.answer),
+              modelUsed,
+              referencedPoints: brief.referencedPoints,
+              metrics: brief.metrics,
+              citedPointIds: guarded.factsCited,
+              unverifiedCitedIds: guarded.unverifiedCitedIds,
+              dataClasses: guarded.dataClasses,
+              uncertaintyNotes: guarded.uncertaintyNotes,
+              blockedOfficialClaim: guarded.blockedOfficialClaim
+            },
+            { headers: cors }
+          );
+        } catch (llmErr) {
+          console.warn('[api/ai-copilot LLM fallback to deterministic]', llmErr?.message);
+        }
+      }
+
+      // Chế độ Tổng hợp Thực chứng Đa nguồn tức thì (0 ms, luôn sẵn sàng kể cả khi chưa gắn khóa LLM đám mây)
+      return Response.json(
+        {
+          ok: true,
+          mode: 'grounded_synthesis',
+          modelUsed: 'multi-source-deterministic-v2',
+          answer: brief.answerText,
+          headline: brief.headline,
+          referencedPoints: brief.referencedPoints,
+          metrics: brief.metrics
+        },
+        { headers: cors }
+      );
+    }
+
     if (!apiKey) {
       return Response.json(
         {
           ok: false,
-          error: 'Chưa cấu hình khóa Gemini API trên máy chủ (vui lòng thiết lập trong Quản trị → Tab 5 hoặc biến môi trường GEMINI_API_KEY).'
+          error: 'Chưa cấu hình khóa Gemini API trên máy chủ cho tác vụ phân tích ảnh/tổng hợp học thuật.'
         },
-        { status: 503 }
+        { status: 503, headers: cors }
       );
-    }
-
-    // 2. Trợ lý Hỏi-Đáp Thực chứng (Grounded RAG Copilot cho Cư dân, Sinh viên & Giảng viên)
-    if (action === 'ask_copilot') {
-      const question = cleanText(body.question, 500);
-      if (question.length < 3) {
-        return Response.json({ ok: false, error: 'Vui lòng nhập câu hỏi cụ thể hơn.' }, { status: 400 });
-      }
-
-      const { extraReports, broadcast, livePulse } = await loadCloudCommunitySnapshot();
-      const groundedContext = buildGroundedContextString(
-        extraReports,
-        body.liveWeather || null,
-        broadcast,
-        body.spotContext || null,
-        body.liveAqi || null,
-        livePulse
-      );
-
-      const sysPrompt = [
-        'Bạn là Trợ lý AI Thực chứng của dự án "Bản đồ Cộng đồng Mở Thích ứng Nắng nóng & Ngập cục bộ khu vực Trường ĐH Mỏ - Địa chất (Phường Đông Ngạc, Hà Nội — Đề tài 08)".',
-        'NGUYÊN TẮC KỶ LUẬT CHỐNG ẢO GIÁC (BẮT BUỘC 100%):',
-        '1. CHỈ sử dụng dữ liệu thực tế trong HỒ SƠ DỮ LIỆU bên dưới (ECMWF ERA5 2024–2026, Copernicus DEM GLO-30, 60+ điểm OpenStreetMap/Báo chí & 18 tuyến ngõ ngập, Bộ Y tế, EVNHANOI, HSDC). Tuyệt đối KHÔNG tự bịa số đo độ sâu cm, không bịa tên đường hoặc số điện thoại ngoài hồ sơ.',
-        '2. Mỗi khi nhắc tới một địa điểm có trong bản đồ, BẮT BUỘC ghi kèm mã điểm trong ngoặc vuông (ví dụ: [R-01], [R-06], [S-01], [S-05], [S-09]) để giao diện tạo nút bấm bay thẳng tới vị trí đó trên bản đồ.',
-        '3. Trả lời bằng tiếng Việt tự nhiên, súc tích, chia thành 3–5 gạch đầu dòng rõ ràng (Đánh giá rủi ro/địa hình -> Hành động an toàn cụ thể -> Điểm tránh trú/y tế & số khẩn cấp liên quan). Không viết lời chào rườm rà.'
-      ].join('\n');
-
-      const fullInput = `HỒ SƠ DỮ LIỆU THỰC CHỨNG ĐÔNG NGẠC - ĐH MỎ:\n${groundedContext}\n\nCÂU HỎI CỦA NGƯỜI DÙNG: "${question}"`;
-
-      const { text, modelUsed } = await runGeminiInteractionWithFallback(apiKey, {
-        models: FAST_MODELS,
-        systemInstruction: sysPrompt,
-        input: fullInput
-      });
-
-      const knownPointIds = [...SAMPLE_HUMG_POINTS, ...extraReports].map((p) => p.id);
-      const activeDataClasses = [
-        DATA_CLASSES.OBSERVED_DATA,
-        DATA_CLASSES.SATELLITE_DATA,
-        DATA_CLASSES.MODELLED_DATA
-      ];
-      if (body.liveWeather) activeDataClasses.push(DATA_CLASSES.FORECAST_DATA);
-      if (extraReports.length > 0 || (Array.isArray(livePulse) && livePulse.length > 0)) {
-        activeDataClasses.push(DATA_CLASSES.COMMUNITY_REPORTS);
-      }
-
-      const guarded = applyScientificGuardrails(text, {
-        knownPointIds,
-        dataClasses: activeDataClasses,
-        hasHumanOfficialApproval: false
-      });
-
-      return Response.json({
-        ok: true,
-        answer: guarded.answer,
-        modelUsed,
-        citedPointIds: guarded.factsCited,
-        unverifiedCitedIds: guarded.unverifiedCitedIds,
-        dataClasses: guarded.dataClasses,
-        uncertaintyNotes: guarded.uncertaintyNotes,
-        blockedOfficialClaim: guarded.blockedOfficialClaim
-      });
     }
 
     // 3. Kiểm định Ảnh Hiện trường Đa phương thức (Gemini Multimodal Vision)

@@ -2614,3 +2614,48 @@ html.is-large-text .subtab-bar {
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+
+/* ================= NÂNG CẤP TƯƠNG TÁC SÂU (24H SCRUB, HYDRO ROUTE, AI COPILOT) ================= */
+.hourly-bar-col[role="button"] {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 120ms ease;
+}
+.hourly-bar-col[role="button"]:hover,
+.hourly-bar-col.is-selected-hour {
+  background: rgba(13, 148, 136, 0.14);
+  outline: 1px solid rgba(13, 148, 136, 0.45);
+}
+
+.route-passability-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.route-passability-badge.is-passable { background: var(--ok-bg); color: var(--ok-ink); }
+.route-passability-badge.is-caution_stall { background: var(--warn-bg); color: var(--warn-ink); }
+.route-passability-badge.is-impassable_deep { background: var(--danger-bg); color: var(--danger-ink); }
+
+.ai-metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 6px;
+}
+.ai-metric-chip {
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  font-size: 0.74rem;
+}
+.ai-metric-chip span { display: block; color: var(--ink-muted); font-size: 0.68rem; }
+.ai-metric-chip strong { color: var(--ink); font-family: var(--font-mono); font-size: 0.8rem; }
+
+.ai-ref-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

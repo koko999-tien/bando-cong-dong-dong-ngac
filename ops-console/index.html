@@ -88,6 +88,7 @@
             <p>Đo độ trễ trực tiếp tới cụm API Production (Vercel Serverless + Cloudflare Edge D1/KV + Open-Meteo Copernicus DEM + OSM).</p>
           </div>
           <div class="btn-row">
+            <button type="button" id="btn-export-ops-snapshot" class="btn">Sao lưu Toàn hệ thống (.JSON)</button>
             <button type="button" id="btn-probe-all" class="btn btn-primary">Ping toàn bộ Cụm Dịch vụ</button>
           </div>
         </div>
@@ -463,6 +464,8 @@
                 <option value="GET|/api/vn-gis?action=wgs84_to_vn2000&lat=16.030263&lng=107.904724&centralMeridian=107.75&zoneWidth=3">GET /api/vn-gis?action=wgs84_to_vn2000</option>
                 <option value="GET|/api/sos-dispatch?action=zone_shield_summary&lat=21.072514&lng=105.77387">GET /api/sos-dispatch?action=zone_shield_summary (Zero-Standing-Location)</option>
                 <option value="GET|/api/sos-dispatch?action=admin_overview">GET /api/sos-dispatch?action=admin_overview (Yêu cầu Bearer)</option>
+                <option value="GET|/api/ai-copilot">GET /api/ai-copilot (Trạng thái Trợ lý Đa nguồn 63 Tỉnh)</option>
+                <option value="GET|/api/sos-dispatch?action=health">GET /api/sos-dispatch?action=health</option>
                 <option value="GET|https://vn-resilience-api.vn-resilience-edge.workers.dev/health">GET Cloudflare Edge Worker (/health)</option>
               </select>
             </div>

@@ -158,6 +158,7 @@
                   <span id="advisory-level-pill" class="status-pill is-normal">Đang kiểm tra</span>
                   <div class="advisory-freshness">
                     <span id="advisory-updated-time" class="mono-num">--:--</span>
+                    <button type="button" id="btn-export-zone-dossier" class="text-btn" title="Tải hồ sơ chẩn đoán hành chính & thiên tai của vùng đang khoanh">Xuất hồ sơ</button>
                     <button type="button" id="btn-refresh-zone" class="text-btn">Làm mới</button>
                   </div>
                 </div>
@@ -267,6 +268,7 @@
                   <span>+18h</span>
                   <span>+24h</span>
                 </div>
+                <p id="hourly-scrub-hint" class="field-hint" style="margin:4px 0 0;">Chạm vào cột giờ bất kỳ để xem mô phỏng mặt phủ ngập theo lượng mưa dự báo giờ đó.</p>
               </article>
 
               <!-- CHUỖI LƯU LƯỢNG DÒNG CHẢY LƯU VỰC SÔNG 21 NGÀY (COPERNICUS GLOFAS) -->
@@ -343,6 +345,10 @@
                 <div id="route-reason-banner" class="route-reason-box"></div>
                 <div id="route-compare-cards" class="two-col-cards"></div>
                 <p id="route-honesty-banner" class="honesty-note"></p>
+                <div id="route-hydro-profile-card" class="card-panel">
+                  <h3 class="section-title">Mặt cắt Địa hình &amp; Mực nước Ước tính Dọc Tuyến</h3>
+                  <div id="route-hydro-profile-svg"></div>
+                </div>
                 <div class="card-panel">
                   <h3 class="section-title">Sơ đồ tuyến (Cũng hiển thị trên bản đồ chính)</h3>
                   <div id="route-mini-map" class="mini-map-mount"></div>
@@ -1106,6 +1112,20 @@
                 <p class="muted-body">Bạn chưa có yêu cầu SOS nào đang mở.</p>
               </div>
             </div>
+
+            <!-- BẢN ĐỒ LÁ CHẮN QUYỀN RIÊNG TƯ 300M + LỐI THOÁT Y TẾ + TIN NHẮN SMS KHI MẤT 4G -->
+            <div class="card-panel">
+              <div class="section-head-row">
+                <h2 class="section-title">Bản đồ Lá chắn Ẩn danh 300 m &amp; Kênh Dự phòng SMS 112</h2>
+                <span class="source-tag tone-verified">Zero-Trust Live</span>
+              </div>
+              <div id="sos-live-map" class="mini-map-mount" style="height:228px;"></div>
+              <p id="sos-map-caption" class="field-hint" style="margin:6px 0 8px;">Vòng tròn vàng thể hiện vùng làm mờ 300 m bảo vệ riêng tư; đường xanh lá dẫn tới cơ sở y tế/tránh trú gần nhất.</p>
+              <div class="form-actions-row">
+                <button type="button" id="btn-copy-sos-sms" class="btn btn-sm btn-secondary">Sao chép Tin nhắn SOS Khẩn</button>
+                <a id="btn-send-sos-sms-link" href="sms:112" class="btn btn-sm btn-primary">Gửi SMS 112 (Khi mất 4G)</a>
+              </div>
+            </div>
           </div>
 
           <!-- CỘT PHẢI: AI HỘ TỐNG HÀNH TRÌNH THỰC CHỨNG (D×V, MANNING, QCVN) + HỘP THƯ ĐỘI XUNG KÍCH -->
@@ -1146,6 +1166,8 @@
                 <strong id="ai-inference-headline" style="display:block;color:var(--ink);">Chưa ghi nhận bất thường trên hành trình</strong>
                 <span id="ai-inference-desc">AI chỉ chạy cục bộ trên thiết bị (Edge Inference), không gửi lịch sử đường đi của bạn lên máy chủ khi bình thường.</span>
               </div>
+
+              <div id="ai-escort-sparkline" class="hydrograph-mount" aria-label="Chuỗi biến thiên xác suất rủi ro hành trình AI"></div>
 
               <div>
                 <span class="field-hint" style="display:block;margin-bottom:6px;">Kiểm chứng thực nghiệm mô hình AI với 3 kịch bản động học ngoài đời thực:</span>
@@ -1212,6 +1234,7 @@
       <div class="prompt-chips-wrap">
         <button type="button" class="prompt-chip js-ai-sample" data-q="Khu vực tôi đang khoanh có nguy cơ thời tiết hoặc ngập úng gì cần lưu ý?">Nguy cơ quanh vùng đang khoanh</button>
         <button type="button" class="prompt-chip js-ai-sample" data-q="Tôi muốn đi qua khu vực có điểm ngập thì cần lưu ý an toàn thế nào?">Nguyên tắc đi qua đoạn ngập</button>
+        <button type="button" class="prompt-chip js-ai-sample" data-q="Điểm y tế và nơi tránh trú cao ráo gần nhất trong vùng này ở đâu?">Y tế &amp; nơi trú gần nhất</button>
         <button type="button" class="prompt-chip js-ai-sample" data-q="Nhà bị nước tràn gần ổ điện cần xử lý an toàn ra sao?">An toàn điện khi nước tràn</button>
       </div>
       <form id="assistant-form" class="search-row">

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vn-resilience-gis-v30';
+const CACHE_NAME = 'vn-resilience-gis-v31';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -8,9 +8,11 @@ const CORE_ASSETS = [
   './platform/regions/vietnam-directory.js',
   './platform/data/vietnam-verified-hotspots.js',
   './platform/gis/hydro-surface.js',
+  './platform/gis/hydro-route.js',
   './platform/gis/vn2000.js',
   './platform/safety/sos-dispatch-engine.js',
   './platform/ai/distress-inference.js',
+  './platform/ai/national-intelligence.js',
   './chuyen-gia.html',
   './styles.css',
   './config.js',

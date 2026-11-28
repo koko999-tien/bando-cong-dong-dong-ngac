@@ -505,3 +505,47 @@ export function createOfflineReportQueueItem(reportPayload, nowMs = Date.now()) 
     attempts: 0
   };
 }
+
+const SMS_CATEGORY_SHORT = {
+  stalled_vehicle: 'Xe chet may / Ket ngap',
+  medical_heat: 'Met la / Y te khan',
+  trapped_deep_water: 'NGAP SAU / NUOC CHAY XIET',
+  landslide_hazard: 'SAT LO / RO DIEN',
+  electrical_leak: 'RO DIEN NGUY HIEM'
+};
+
+/**
+ * Tạo gói tin nhắn SMS khẩn cấp gọn nhẹ gửi 112 hoặc người thân khi mất mạng 4G trong vùng bão lũ.
+ */
+export function buildOfflineSosSmsPayload({
+  category = 'stalled_vehicle',
+  waterDepthM = 0.28,
+  areaHint = '',
+  lat = 21.0725,
+  lng = 105.7739,
+  safetyPin = '',
+  note = ''
+} = {}) {
+  const safeLat = Number.isFinite(Number(lat)) ? Number(lat) : 21.0725;
+  const safeLng = Number.isFinite(Number(lng)) ? Number(lng) : 105.7739;
+  const depthCm = Math.max(0, Math.round((Number(waterDepthM) || 0) * 100));
+  const catLabel = SMS_CATEGORY_SHORT[category] || 'Ho tro khan cap';
+  const cleanHint = String(areaHint || 'Khu vuc hien tai').replace(/\s+/g, ' ').trim().slice(0, 64);
+  const cleanPin = String(safetyPin || '').replace(/\D/g, '').slice(0, 4);
+  const cleanNote = String(note || '').replace(/\s+/g, ' ').trim().slice(0, 52);
+
+  const parts = [
+    `SOS KHAN CAP: ${catLabel}`,
+    `Muc nuoc ~${depthCm}cm`,
+    `Vi tri: ${cleanHint} (${safeLat.toFixed(5)}, ${safeLng.toFixed(5)})`
+  ];
+  if (cleanPin) parts.push(`PIN: ${cleanPin}`);
+  if (cleanNote) parts.push(cleanNote);
+
+  const smsText = parts.join(' | ').slice(0, 220);
+  return {
+    smsText,
+    smsHref: `sms:112?body=${encodeURIComponent(smsText)}`,
+    mapsUrl: `https://maps.google.com/?q=${safeLat.toFixed(6)},${safeLng.toFixed(6)}`
+  };
+}

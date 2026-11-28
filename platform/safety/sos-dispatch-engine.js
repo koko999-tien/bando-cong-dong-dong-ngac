@@ -19,6 +19,7 @@
  */
 
 import crypto from 'node:crypto';
+export { buildOfflineSosSmsPayload } from '../../citizen-logic.js';
 
 const BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
 

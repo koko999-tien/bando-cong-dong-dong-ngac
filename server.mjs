@@ -356,9 +356,9 @@ const server = http.createServer(async (req, res) => {
       const webReq = new Request(`http://localhost:${PORT}${req.url}`, {
         method: req.method,
         headers: req.headers,
-        body: ['GET', 'HEAD'].includes(req.method) ? undefined : Buffer.concat(chunks)
+        body: ['GET', 'HEAD', 'OPTIONS'].includes(req.method) ? undefined : Buffer.concat(chunks)
       });
-      const webRes = req.method === 'POST' ? await mod.POST(webReq) : await mod.GET(webReq);
+      const webRes = req.method === 'POST' ? await mod.POST(webReq) : req.method === 'OPTIONS' ? await mod.OPTIONS(webReq) : await mod.GET(webReq);
       res.writeHead(webRes.status, Object.fromEntries(webRes.headers.entries()));
       res.end(await webRes.text());
       return;

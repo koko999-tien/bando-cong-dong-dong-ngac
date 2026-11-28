@@ -24,9 +24,13 @@ import {
   computeTerrainGradient,
   sampleElevationProfile
 } from '../platform/gis/hydro-surface.js';
-import { lookupCentralMeridian, wgs84ToVn2000Local, vn2000ToWgs84Local } from '../platform/gis/vn2000.js';
+import { lookupCentralMeridian, wgs84ToVn2000Local, vn2000ToWgs84Local, computeVn2000MetricLength, computeVn2000MetricPolygonArea } from '../platform/gis/vn2000.js';
 import { GET as vnGisGET } from '../api/vn-gis.js';
 import { GET as sosGET, POST as sosPOST } from '../api/sos-dispatch.js';
+import { GET as aiGET, POST as aiPOST, OPTIONS as aiOPTIONS } from '../api/ai-copilot.js';
+import { evaluateRouteHydroTerrain, renderRouteHydroProfileSvg } from '../platform/gis/hydro-route.js';
+import { buildNationalGroundedBrief } from '../platform/ai/national-intelligence.js';
+import { buildOfflineSosSmsPayload } from '../citizen-logic.js';
 import {
   computeHydrodynamicInstability,
   evaluateUserDistressProbability
@@ -479,14 +483,107 @@ try {
   });
   assert.equal(stallAnomaly.triggerProactivePrompt, true, 'Đột ngột dừng kẹt 125s giữa rốn ngập sâu phải kích hoạt hỏi thăm an toàn chủ động');
 
-  console.log('VERIFIED VIETNAM NATIONAL 4-PILLAR + ZERO-TRUST SOS + HYDRO-AI TESTS PASSED:', {
+  // =========================================================================
+  // 6. NÂNG CẤP TOÀN DIỆN v31: VN-2000 SHOELACE, HYDRO-ROUTE, AI 63 TỈNH & SMS 112
+  // =========================================================================
+  // 6A. Kiểm chứng diện tích đa giác phẳng VN-2000 (hình vuông 100m x 100m = ~10,000 m2 = 1.00 ha)
+  const pA = vn2000ToWgs84Local(2331000, 580000, 105, 3);
+  const pB = vn2000ToWgs84Local(2331100, 580000, 105, 3);
+  const pC = vn2000ToWgs84Local(2331100, 580100, 105, 3);
+  const pD = vn2000ToWgs84Local(2331000, 580100, 105, 3);
+  const metricPoly = computeVn2000MetricPolygonArea([pA, pB, pC, pD], 105, 3);
+  assert.ok(Math.abs(metricPoly.areaM2 - 10000) < 25, `Diện tích hình vuông 100m hệ VN-2000 phải ~10,000 m² (thực tế: ${metricPoly.areaM2})`);
+  assert.ok(Math.abs(metricPoly.areaHa - 1.0) < 0.005, 'Diện tích phải ~1.00 ha');
+  const metricLine = computeVn2000MetricLength([pA, pB], 105, 3);
+  assert.ok(Math.abs(metricLine.lengthM - 100) < 0.5, `Độ dài cạnh 100m hệ VN-2000 phải ~100m (thực tế: ${metricLine.lengthM})`);
+
+  // 6B. Định tuyến Thủy-Địa hình & Đồ thị Mặt cắt Cao độ - Mực nước
+  const floodPtsInCore = SAMPLE_HUMG_POINTS.filter((p) => p.layerGroup === 'risk');
+  const directHydroEval = evaluateRouteHydroTerrain({
+    coordsLngLat: [
+      [105.7745, 21.0725],
+      [105.7785, 21.0755]
+    ],
+    demGrid: coreDem,
+    rainMm: 120,
+    riskPoints: floodPtsInCore,
+    travelMode: 'bike'
+  });
+  const profileSvg = renderRouteHydroProfileSvg(directHydroEval, directHydroEval);
+  assert.equal(directHydroEval.profile.length, 28, 'Mặt cắt tuyến phải đủ 28 trạm');
+  assert.ok(profileSvg.includes('<svg') && profileSvg.includes('polyline'), 'Phải sinh SVG mặt cắt cao độ & mực nước tuyến đường');
+
+  // 6C. Tổng hợp Đa nguồn Toàn quốc 63 Tỉnh/Thành (TP. Huế) & CORS /api/ai-copilot
+  const aiOptionsRes = await aiOPTIONS(
+    new Request('http://localhost/api/ai-copilot', {
+      method: 'OPTIONS',
+      headers: { Origin: 'https://vn-resilience-ops.vercel.app' }
+    })
+  );
+  assert.equal(aiOptionsRes.status, 204);
+  assert.equal(aiOptionsRes.headers.get('access-control-allow-origin'), 'https://vn-resilience-ops.vercel.app');
+
+  const aiHealthJson = await (await aiGET(new Request('http://localhost/api/ai-copilot'))).json();
+  assert.equal(aiHealthJson.ok, true);
+  assert.equal(aiHealthJson.nationalCoverageProvinces, 63);
+
+  const hueBrief = buildNationalGroundedBrief({
+    question: 'Khu vực TP. Huế có nguy cơ gì cần lưu ý lúc này?',
+    zone: { name: 'TP. Huế', province: 'Thừa Thiên Huế', lat: 16.4637, lng: 107.5909, radiusKm: 8 },
+    weather: { temp: 29, apparentTemp: 33, rainMm: 12, dailyRainMm: 68 },
+    riverDischarge: { todayVal: 320.5, ratioVsMean: 1.65 },
+    aqi: { usAqi: 42, pm25: 11.4 },
+    demStats: { minM: 1.2, p50M: 4.5, maxM: 28.0, lowlandPct: 62, maxSlopeDeg: 9.2 },
+    zonePoints: filterFeaturesInZone(VIETNAM_VERIFIED_HOTSPOTS, 16.4637, 107.5909, 8)
+  });
+  assert.ok(hueBrief.answerText.includes('Huế') && hueBrief.answerText.includes('320.5'), 'Trợ lý phải tổng hợp đúng số liệu tỉnh đang khoanh (TP. Huế)');
+  assert.ok(!/\b(?:DEM|OSRM|ERA5|DSM)\b/i.test(hueBrief.answerText), 'Trợ lý người dân không được lọt thuật ngữ DEM/OSRM/ERA5');
+
+  const aiPostRes = await aiPOST(
+    new Request('http://localhost/api/ai-copilot', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '198.51.100.77' },
+      body: JSON.stringify({
+        action: 'ask_copilot',
+        question: 'Tình hình mưa và đường đi tại TP. Huế thế nào?',
+        zoneContext: {
+          zone: { name: 'TP. Huế', province: 'Thừa Thiên Huế', lat: 16.4637, lng: 107.5909, radiusKm: 8 },
+          weather: { temp: 29, apparentTemp: 33, rainMm: 12, dailyRainMm: 68 },
+          riverDischarge: { todayVal: 320.5, ratioVsMean: 1.65 },
+          zonePoints: filterFeaturesInZone(VIETNAM_VERIFIED_HOTSPOTS, 16.4637, 107.5909, 8)
+        }
+      })
+    })
+  );
+  assert.equal(aiPostRes.status, 200, '/api/ai-copilot phải luôn trả 200 nhờ bộ tổng hợp đa nguồn ngay cả khi chưa cấu hình khóa LLM');
+  const aiPostJson = await aiPostRes.json();
+  assert.equal(aiPostJson.ok, true);
+  assert.ok(aiPostJson.answer.includes('Huế'), 'Phản hồi /api/ai-copilot phải bám sát đúng vùng TP. Huế');
+
+  // 6D. Gói SMS 112 Ngoại tuyến & Kiểm tra HTML v31
+  const smsPkt = buildOfflineSosSmsPayload({
+    category: 'stalled_vehicle',
+    waterDepthM: 0.3,
+    areaHint: '18 Pho Vien',
+    lat: 21.07251,
+    lng: 105.77387,
+    safetyPin: '4829'
+  });
+  assert.ok(smsPkt.smsHref.startsWith('sms:112?body='), 'Phải sinh đúng liên kết sms:112');
+  assert.ok(smsPkt.smsText.includes('PIN: 4829') && smsPkt.smsText.includes('21.07251'), 'SMS khẩn cấp phải chứa tọa độ và PIN 4 số');
+  assert.ok(html.includes('id="sos-live-map"') && html.includes('id="btn-export-zone-dossier"') && html.includes('id="route-hydro-profile-svg"'));
+  assert.ok(opsHtml.includes('id="btn-export-ops-snapshot"'));
+
+  console.log('VERIFIED VIETNAM NATIONAL 4-PILLAR + ZERO-TRUST SOS + HYDRO-AI + V31 DEEP TESTS PASSED:', {
     provincesCovered: uniqueProvinces.size,
     dongNgacPointsInZone: inDongNgac.length,
     daNangPublishedAfterReview: afterDaNang.features.length,
     canThoZeroLagIsolation: afterCanTho.features.length,
     zeroExposedUserCoords: shieldRes.exposedUserCoordinates === 0,
     antiCongestionSlotCap2: claim3Res.status === 409,
-    proactiveAiDistressPct: stallAnomaly.probabilityPct
+    proactiveAiDistressPct: stallAnomaly.probabilityPct,
+    vn2000SquareAreaM2: metricPoly.areaM2,
+    aiCopilot63Provinces: aiHealthJson.nationalCoverageProvinces
   });
 } finally {
   await fs.rm(localSimPath, { force: true }).catch(() => {});

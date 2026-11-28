@@ -32,11 +32,22 @@ import {
   createNationalHeatmapLayer,
   buildMapPictogramIcon
 } from './platform/gis/hydro-surface.js';
-import { lookupCentralMeridian, wgs84ToVn2000Local } from './platform/gis/vn2000.js';
+import {
+  selectHighGroundWaypoints,
+  evaluateRouteHydroTerrain,
+  renderRouteHydroProfileSvg
+} from './platform/gis/hydro-route.js';
+import {
+  lookupCentralMeridian,
+  wgs84ToVn2000Local,
+  computeVn2000MetricLength,
+  computeVn2000MetricPolygonArea
+} from './platform/gis/vn2000.js';
 import {
   computeHydrodynamicInstability,
   evaluateUserDistressProbability
 } from './platform/ai/distress-inference.js';
+import { buildNationalGroundedBrief, sanitizeCitizenJargon } from './platform/ai/national-intelligence.js';
 import { roundPrivacyCoord, analyzePolylineCorridor } from './gis-utils.js';
 import { synthesizeSituationalAnswer } from './knowledge-engine.js';
 import {
@@ -56,7 +67,8 @@ import {
   buildCitizenStatusAdvisory,
   buildHonestRentalAreaSummary,
   buildHonestRouteComparison,
-  createOfflineReportQueueItem
+  createOfflineReportQueueItem,
+  buildOfflineSosSmsPayload
 } from './citizen-logic.js';
 
 const CACHE_KEY = 'vn_resilience_cache_v2';
@@ -182,6 +194,8 @@ let reportMarker = null;
 let studyMap = null;
 let studyDraftLayer = null;
 let studyZoneCircle = null;
+let sosLiveMap = null;
+let sosLiveLayer = null;
 
 function esc(str) {
   return String(str ?? '')
@@ -632,10 +646,84 @@ function renderHourlyRainChart() {
     .map((mm, idx) => {
       const pct = mm > 0 ? Math.max(12, Math.min(100, Math.round((mm / scaleTop) * 100))) : 5;
       const cls = mm >= 15 ? 'is-heavy' : mm >= 3 ? 'is-mod' : mm > 0 ? '' : 'is-dry';
-      const prob = probArr[idx] != null ? ` (${Math.round(probArr[idx])}%)` : '';
-      return `<div class="hourly-bar-col" title="+${idx}h: ${mm.toFixed(1)} mm/h${prob}"><div class="hourly-bar-fill ${cls}" style="height:${pct}%"></div></div>`;
+      const prob = probArr[idx] != null ? Math.round(probArr[idx]) : 0;
+      return `<div class="hourly-bar-col" role="button" tabindex="0" data-hour-idx="${idx}" data-mm="${mm.toFixed(1)}" data-prob="${prob}" title="Chạm mô phỏng +${idx}h: ${mm.toFixed(1)} mm/h (${prob}%)"><div class="hourly-bar-fill ${cls}" style="height:${pct}%"></div></div>`;
     })
     .join('');
+}
+
+function exportActiveZoneDossier() {
+  const z = state.zone;
+  const stats = state.hydroSim.demGrid?.stats || {};
+  const l0 = lookupCentralMeridian(z.province, z.lng);
+  const vn2kCenter = wgs84ToVn2000Local(z.lat, z.lng, l0, 3);
+  const postAdmin = state.vnZoneIntel?.admin?.postMerger?.fullLabel || z.name;
+  const preAdmin = state.vnZoneIntel?.admin?.preMerger?.fullLabel || 'Đang cập nhật';
+  const pop = state.vnZoneIntel?.populationZone?.population;
+  const aqiInfo = describeAqiPlain(state.aqi?.usAqi);
+
+  const brief = buildNationalGroundedBrief({
+    question: 'Tổng hợp hồ sơ vùng khoanh',
+    zone: z,
+    weather: state.weather,
+    hourlyForecast: state.hourlyForecast,
+    riverDischarge: state.riverDischarge,
+    aqi: state.aqi,
+    demStats: stats,
+    vnZoneIntel: state.vnZoneIntel,
+    zonePoints: state.zonePoints,
+    zoneCorridors: state.zoneCorridors
+  });
+
+  const risks = state.zonePoints.filter((p) => p.layerGroup === 'risk').slice(0, 25);
+  const safes = state.zonePoints.filter((p) => p.layerGroup === 'safe').slice(0, 15);
+  const safeId = String(z.id || 'zone').replace(/[^a-z0-9-_]/gi, '-');
+
+  const html = `<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Hồ sơ Địa không gian & An toàn Thiên tai — ${esc(z.name)}</title>
+<style>
+  body { font-family: system-ui, -apple-system, sans-serif; color: #0F172A; margin: 28px auto; max-width: 860px; line-height: 1.5; }
+  h1 { font-size: 1.45rem; margin: 0 0 6px; color: #0F766E; }
+  .meta { font-size: 0.85rem; color: #475569; margin-bottom: 18px; border-bottom: 1px solid #CBD5E1; padding-bottom: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .box { border: 1px solid #CBD5E1; border-radius: 8px; padding: 10px 12px; background: #F8FAFC; }
+  .box strong { display: block; font-size: 0.78rem; color: #475569; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 18px; font-size: 0.82rem; }
+  th, td { border: 1px solid #CBD5E1; padding: 6px 8px; text-align: left; }
+  th { background: #F1F5F9; }
+  @media print { body { margin: 12px; } }
+</style>
+</head>
+<body>
+  <h1>HỒ SƠ CHẨN ĐOÁN ĐỊA KHÔNG GIAN &amp; AN TOÀN THIÊN TAI</h1>
+  <div class="meta">
+    Vùng khoanh: <strong>${esc(z.name)} (R = ${z.radiusKm} km)</strong> · Xuất lúc: ${new Date().toLocaleString('vi-VN')} · Nền tảng VN Resilience Atlas
+  </div>
+  <div class="grid">
+    <div class="box"><strong>Đơn vị Hành chính (Sau sáp nhập / Trước sáp nhập)</strong>${esc(postAdmin)}<br><small>Trước sáp nhập: ${esc(preAdmin)}</small></div>
+    <div class="box"><strong>Quy mô Dân cư &amp; Tọa độ VN-2000 (L0=${l0}°)</strong>${pop != null ? `~${Number(pop).toLocaleString('vi-VN')} người trong vùng` : `Bán kính ${z.radiusKm} km`}<br><small>X=${vn2kCenter.x} m · Y=${vn2kCenter.y} m (${z.lat.toFixed(5)}°N, ${z.lng.toFixed(5)}°E)</small></div>
+    <div class="box"><strong>Địa hình &amp; Khí tượng – Thủy văn</strong>Cao độ: ${stats.minM ?? '--'}–${stats.maxM ?? '--'} m (Trũng ${stats.lowlandPct ?? '--'}%, Dốc max ${stats.maxSlopeDeg ?? '--'}°)<br><small>Mưa ngày: ${state.weather ? `${Math.round(state.weather.dailyRainMm)} mm` : '--'} · Sông: ${state.riverDischarge ? `${state.riverDischarge.todayVal.toFixed(1)} m³/s (×${state.riverDischarge.ratioVsMean})` : '--'}</small></div>
+    <div class="box"><strong>Không khí (QCVN 05:2023/BTNMT) &amp; Chỉ số D×V</strong>AQI ${Number.isFinite(state.aqi?.usAqi) ? Math.round(state.aqi.usAqi) : '--'} (${esc(aqiInfo.headline)})<br><small>Kịch bản mưa đang mô phỏng: ${state.hydroSim.rainMm} mm · D×V đáy vùng ~${brief.metrics.dvProduct} m²/s</small></div>
+  </div>
+  <h2>1. Tổng hợp Thực chứng Đa nguồn</h2>
+  <ul>${brief.bullets.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>
+  <h2>2. Điểm Rủi ro Trọng điểm Nội vùng (${risks.length})</h2>
+  <table><thead><tr><th>Mã</th><th>Địa điểm</th><th>Phân loại</th><th>Cách tâm</th><th>Ghi chú</th></tr></thead><tbody>
+  ${risks.map((r) => `<tr><td>${esc(r.id)}</td><td>${esc(r.name)}</td><td>${esc(r.category)}</td><td>${esc(formatDistancePlain(r.distanceMeters))}</td><td>${esc((r.notes || '').slice(0, 120))}</td></tr>`).join('')}
+  </tbody></table>
+  <h2>3. Cơ sở Y tế &amp; Điểm Tránh trú Gần nhất (${safes.length})</h2>
+  <table><thead><tr><th>Mã</th><th>Cơ sở</th><th>Loại</th><th>Cách tâm</th></tr></thead><tbody>
+  ${safes.map((s) => `<tr><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.category)}</td><td>${esc(formatDistancePlain(s.distanceMeters))}</td></tr>`).join('')}
+  </tbody></table>
+  <p style="font-size:0.78rem;color:#475569;"><em>Miễn trừ khoa học: Hồ sơ tổng hợp từ dữ liệu mở đa nguồn và mô phỏng địa hình tham khảo, không thay thế bản tin dự báo/sơ tán chính thức của cơ quan KTTV &amp; PCTT. Tổng đài khẩn cấp quốc gia: 112 / 114 / 115.</em></p>
+</body>
+</html>`;
+
+  downloadFile(html, `ho-so-vung-${safeId}.html`, 'text/html;charset=utf-8');
+  showToast(`Đã xuất Hồ sơ Vùng Khoanh (${z.name}) chuẩn in A4!`);
 }
 
 function renderPublicOverview({ flyMap = false } = {}) {
@@ -1425,87 +1513,128 @@ async function geocodeVietnamPlace(text) {
   return { name: state.zone.name, lat: state.zone.lat, lng: state.zone.lng };
 }
 
-async function fetchOsrm(waypoints, travelMode) {
-  if (state.isOffline) return null;
+async function fetchOsrmRoutes(waypoints, travelMode, includeAlternatives = false) {
+  if (state.isOffline) return [];
   const profile = travelMode === 'foot' ? 'foot' : 'driving';
   const str = waypoints.map(([la, ln]) => `${ln},${la}`).join(';');
   try {
-    const res = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${str}?overview=full&geometries=geojson`);
-    if (!res.ok) return null;
+    const altParam = includeAlternatives ? '&alternatives=true' : '';
+    const res = await fetch(`https://router.project-osrm.org/route/v1/${profile}/${str}?overview=full&geometries=geojson${altParam}`);
+    if (!res.ok) return [];
     const d = await res.json();
-    const r = d?.routes?.[0];
-    if (!r?.geometry?.coordinates) return null;
-    return {
-      coordsLngLat: r.geometry.coordinates,
-      distanceKm: Math.round((r.distance / 1000) * 100) / 100,
-      durationMin: Math.max(2, Math.round((r.duration / 60) * (travelMode === 'foot' ? 1 : 1.15)))
-    };
+    return (d?.routes || [])
+      .filter((r) => Array.isArray(r?.geometry?.coordinates) && r.geometry.coordinates.length >= 2)
+      .map((r) => ({
+        coordsLngLat: r.geometry.coordinates,
+        distanceKm: Math.round((r.distance / 1000) * 100) / 100,
+        durationMin: Math.max(2, Math.round((r.duration / 60) * (travelMode === 'foot' ? 1 : 1.15)))
+      }));
   } catch {
-    return null;
+    return [];
   }
+}
+
+async function fetchOsrm(waypoints, travelMode) {
+  const routes = await fetchOsrmRoutes(waypoints, travelMode, false);
+  return routes[0] || null;
 }
 
 async function runNationalRouteComparison(e) {
   if (e) e.preventDefault();
   const btn = document.getElementById('btn-compare-routes');
   btn.disabled = true;
-  btn.textContent = 'Đang tính toán lộ trình...';
+  btn.textContent = 'Đang giải tích thủy – địa hình...';
   try {
     const start = await geocodeVietnamPlace(document.getElementById('route-start-input')?.value);
     const end = await geocodeVietnamPlace(document.getElementById('route-end-input')?.value);
 
-    const midLat = (start.lat + end.lat) / 2;
-    const midLng = (start.lng + end.lng) / 2;
-    const altOffset = 0.008;
-    const direct = (await fetchOsrm([[start.lat, start.lng], [end.lat, end.lng]], state.travelMode)) || {
+    const riskPoints = state.zonePoints.filter((p) => p.layerGroup === 'risk');
+    const highWaypoints = selectHighGroundWaypoints(start, end, state.hydroSim.demGrid, riskPoints, state.zoneCorridors);
+
+    const [directList, ...viaLists] = await Promise.all([
+      fetchOsrmRoutes([[start.lat, start.lng], [end.lat, end.lng]], state.travelMode, true),
+      ...highWaypoints.map((wp) => fetchOsrmRoutes([[start.lat, start.lng], [wp.lat, wp.lng], [end.lat, end.lng]], state.travelMode, false))
+    ]);
+
+    const direct = directList[0] || {
       coordsLngLat: [[start.lng, start.lat], [end.lng, end.lat]],
       distanceKm: Math.round((haversineMeters(start.lat, start.lng, end.lat, end.lng) * 1.25) / 10) / 100,
       durationMin: Math.max(3, Math.round(haversineMeters(start.lat, start.lng, end.lat, end.lng) / 300))
     };
-    const alt1 = await fetchOsrm([[start.lat, start.lng], [midLat + altOffset, midLng + altOffset], [end.lat, end.lng]], state.travelMode);
-    const alt2 = await fetchOsrm([[start.lat, start.lng], [midLat - altOffset, midLng - altOffset], [end.lat, end.lng]], state.travelMode);
 
-    const riskPoints = state.zonePoints.filter((p) => p.layerGroup === 'risk');
-    const directEval = analyzePolylineCorridor(window.turf, direct.coordsLngLat, riskPoints, 130);
-    const candidates = [alt1, alt2].filter(Boolean).map((c) => ({
-      geom: c,
-      ev: analyzePolylineCorridor(window.turf, c.coordsLngLat, riskPoints, 130)
-    }));
-    candidates.sort((a, b) => a.ev.nearbyRisks.length - b.ev.nearbyRisks.length || a.geom.distanceKm - b.geom.distanceKm);
-    const bestAlt = candidates[0] || { geom: direct, ev: directEval };
+    const simRainMm = Math.max(Number(state.hydroSim.rainMm || 0), Number(state.weather?.dailyRainMm || 0));
+    const dischargeRatio = Number(state.riverDischarge?.ratioVsMean || 1);
 
+    const evalOpts = (coordsLngLat) =>
+      evaluateRouteHydroTerrain({
+        coordsLngLat,
+        demGrid: state.hydroSim.demGrid,
+        rainMm: simRainMm,
+        dischargeRatio,
+        riskPoints,
+        corridors: state.zoneCorridors,
+        travelMode: state.travelMode
+      });
+
+    const directHydro = evalOpts(direct.coordsLngLat);
+    const pool = [...directList.slice(1), ...viaLists.flat()].filter(Boolean);
+    const evaluatedPool = pool.map((geom) => ({ geom, hydro: evalOpts(geom.coordsLngLat) }));
+    evaluatedPool.sort(
+      (a, b) =>
+        a.hydro.compositeScore - b.hydro.compositeScore ||
+        a.hydro.nearRiskCount - b.hydro.nearRiskCount ||
+        a.geom.distanceKm - b.geom.distanceKm
+    );
+
+    const bestAlt = evaluatedPool[0] || { geom: direct, hydro: directHydro };
     const cmp = buildHonestRouteComparison({
       originName: start.name,
       destName: end.name,
       travelMode: state.travelMode,
-      directRoute: { distanceKm: direct.distanceKm, durationMin: direct.durationMin, risks: directEval.nearbyRisks },
-      detourRoute: { distanceKm: bestAlt.geom.distanceKm, durationMin: bestAlt.geom.durationMin, risks: bestAlt.ev.nearbyRisks }
+      directRoute: { distanceKm: direct.distanceKm, durationMin: direct.durationMin, risks: directHydro.nearRisks },
+      detourRoute: { distanceKm: bestAlt.geom.distanceKm, durationMin: bestAlt.geom.durationMin, risks: bestAlt.hydro.nearRisks }
     });
 
+    const recommendAlt =
+      cmp.recommendation === 'detour' ||
+      bestAlt.hydro.compositeScore + 10 < directHydro.compositeScore ||
+      bestAlt.hydro.maxDepthCm + 4 < directHydro.maxDepthCm;
+
     document.getElementById('route-comparison-output').hidden = false;
-    document.getElementById('route-reason-banner').innerHTML = `<strong>${esc(start.name)} → ${esc(end.name)}:</strong><br>${esc(cmp.reason)}`;
+    const reasonExtra =
+      recommendAlt && bestAlt.hydro.floodedLengthM < directHydro.floodedLengthM
+        ? ` Giảm đoạn nghi đọng nước từ ~${directHydro.floodedLengthM} m xuống ~${bestAlt.hydro.floodedLengthM} m (đáy tuyến cao nhất từ ${bestAlt.hydro.minElevM} m).`
+        : '';
+    document.getElementById('route-reason-banner').innerHTML = `<strong>${esc(start.name)} → ${esc(end.name)}:</strong><br>${esc(cmp.reason + reasonExtra)}`;
+
     const dRisk = cmp.directSummary.riskCount;
     const aRisk = cmp.detourSummary.riskCount;
-    const altNote =
-      aRisk < dRisk
-        ? `Đi gần <strong>${aRisk} vị trí</strong> rủi ro — ít hơn tuyến thông thường (${dRisk}).`
-        : aRisk === 0
-          ? 'Không đi sát điểm rủi ro đã ghi nhận nào.'
-          : `Đi gần <strong>${aRisk} vị trí</strong> rủi ro (tương đương tuyến chính).`;
+    const passBadge = (h) => `<span class="route-passability-badge is-${esc(h.passability)}">${esc(h.passabilityLabel)}</span>`;
 
     document.getElementById('route-compare-cards').innerHTML = `
-      <article class="route-option-card ${cmp.recommendation !== 'detour' ? 'is-recommended' : ''}">
-        <span class="source-tag ${dRisk > 0 ? 'tone-community' : 'tone-verified'}">Tuyến thông thường</span>
+      <article class="route-option-card ${!recommendAlt ? 'is-recommended' : ''}">
+        <span class="source-tag ${dRisk > 0 || directHydro.maxDepthCm >= 16 ? 'tone-community' : 'tone-verified'}">Tuyến ngắn nhất</span>
         <div class="route-metrics"><span>${cmp.directSummary.distanceKm} km</span><span>~${cmp.directSummary.durationMin} phút</span></div>
-        <p class="muted-body">${dRisk > 0 ? `Đi gần <strong>${dRisk} vị trí</strong> rủi ro.` : 'Không đi sát điểm rủi ro đã ghi nhận.'}</p>
+        ${passBadge(directHydro)}
+        <p class="muted-body">
+          Đi gần <strong>${dRisk} vị trí</strong> rủi ro · Ngập mô phỏng tối đa <strong>~${directHydro.maxDepthCm} cm</strong> (D×V ${directHydro.maxDv} m²/s) · Đoạn trũng ~${directHydro.floodedLengthM} m · Nền thấp nhất ${directHydro.minElevM} m.
+        </p>
       </article>
-      <article class="route-option-card ${cmp.recommendation === 'detour' ? 'is-recommended' : ''}">
-        <span class="source-tag ${aRisk < dRisk ? 'tone-verified' : 'tone-model'}">${aRisk < dRisk ? 'Tuyến ít rủi ro (Đề xuất)' : 'Tuyến vòng tham khảo'}</span>
+      <article class="route-option-card ${recommendAlt ? 'is-recommended' : ''}">
+        <span class="source-tag ${recommendAlt ? 'tone-verified' : 'tone-model'}">${recommendAlt ? 'Tuyến nền cao (Đề xuất)' : 'Tuyến vòng tham khảo'}</span>
         <div class="route-metrics"><span>${cmp.detourSummary.distanceKm} km</span><span>~${cmp.detourSummary.durationMin} phút</span></div>
-        <p class="muted-body">${altNote}</p>
+        ${passBadge(bestAlt.hydro)}
+        <p class="muted-body">
+          Đi gần <strong>${aRisk} vị trí</strong> rủi ro · Ngập mô phỏng tối đa <strong>~${bestAlt.hydro.maxDepthCm} cm</strong> (D×V ${bestAlt.hydro.maxDv} m²/s) · Đoạn trũng ~${bestAlt.hydro.floodedLengthM} m · Nền thấp nhất ${bestAlt.hydro.minElevM} m.
+        </p>
       </article>
     `;
     document.getElementById('route-honesty-banner').textContent = cmp.cannotGuaranteeSafeNotice;
+
+    const profMount = document.getElementById('route-hydro-profile-svg');
+    if (profMount) {
+      profMount.innerHTML = renderRouteHydroProfileSvg(directHydro, bestAlt.hydro);
+    }
 
     if (typeof window.L !== 'undefined') {
       const directCoords = direct.coordsLngLat.map(([ln, la]) => [la, ln]);
@@ -1517,7 +1646,7 @@ async function runNationalRouteComparison(e) {
         routeLinesLayer = window.L.layerGroup().addTo(routeMap);
       }
       routeLinesLayer.clearLayers();
-      const l1 = window.L.polyline(directCoords, { color: dRisk > 0 ? '#DC2626' : '#64748B', weight: 4.5, dashArray: '7 5' }).addTo(routeLinesLayer);
+      const l1 = window.L.polyline(directCoords, { color: dRisk > 0 || directHydro.maxDepthCm >= 16 ? '#DC2626' : '#64748B', weight: 4.5, dashArray: '7 5' }).addTo(routeLinesLayer);
       const l2 = window.L.polyline(altCoords, { color: '#16A34A', weight: 5.5 }).addTo(routeLinesLayer);
       setTimeout(() => {
         routeMap.invalidateSize();
@@ -1834,8 +1963,24 @@ function ensureStudyStudioMap() {
 
 function renderStudyDraftOverlay() {
   const prev = document.getElementById('sub-points-preview');
+  const meta = getSelectedStudyProvinceMeta();
+  const l0 = Number(document.getElementById('vn2k-l0')?.value) || lookupCentralMeridian(meta.province, meta.lng);
+  const zw = Number(document.getElementById('vn2k-zone')?.value || 3);
+
+  const shapeMetrics = state.draftStudyShapes.map((sh) => {
+    if (sh.kind === 'polygon' && sh.coords.length >= 3) {
+      const poly = computeVn2000MetricPolygonArea(sh.coords, l0, zw);
+      return `Đa giác "${sh.name}": S = ${poly.areaHa} ha (${poly.areaM2.toLocaleString('vi-VN')} m², chu vi ${Math.round(poly.perimeterM)} m)`;
+    }
+    if (sh.coords.length >= 2) {
+      const ln = computeVn2000MetricLength(sh.coords, l0, zw);
+      return `Tuyến "${sh.name}": L = ${ln.lengthM.toLocaleString('vi-VN')} m (${ln.lengthKm} km)`;
+    }
+    return '';
+  }).filter(Boolean);
+
   if (prev) {
-    const shapeInfo = state.draftStudyShapes.length > 0 ? ` + ${state.draftStudyShapes.length} tuyến/vùng đa giác` : '';
+    const shapeInfo = shapeMetrics.length > 0 ? ` · Đo phẳng VN-2000 (L0=${l0}°): ${shapeMetrics.join(' | ')}` : '';
     prev.textContent =
       state.draftStudyPoints.length > 0
         ? `Đã chuẩn bị ${state.draftStudyPoints.length} tọa độ${shapeInfo} sẵn sàng gửi kiểm định.`
@@ -1843,7 +1988,6 @@ function renderStudyDraftOverlay() {
   }
   if (!studyMap || !studyDraftLayer) return;
   studyDraftLayer.clearLayers();
-  const meta = getSelectedStudyProvinceMeta();
   studyZoneCircle = window.L.circle([meta.lat, meta.lng], {
     radius: meta.radiusKm * 1000,
     color: '#0F766E',
@@ -1854,12 +1998,14 @@ function renderStudyDraftOverlay() {
 
   for (const sh of state.draftStudyShapes) {
     if (sh.kind === 'polygon' && sh.coords.length >= 3) {
+      const poly = computeVn2000MetricPolygonArea(sh.coords, l0, zw);
       window.L.polygon(sh.coords, { color: '#0284C7', weight: 2, fillColor: '#0EA5E9', fillOpacity: 0.2 })
-        .bindTooltip(sh.name)
+        .bindTooltip(`${sh.name} · ${poly.areaHa} ha (${poly.areaM2.toLocaleString('vi-VN')} m²)`)
         .addTo(studyDraftLayer);
     } else if (sh.coords.length >= 2) {
+      const ln = computeVn2000MetricLength(sh.coords, l0, zw);
       window.L.polyline(sh.coords, { color: '#DC2626', weight: 3.5 })
-        .bindTooltip(sh.name)
+        .bindTooltip(`${sh.name} · ${ln.lengthM.toLocaleString('vi-VN')} m`)
         .addTo(studyDraftLayer);
     }
   }
@@ -1883,6 +2029,8 @@ function exportStudyDraftGeoJson() {
     return;
   }
   const meta = getSelectedStudyProvinceMeta();
+  const l0 = Number(document.getElementById('vn2k-l0')?.value) || lookupCentralMeridian(meta.province, meta.lng);
+  const zw = Number(document.getElementById('vn2k-zone')?.value || 3);
   const features = [
     ...state.draftStudyPoints.map((p) => ({
       type: 'Feature',
@@ -1891,42 +2039,64 @@ function exportStudyDraftGeoJson() {
     })),
     ...state.draftStudyShapes
       .filter((s) => s.coords.length >= (s.kind === 'polygon' ? 3 : 2))
-      .map((s) => ({
-        type: 'Feature',
-        properties: { name: s.name, category: s.category, province: meta.province },
-        geometry:
+      .map((s) => {
+        const metrics =
           s.kind === 'polygon'
-            ? {
-                type: 'Polygon',
-                coordinates: [[...s.coords.map(([la, ln]) => [ln, la]), [s.coords[0][1], s.coords[0][0]]]]
-              }
-            : {
-                type: 'LineString',
-                coordinates: s.coords.map(([la, ln]) => [ln, la])
-              }
-      }))
+            ? computeVn2000MetricPolygonArea(s.coords, l0, zw)
+            : computeVn2000MetricLength(s.coords, l0, zw);
+        return {
+          type: 'Feature',
+          properties: { name: s.name, category: s.category, province: meta.province, vn2000Metrics: metrics },
+          geometry:
+            s.kind === 'polygon'
+              ? {
+                  type: 'Polygon',
+                  coordinates: [[...s.coords.map(([la, ln]) => [ln, la]), [s.coords[0][1], s.coords[0][0]]]]
+                }
+              : {
+                  type: 'LineString',
+                  coordinates: s.coords.map(([la, ln]) => [ln, la])
+                }
+        };
+      })
   ];
   downloadFile(
-    JSON.stringify({ type: 'FeatureCollection', crs: 'EPSG:4326', generatedAt: new Date().toISOString(), features }, null, 2),
+    JSON.stringify({ type: 'FeatureCollection', crs: 'EPSG:4326', vn2000CentralMeridian: l0, generatedAt: new Date().toISOString(), features }, null, 2),
     `vn-research-draft-${Date.now()}.geojson`,
     'application/geo+json;charset=utf-8'
   );
-  showToast(`Đã tải xuống tệp .GeoJSON (${features.length} đối tượng).`);
+  showToast(`Đã tải xuống tệp .GeoJSON (${features.length} đối tượng kèm chỉ số VN-2000).`);
 }
 
 async function runVietnamElevationTransect() {
   const out = document.getElementById('vn-elevation-output');
   const meta = getSelectedStudyProvinceMeta();
-  out.textContent = `Đang truy xuất cao độ Copernicus 30 m quanh ${meta.province}...`;
-
+  const drawnLine = [...state.draftStudyShapes].reverse().find((s) => s.kind === 'line' && s.coords.length >= 2);
+  const steps = 24;
   const lats = [];
   const lngs = [];
-  const steps = 12;
-  for (let i = 0; i < steps; i++) {
-    const frac = i / (steps - 1) - 0.5;
-    lats.push((meta.lat + frac * 0.036).toFixed(5));
-    lngs.push((meta.lng + frac * 0.036).toFixed(5));
+  let transectTitle = `Lát cắt 4 km qua ${meta.province}`;
+
+  if (drawnLine) {
+    const first = drawnLine.coords[0];
+    const last = drawnLine.coords[drawnLine.coords.length - 1];
+    const l0 = Number(document.getElementById('vn2k-l0')?.value) || lookupCentralMeridian(meta.province, meta.lng);
+    const lenObj = computeVn2000MetricLength(drawnLine.coords, l0, 3);
+    transectTitle = `Mặt cắt theo tuyến vẽ (${lenObj.lengthM.toLocaleString('vi-VN')} m)`;
+    for (let i = 0; i < steps; i++) {
+      const f = i / (steps - 1);
+      lats.push((first[0] + (last[0] - first[0]) * f).toFixed(5));
+      lngs.push((first[1] + (last[1] - first[1]) * f).toFixed(5));
+    }
+  } else {
+    for (let i = 0; i < steps; i++) {
+      const frac = i / (steps - 1) - 0.5;
+      lats.push((meta.lat + frac * 0.036).toFixed(5));
+      lngs.push((meta.lng + frac * 0.036).toFixed(5));
+    }
   }
+
+  out.textContent = `Đang truy xuất ${steps} điểm cao độ Copernicus 30 m (${transectTitle})...`;
   try {
     const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats.join(',')}&longitude=${lngs.join(',')}`);
     const data = await res.json();
@@ -1934,6 +2104,7 @@ async function runVietnamElevationTransect() {
     if (elevs.length === 0) throw new Error('EMPTY');
     const minE = Math.min(...elevs);
     const maxE = Math.max(...elevs);
+    const avgE = elevs.reduce((a, b) => a + b, 0) / elevs.length;
     const span = Math.max(1, maxE - minE);
     const ptsSvg = elevs
       .map((val, idx) => {
@@ -1944,7 +2115,7 @@ async function runVietnamElevationTransect() {
       .join(' ');
     const areaSvg = `14,84 ${ptsSvg} 286,84`;
     out.innerHTML = `
-      <strong>Lát cắt 4 km qua ${esc(meta.province)}</strong>: Thấp nhất <strong class="mono-num">${minE.toFixed(1)} m</strong> · Cao nhất <strong class="mono-num">${maxE.toFixed(1)} m</strong> (Chênh ${(maxE - minE).toFixed(1)} m).
+      <strong>${esc(transectTitle)}</strong>: Thấp nhất <strong class="mono-num">${minE.toFixed(1)} m</strong> · TB <strong class="mono-num">${avgE.toFixed(1)} m</strong> · Cao nhất <strong class="mono-num">${maxE.toFixed(1)} m</strong> (Chênh ${(maxE - minE).toFixed(1)} m).
       <svg viewBox="0 0 300 96" style="width:100%;max-height:118px;display:block;margin-top:8px;background:#FFFFFF;border-radius:6px;border:1px solid #CBD5E1;">
         <line x1="14" y1="22" x2="286" y2="22" stroke="#E2E8F0" stroke-dasharray="3 3" />
         <line x1="14" y1="52" x2="286" y2="52" stroke="#E2E8F0" stroke-dasharray="3 3" />
@@ -1952,7 +2123,7 @@ async function runVietnamElevationTransect() {
         <polygon fill="rgba(15, 118, 110, 0.14)" points="${areaSvg}" />
         <polyline fill="none" stroke="#0F766E" stroke-width="2.2" points="${ptsSvg}" />
       </svg>
-      <span class="field-hint">Nguồn: ESA Copernicus GLO-30 (SATELLITE_DATA — mô hình bề mặt tham chiếu, không dùng đơn lẻ để suy độ sâu ngập cm trong ngõ hẻm).</span>
+      <span class="field-hint">Nguồn: ESA Copernicus GLO-30 (${steps} điểm mẫu) — mô hình bề mặt tham chiếu.</span>
     `;
   } catch {
     out.textContent = 'Chưa tải được dữ liệu cao độ từ Open-Meteo (kiểm tra kết nối mạng).';
@@ -2213,44 +2384,79 @@ async function askAssistant(question) {
   const out = document.getElementById('assistant-answer-box');
   if (!out || q.length < 3) return;
   out.hidden = false;
-  out.innerHTML = `<p class="muted-body">Đang tổng hợp dữ liệu vùng ${esc(state.zone.name)}...</p>`;
+  out.innerHTML = `<p class="muted-body">Đang tổng hợp dữ liệu đa nguồn vùng ${esc(state.zone.name)}...</p>`;
+
+  const zoneContext = {
+    zone: state.zone,
+    weather: state.weather,
+    hourlyForecast: state.hourlyForecast,
+    riverDischarge: state.riverDischarge,
+    aqi: state.aqi,
+    demStats: state.hydroSim.demGrid?.stats || null,
+    vnZoneIntel: state.vnZoneIntel,
+    zonePoints: state.zonePoints.slice(0, 60).map((p) => ({
+      id: p.id,
+      name: p.name,
+      lat: p.lat,
+      lng: p.lng,
+      layerGroup: p.layerGroup,
+      category: p.category,
+      distanceMeters: p.distanceMeters,
+      elevationM: p.elevationM,
+      notes: (p.notes || '').slice(0, 120)
+    })),
+    zoneCorridors: state.zoneCorridors.slice(0, 8)
+  };
+
+  const renderAssistantOutput = (answerText, metrics, refs, badgeLabel, badgeTone) => {
+    const cleanText = sanitizeCitizenJargon(answerText).replace(/\bDEM\s*[\d–\-.,]+\s*m\b/gi, 'vùng trũng thấp');
+    const metricsHtml = metrics
+      ? `<div class="ai-metrics-strip">
+           <div class="ai-metric-chip"><span>Đỉnh mưa 24h</span><strong>${metrics.rainPeak24hMm ?? 0} mm/h</strong></div>
+           <div class="ai-metric-chip"><span>Lưu lượng sông</span><strong>${metrics.riverDischargeMs != null ? `${metrics.riverDischargeMs} m³/s` : '--'}</strong></div>
+           <div class="ai-metric-chip"><span>Tích số D×V trũng</span><strong>${metrics.dvProduct ?? 0} m²/s</strong></div>
+           <div class="ai-metric-chip"><span>Điểm trong vùng</span><strong>${metrics.riskCount ?? 0} rủi ro · ${metrics.safeCount ?? 0} y tế</strong></div>
+         </div>`
+      : '';
+    const refsHtml =
+      Array.isArray(refs) && refs.length
+        ? `<div class="ai-ref-pills">
+             ${refs
+               .map(
+                 (r) =>
+                   `<button type="button" class="checkin-btn is-locate js-ai-jump-pt" data-lat="${r.lat}" data-lng="${r.lng}" data-ptid="${esc(r.id)}">${esc(r.name)} (${esc(formatDistancePlain(r.distanceMeters))})</button>`
+               )
+               .join('')}
+           </div>`
+        : '';
+    out.innerHTML = `
+      <span class="source-tag ${badgeTone}">${esc(badgeLabel)}</span>
+      ${metricsHtml}
+      <div class="assistant-answer-text">${esc(cleanText)}</div>
+      ${refsHtml}
+      <p class="honesty-note">Trợ lý chỉ diễn giải từ dữ liệu đa nguồn hiện có, không thay thế cảnh báo chính thức của cơ quan KTTV/PCTT.</p>
+    `;
+  };
 
   try {
     if (!navigator.onLine) throw new Error('OFFLINE');
     const res = await fetch('/api/ai-copilot', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'ask_copilot', question: `[Vùng đang xem: ${state.zone.name}] ${q}`, liveWeather: state.weather, liveAqi: state.aqi })
+      body: JSON.stringify({ action: 'ask_copilot', question: q, zoneContext, liveWeather: state.weather, liveAqi: state.aqi })
     });
     const data = await res.json();
     if (res.ok && data?.ok && data.answer) {
-      out.innerHTML = `
-        <span class="source-tag tone-verified">Tổng hợp từ dữ liệu hiện có</span>
-        <div class="assistant-answer-text">${esc(data.answer)}</div>
-        <p class="honesty-note">Trợ lý không thay thế cảnh báo thiên tai chính thức của cơ quan KTTV/PCTT.</p>
-      `;
+      const badgeLbl = data.mode === 'cloud_llm' ? `AI Tổng hợp Đám mây (${data.modelUsed})` : `Tổng hợp Đa nguồn (${state.zone.province})`;
+      renderAssistantOutput(data.answer, data.metrics, data.referencedPoints, badgeLbl, 'tone-verified');
       return;
     }
     throw new Error('FALLBACK');
   } catch {
-    const localAns = synthesizeSituationalAnswer(q, state.zonePoints, state.weather);
-    const clean = (t) =>
-      String(t || '')
-        .replace(/Bấm nút\s*[“"]Phân tích\s*&\s*Vẽ lộ trình OSRM[”"]\s*bên dưới/gi, 'Mở mục “Lộ trình” để đối chiếu tuyến đường')
-        .replace(/\bDEM\s*[\d–\-.,]+\s*m\b/gi, 'vùng trũng thấp')
-        .replace(/\b(?:OSRM|DEM|ERA5|DSM)\b/gi, '')
-        .replace(/\s{2,}/g, ' ')
-        .trim();
-    const lines = [
-      `• Vùng khoanh hiện tại: ${state.zone.name} (bán kính ${state.zone.radiusKm} km, ${state.zonePoints.length} đối tượng nội vùng).`,
-      localAns?.headline ? `• ${clean(localAns.headline)}` : '',
-      ...(Array.isArray(localAns?.bullets) ? localAns.bullets.map((b) => `• ${clean(b)}`) : [])
-    ].filter(Boolean);
-    out.innerHTML = `
-      <span class="source-tag tone-model">Trả lời từ dữ liệu đã nạp</span>
-      <div class="assistant-answer-text">${esc(lines.join('\n'))}</div>
-      <p class="honesty-note">Trợ lý chỉ diễn giải dữ liệu hiện có, không thay thế cảnh báo chính thức của cơ quan KTTV/PCTT.</p>
-    `;
+    const brief = buildNationalGroundedBrief({ question: q, ...zoneContext });
+    const legacyFallback = synthesizeSituationalAnswer(q, state.zonePoints, state.weather);
+    const mergedText = brief?.answerText || [legacyFallback?.headline, ...(legacyFallback?.bullets || [])].filter(Boolean).join('\n');
+    renderAssistantOutput(mergedText, brief?.metrics, brief?.referencedPoints, `Tổng hợp Cục bộ (${state.zone.province})`, 'tone-model');
   }
 }
 
@@ -2286,6 +2492,42 @@ function bindEvents() {
     selectZone(state.zone, { radiusKm: Number(ev.target.value), flyMap: true });
   });
   document.getElementById('btn-refresh-zone')?.addEventListener('click', () => refreshActiveZoneData({ flyMap: false }));
+  document.getElementById('btn-export-zone-dossier')?.addEventListener('click', exportActiveZoneDossier);
+
+  const hourlyBarsEl = document.getElementById('hourly-rain-bars');
+  const activateHourlyScrub = (col) => {
+    if (!col || col.dataset.mm == null) return;
+    const mm = Number(col.dataset.mm);
+    const idx = Number(col.dataset.hourIdx || 0);
+    const prob = Number(col.dataset.prob || 0);
+    document.querySelectorAll('#hourly-rain-bars .hourly-bar-col').forEach((el) => el.classList.toggle('is-selected-hour', el === col));
+    const simMm = mm > 0 ? Math.min(200, Math.max(15, Math.round(mm * 4.2))) : 0;
+    state.hydroSim.rainMm = simMm;
+    state.hydroSim.preset = 'custom';
+    document.querySelectorAll('[data-rain-preset]').forEach((b) => b.classList.remove('is-active'));
+    const sl = document.getElementById('hydro-rain-slider');
+    const lb = document.getElementById('hydro-rain-label');
+    if (sl) sl.value = String(simMm);
+    if (lb) lb.textContent = `${simMm} mm`;
+    const hintEl = document.getElementById('hourly-scrub-hint');
+    if (hintEl) {
+      hintEl.textContent = `Đang mô phỏng mặt phủ theo mốc +${idx}h: mưa ${mm.toFixed(1)} mm/h (XS ${prob}% → quy đổi kịch bản ${simMm} mm).`;
+    }
+    hydroSurfaceLayer?.redraw();
+  };
+  hourlyBarsEl?.addEventListener('click', (ev) => {
+    const col = ev.target.closest('.hourly-bar-col[data-mm]');
+    if (col) activateHourlyScrub(col);
+  });
+  hourlyBarsEl?.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      const col = ev.target.closest('.hourly-bar-col[data-mm]');
+      if (col) {
+        ev.preventDefault();
+        activateHourlyScrub(col);
+      }
+    }
+  });
   document.getElementById('btn-vn-gps')?.addEventListener('click', () => {
     if (!('geolocation' in navigator)) {
       showToast('Thiết bị không hỗ trợ GPS — hãy nhập tên tỉnh/huyện ở ô tìm kiếm.');
@@ -2974,6 +3216,21 @@ function bindEvents() {
       return;
     }
 
+    const aiJumpPt = ev.target.closest('.js-ai-jump-pt');
+    if (aiJumpPt) {
+      document.getElementById('assistant-dialog')?.close();
+      switchPillar('public');
+      switchPublicTab('overview');
+      const pt = state.zonePoints.find((p) => p.id === aiJumpPt.dataset.ptid);
+      const lat = Number(aiJumpPt.dataset.lat);
+      const lng = Number(aiJumpPt.dataset.lng);
+      if (nationalMap && Number.isFinite(lat) && Number.isFinite(lng)) {
+        nationalMap.setView([lat, lng], 16);
+      }
+      if (pt) showSelectedPointCard(pt);
+      return;
+    }
+
     const aiSample = ev.target.closest('.js-ai-sample');
     if (aiSample) {
       document.getElementById('assistant-input').value = aiSample.dataset.q;
@@ -3014,7 +3271,8 @@ const appSafetyState = {
   escortWatchId: null,
   lastSpeedKmh: 0,
   stationarySinceMs: null,
-  kinematics: { prevSpeedKmh: 18, currentSpeedKmh: 18, stationarySeconds: 0 }
+  kinematics: { prevSpeedKmh: 18, currentSpeedKmh: 18, stationarySeconds: 0 },
+  telemetryHistory: []
 };
 
 function updateCitizenAuthUi() {
@@ -3279,6 +3537,16 @@ function runProactiveAiEvaluation(customOverride = null) {
   if (hlEl) hlEl.textContent = result.headline;
   if (dsEl) dsEl.textContent = result.explanation;
 
+  appSafetyState.telemetryHistory.push({
+    probPct: result.probabilityPct,
+    dvProduct: hydro.dvProduct,
+    ts: Date.now()
+  });
+  if (appSafetyState.telemetryHistory.length > 18) {
+    appSafetyState.telemetryHistory.shift();
+  }
+  renderAiEscortSparkline();
+
   if (result.triggerProactivePrompt) {
     const dlg = document.getElementById('proactive-safety-dialog');
     const reasonBox = document.getElementById('proactive-dlg-reason');
@@ -3287,6 +3555,124 @@ function runProactiveAiEvaluation(customOverride = null) {
     }
     if (dlg && !dlg.open) dlg.showModal();
   }
+}
+
+function renderAiEscortSparkline() {
+  const mount = document.getElementById('ai-escort-sparkline');
+  if (!mount) return;
+  const hist = appSafetyState.telemetryHistory;
+  const padded = hist.length >= 2 ? hist : [{ probPct: hist[0]?.probPct ?? 8, dvProduct: 0 }, { probPct: hist[0]?.probPct ?? 8, dvProduct: 0 }];
+  const W = 320;
+  const H = 56;
+  const thresholdY = H - 8 - (68 / 100) * (H - 16);
+  const pts = padded
+    .map((item, idx) => {
+      const x = 8 + (idx / Math.max(1, padded.length - 1)) * (W - 16);
+      const y = H - 8 - (Math.min(100, Math.max(0, item.probPct)) / 100) * (H - 16);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(' ');
+  const lastPt = padded[padded.length - 1];
+  const lineCol = lastPt.probPct >= 62 ? '#DC2626' : lastPt.probPct >= 35 ? '#D97706' : '#0F766E';
+  mount.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Biểu đồ động học xác suất rủi ro AI">
+      <line x1="8" y1="${thresholdY.toFixed(1)}" x2="${W - 8}" y2="${thresholdY.toFixed(1)}" stroke="#EF4444" stroke-width="1" stroke-dasharray="3 3" />
+      <polygon fill="rgba(15, 118, 110, 0.1)" points="8,${H - 6} ${pts} ${W - 8},${H - 6}" />
+      <polyline fill="none" stroke="${lineCol}" stroke-width="2.1" points="${pts}" />
+      <text x="10" y="12" font-size="8.5" fill="#64748B">Ngưỡng hỏi thăm an toàn AI (62%)</text>
+      <text x="${W - 10}" y="12" font-size="8.5" fill="${lineCol}" text-anchor="end">Hiện tại: ${lastPt.probPct}%</text>
+    </svg>`;
+}
+
+function getCurrentOfflineSosSmsPayload() {
+  const coords = appSafetyState.sosCoords || state.zone;
+  const areaHint = (document.getElementById('sos-area-hint')?.value || '').trim() || resolveAutoLocationLabel(coords.lat, coords.lng);
+  const activeTicket = appSafetyState.myTickets.find((t) => !t.shreddedLocation);
+  return buildOfflineSosSmsPayload({
+    category: document.getElementById('sos-category')?.value || 'stalled_vehicle',
+    waterDepthM: Number(document.getElementById('sos-water-depth')?.value || 0.28),
+    areaHint,
+    lat: coords.lat,
+    lng: coords.lng,
+    safetyPin: activeTicket?.safetyPin || '',
+    note: updateSosComposedPreview()
+  });
+}
+
+function renderSosLiveMap() {
+  if (typeof window.L === 'undefined') return;
+  const mount = document.getElementById('sos-live-map');
+  if (!mount) return;
+  const coords = appSafetyState.sosCoords || state.zone;
+
+  if (!sosLiveMap) {
+    sosLiveMap = window.L.map('sos-live-map', { zoomControl: false }).setView([coords.lat, coords.lng], 15);
+    window.L.tileLayer(BASEMAP_PROVIDERS.osm.url, { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(sosLiveMap);
+    sosLiveLayer = window.L.layerGroup().addTo(sosLiveMap);
+  }
+  sosLiveLayer.clearLayers();
+
+  // Vòng tròn làm mờ quyền riêng tư 300 m (tương tự lá chắn server)
+  window.L.circle([coords.lat, coords.lng], {
+    radius: 300,
+    color: '#D97706',
+    weight: 2,
+    dashArray: '5 4',
+    fillColor: '#F59E0B',
+    fillOpacity: 0.14
+  })
+    .bindTooltip('Vùng làm mờ bảo vệ quyền riêng tư 300 m')
+    .addTo(sosLiveLayer);
+
+  window.L.circleMarker([coords.lat, coords.lng], {
+    radius: 7,
+    color: '#FFFFFF',
+    weight: 2.5,
+    fillColor: '#E11D48',
+    fillOpacity: 1
+  })
+    .bindTooltip('Vị trí cục bộ trên thiết bị của bạn')
+    .addTo(sosLiveLayer);
+
+  const safeNear = state.zonePoints
+    .filter((p) => p.layerGroup === 'safe')
+    .map((p) => ({ ...p, d: haversineMeters(coords.lat, coords.lng, Number(p.lat), Number(p.lng)) }))
+    .sort((a, b) => a.d - b.d)[0];
+
+  const capEl = document.getElementById('sos-map-caption');
+  if (safeNear) {
+    window.L.polyline(
+      [
+        [coords.lat, coords.lng],
+        [Number(safeNear.lat), Number(safeNear.lng)]
+      ],
+      { color: '#16A34A', weight: 3.5, dashArray: '6 4' }
+    ).addTo(sosLiveLayer);
+    window.L.circleMarker([Number(safeNear.lat), Number(safeNear.lng)], {
+      radius: 7,
+      color: '#FFFFFF',
+      weight: 2,
+      fillColor: '#16A34A',
+      fillOpacity: 1
+    })
+      .bindTooltip(`${safeNear.name} (${formatDistancePlain(safeNear.d)})`)
+      .addTo(sosLiveLayer);
+    if (capEl) {
+      capEl.textContent = `Vòng mờ 300 m đang bật. Nơi y tế / tránh trú gần nhất: ${safeNear.name} (${formatDistancePlain(safeNear.d)}).`;
+    }
+  } else if (capEl) {
+    capEl.textContent = 'Vòng mờ 300 m đang bật bảo vệ riêng tư trước khi có Tình nguyện viên được cấp phép nhận ca.';
+  }
+
+  const smsLink = document.getElementById('btn-send-sos-sms-link');
+  if (smsLink) {
+    smsLink.href = getCurrentOfflineSosSmsPayload().smsHref;
+  }
+
+  setTimeout(() => {
+    sosLiveMap?.invalidateSize();
+    sosLiveMap?.setView([coords.lat, coords.lng], 15);
+  }, 80);
 }
 
 async function refreshSosAndAiPillar() {
@@ -3310,6 +3696,7 @@ async function refreshSosAndAiPillar() {
   }
 
   runProactiveAiEvaluation();
+  renderSosLiveMap();
   try {
     const shRes = await fetch(`/api/sos-dispatch?action=zone_shield_summary&lat=${coords.lat}&lng=${coords.lng}`);
     const shJson = shRes.ok ? await shRes.json() : null;
@@ -3319,6 +3706,7 @@ async function refreshSosAndAiPillar() {
     // ignore
   }
   await syncCitizenSession();
+  renderSosLiveMap();
 }
 
 function updateSosComposedPreview() {
@@ -3669,7 +4057,22 @@ function bindSosAndAppEvents() {
     await submitSosNow();
   });
 
-  document.getElementById('btn-refresh-sos-state')?.addEventListener('click', syncCitizenSession);
+  document.getElementById('btn-refresh-sos-state')?.addEventListener('click', async () => {
+    await syncCitizenSession();
+    renderSosLiveMap();
+  });
+
+  document.getElementById('btn-copy-sos-sms')?.addEventListener('click', async () => {
+    const pkt = getCurrentOfflineSosSmsPayload();
+    const link = document.getElementById('btn-send-sos-sms-link');
+    if (link) link.href = pkt.smsHref;
+    try {
+      await navigator.clipboard.writeText(pkt.smsText);
+      showToast('Đã sao chép tin nhắn SOS khẩn kèm tọa độ & PIN!');
+    } catch {
+      showToast(pkt.smsText);
+    }
+  });
 
   document.getElementById('btn-responder-heartbeat')?.addEventListener('click', async () => {
     const coords = appSafetyState.sosCoords || state.zone;

@@ -29,6 +29,7 @@ const state = {
   moderationMap: {},
   auditLog: [],
   studies: [],
+  sosTickets: [],
   lastInspectedZone: null,
   batchCandidates: []
 };
@@ -250,6 +251,16 @@ async function runClusterProbes() {
           detail: `HTTP ${res.status} · MaxSlots=${data?.antiCongestionMaxSlots ?? 2} · ${data?.locationPrivacy || 'ok'}`
         };
       }
+    },
+    {
+      name: 'National Grounded AI Copilot (/api/ai-copilot)',
+      run: async () => {
+        const { res, data } = await apiFetch('/api/ai-copilot');
+        return {
+          ok: res.ok && data?.ok,
+          detail: `HTTP ${res.status} · Phủ ${data?.nationalCoverageProvinces || 63} tỉnh · ${data?.engine || 'ok'}`
+        };
+      }
     }
   ];
 
@@ -363,6 +374,28 @@ function renderNationalCommandMap(focusZone = null) {
       fillOpacity: 0.95
     })
       .bindPopup(`<strong>[${esc(rep.id)}] ${esc(rep.name)}</strong><br>${esc(rep.province || 'Cloud')}`)
+      .addTo(cmdLayer);
+  }
+
+  for (const t of (state.sosTickets || []).filter((x) => !x.shreddedLocation)) {
+    const tLat = Number(t.exactLat ?? t.fuzzyLat);
+    const tLng = Number(t.exactLng ?? t.fuzzyLng);
+    if (!Number.isFinite(tLat) || !Number.isFinite(tLng)) continue;
+    window.L.circle([tLat, tLng], {
+      radius: t.privacyRadiusM || 300,
+      color: '#F59E0B',
+      weight: 1.5,
+      dashArray: '4 4',
+      fillOpacity: 0.1
+    }).addTo(cmdLayer);
+    window.L.circleMarker([tLat, tLng], {
+      radius: 7,
+      color: '#FFFFFF',
+      weight: 2,
+      fillColor: '#BE123C',
+      fillOpacity: 1
+    })
+      .bindPopup(`<strong>SOS [${esc(t.id)}]: ${esc(t.categoryLabel)}</strong><br>${esc(t.areaHint)} · ${t.slotsFilled}/${t.maxResponders} chỗ`)
       .addTo(cmdLayer);
   }
 
@@ -653,6 +686,28 @@ function bindEvents() {
 
   document.getElementById('btn-probe-all').addEventListener('click', runClusterProbes);
   document.getElementById('btn-inspect-zone').addEventListener('click', inspectSelectedZone);
+  document.getElementById('btn-export-ops-snapshot')?.addEventListener('click', async () => {
+    const [pubRes, commRes] = await Promise.all([
+      apiFetch('/api/research-portal?action=publications'),
+      apiFetch('/api/community?action=public_sync&lat=21.0725&lng=105.7739&radiusKm=20')
+    ]);
+    const snapshot = {
+      exportedAt: new Date().toISOString(),
+      apiBase: state.apiBase,
+      adminAuthenticated: Boolean(state.adminToken),
+      communityReports: state.adminToken ? state.reports : commRes.data?.reports || [],
+      publications: pubRes.data?.items || [],
+      researchReviewQueue: state.adminToken ? state.studies : undefined,
+      sosTickets: state.adminToken ? state.sosTickets : undefined,
+      auditLog: state.adminToken ? state.auditLog : undefined
+    };
+    downloadBlob(
+      JSON.stringify(snapshot, null, 2),
+      `vn-resilience-ops-snapshot-${Date.now()}.json`,
+      'application/json;charset=utf-8'
+    );
+    toast('Đã xuất bản sao lưu hệ thống (.JSON)!');
+  });
 
   document.getElementById('btn-export-zone-geojson').addEventListener('click', () => {
     if (!state.lastInspectedZone) {
@@ -998,8 +1053,10 @@ async function syncSosAdminOverview() {
   if (!res.ok || !data?.ok) return;
 
   const activeSos = (data.tickets || []).filter((t) => !String(t.status).includes('shredded'));
+  state.sosTickets = data.tickets || [];
   const navCnt = document.getElementById('nav-cnt-sos');
   if (navCnt) navCnt.textContent = String(activeSos.length);
+  renderNationalCommandMap(state.lastInspectedZone);
 
   const tBox = document.getElementById('ops-sos-tickets-list');
   if (tBox) {

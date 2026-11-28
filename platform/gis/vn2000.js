@@ -256,3 +256,84 @@ export function vn2000ToWgs84Local(xNorth, yEast, centralMeridian = 105.0, zoneW
     lng: Math.round(((wgsGeo.lonRad * 180) / Math.PI) * 1e7) / 1e7
   };
 }
+
+/**
+ * Tính độ dài tuyến khảo sát trên mặt phẳng chiếu thực tế VN-2000 (đơn vị mét)
+ * Tuân thủ chuẩn trắc địa: không tính chiều dài Euclid trực tiếp trên hệ tọa độ cầu EPSG:4326.
+ */
+export function computeVn2000MetricLength(coordsLatLng = [], centralMeridianDeg = 105.0, zoneWidth = 3) {
+  const pts = Array.isArray(coordsLatLng)
+    ? coordsLatLng
+        .map((pt) => {
+          const lat = Array.isArray(pt) ? Number(pt[0]) : Number(pt?.lat);
+          const lng = Array.isArray(pt) ? Number(pt[1]) : Number(pt?.lng);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+          return wgs84ToVn2000Local(lat, lng, centralMeridianDeg, zoneWidth);
+        })
+        .filter(Boolean)
+    : [];
+
+  let lengthM = 0;
+  for (let i = 1; i < pts.length; i++) {
+    lengthM += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  }
+  const roundedM = Math.round(lengthM * 100) / 100;
+  return {
+    lengthM: roundedM,
+    lengthKm: Math.round((roundedM / 1000) * 1000) / 1000,
+    vertexCount: pts.length,
+    centralMeridian: Number(centralMeridianDeg)
+  };
+}
+
+/**
+ * Tính diện tích và chu vi đa giác vùng ngập / sạt lở bằng công thức Gauss (Shoelace)
+ * trên mặt phẳng tọa độ mét hệ VN-2000 (X Bắc, Y Đông).
+ */
+export function computeVn2000MetricPolygonArea(coordsLatLng = [], centralMeridianDeg = 105.0, zoneWidth = 3) {
+  const pts = Array.isArray(coordsLatLng)
+    ? coordsLatLng
+        .map((pt) => {
+          const lat = Array.isArray(pt) ? Number(pt[0]) : Number(pt?.lat);
+          const lng = Array.isArray(pt) ? Number(pt[1]) : Number(pt?.lng);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+          return wgs84ToVn2000Local(lat, lng, centralMeridianDeg, zoneWidth);
+        })
+        .filter(Boolean)
+    : [];
+
+  if (pts.length < 3) {
+    return {
+      areaM2: 0,
+      areaHa: 0,
+      perimeterM: 0,
+      centroidVn2000: pts[0] ? { x: pts[0].x, y: pts[0].y } : { x: 0, y: 0 },
+      centralMeridian: Number(centralMeridianDeg)
+    };
+  }
+
+  let twiceArea = 0;
+  let perimeterM = 0;
+  let sumX = 0;
+  let sumY = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const cur = pts[i];
+    const nxt = pts[(i + 1) % pts.length];
+    twiceArea += cur.y * nxt.x - nxt.y * cur.x;
+    perimeterM += Math.hypot(nxt.x - cur.x, nxt.y - cur.y);
+    sumX += cur.x;
+    sumY += cur.y;
+  }
+
+  const areaM2 = Math.round((Math.abs(twiceArea) / 2) * 100) / 100;
+  return {
+    areaM2,
+    areaHa: Math.round((areaM2 / 10000) * 10000) / 10000,
+    perimeterM: Math.round(perimeterM * 100) / 100,
+    centroidVn2000: {
+      x: Math.round((sumX / pts.length) * 1000) / 1000,
+      y: Math.round((sumY / pts.length) * 1000) / 1000
+    },
+    centralMeridian: Number(centralMeridianDeg)
+  };
+}
