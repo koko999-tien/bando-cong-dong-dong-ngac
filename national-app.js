@@ -33,6 +33,10 @@ import {
   buildMapPictogramIcon
 } from './platform/gis/hydro-surface.js';
 import { lookupCentralMeridian, wgs84ToVn2000Local } from './platform/gis/vn2000.js';
+import {
+  computeHydrodynamicInstability,
+  evaluateUserDistressProbability
+} from './platform/ai/distress-inference.js';
 import { roundPrivacyCoord, analyzePolylineCorridor } from './gis-utils.js';
 import { synthesizeSituationalAnswer } from './knowledge-engine.js';
 import {
@@ -61,6 +65,7 @@ const OFFLINE_QUEUE_KEY = 'vn_resilience_offline_queue_v1';
 const LARGE_TEXT_KEY = 'vn_resilience_large_text_v1';
 const RESEARCHER_TOKEN_KEY = 'vn_resilience_researcher_token_v1';
 const REVIEWER_TOKEN_KEY = 'vn_resilience_reviewer_token_v1';
+const CITIZEN_TOKEN_KEY = 'vn_resilience_citizen_token_v1';
 
 const ALL_STATIC_POINTS = [...SAMPLE_HUMG_POINTS, ...VIETNAM_VERIFIED_HOTSPOTS];
 const ALL_STATIC_CORRIDORS = [...FLOOD_STREET_CORRIDORS, ...VIETNAM_VERIFIED_CORRIDORS];
@@ -244,7 +249,7 @@ function registerServiceWorker() {
    1. ĐIỀU HƯỚNG 3 PHÂN HỆ CÔNG CỘNG / KHOA HỌC & 4 TAB CON TRONG VÙNG
    ========================================================================= */
 function switchPillar(pillarName) {
-  const valid = ['public', 'research', 'news'];
+  const valid = ['public', 'sos', 'research', 'news'];
   const next = valid.includes(pillarName) ? pillarName : 'public';
   state.pillar = next;
 
@@ -265,6 +270,8 @@ function switchPillar(pillarName) {
       nationalMap?.invalidateSize();
       hydroSurfaceLayer?.redraw();
     }, 60);
+  } else if (next === 'sos') {
+    refreshSosAndAiPillar();
   } else if (next === 'research') {
     renderResearchPillar();
   } else if (next === 'news') {
@@ -894,7 +901,7 @@ function stopRadarPlayback() {
   }
   state.radarAnim.playing = false;
   const playBtn = document.getElementById('btn-radar-play');
-  if (playBtn) playBtn.textContent = '▶ Phát động';
+  if (playBtn) playBtn.textContent = 'Phát động';
 }
 
 async function toggleRadarOverlay(enable) {
@@ -2400,7 +2407,7 @@ function bindEvents() {
       return;
     }
     state.radarAnim.playing = true;
-    document.getElementById('btn-radar-play').textContent = '⏸ Tạm dừng';
+    document.getElementById('btn-radar-play').textContent = 'Tạm dừng';
     state.radarAnim.timer = setInterval(() => {
       state.radarAnim.idx = (state.radarAnim.idx + 1) % state.radarAnim.frames.length;
       renderRadarFrame();
@@ -2934,6 +2941,703 @@ function bindEvents() {
     state.isOffline = true;
     updateOfflineStrip();
   });
+
+  bindSosAndAppEvents();
+}
+
+/* =========================================================================
+   11. PHÂN HỆ APP: ĐĂNG NHẬP CÁ NHÂN / GOOGLE, SOS ZERO-TRUST & AI HỘ TỐNG THỰC CHỨNG
+   ========================================================================= */
+const appSafetyState = {
+  citizenToken: localStorage.getItem(CITIZEN_TOKEN_KEY) || '',
+  citizenProfile: null,
+  myTickets: [],
+  responderInbox: [],
+  sosCoords: null,
+  deferredInstallPrompt: null,
+  escortWatchId: null,
+  lastSpeedKmh: 0,
+  stationarySinceMs: null,
+  kinematics: { prevSpeedKmh: 18, currentSpeedKmh: 18, stationarySeconds: 0 }
+};
+
+function updateCitizenAuthUi() {
+  const p = appSafetyState.citizenProfile;
+  const topLbl = document.getElementById('topbar-account-label');
+  const dot = document.getElementById('sos-auth-dot');
+  const title = document.getElementById('sos-profile-title');
+  const sub = document.getElementById('sos-profile-sub');
+  const loginBtn = document.getElementById('btn-sos-open-login');
+  const logoutBtn = document.getElementById('btn-sos-logout');
+
+  if (p) {
+    const tierNames = {
+      citizen: 'Tài khoản Công dân',
+      pending_responder: 'Công dân (Đang chờ duyệt Tình nguyện viên)',
+      verified_responder: 'Tình nguyện viên Đã xác minh (0 đồng)',
+      official_unit: 'Đội Xung kích Chính thức'
+    };
+    if (topLbl) topLbl.textContent = p.fullName.split(' ').slice(-2).join(' ');
+    if (dot) dot.className = 'dot dot-green';
+    if (title) title.textContent = `${p.fullName} · ${tierNames[p.trustTier] || p.trustTier}`;
+    if (sub) sub.textContent = `${p.email} · Bảo vệ vị trí nền Geohash-6 đang bật (0 tọa độ lộ công khai).`;
+    if (loginBtn) loginBtn.hidden = true;
+    if (logoutBtn) logoutBtn.hidden = false;
+  } else {
+    if (topLbl) topLbl.textContent = 'Tài khoản';
+    if (dot) dot.className = 'dot dot-amber';
+    if (title) title.textContent = 'Chưa đăng nhập tài khoản cá nhân';
+    if (sub) sub.textContent = 'Đăng nhập bằng tài khoản cá nhân hoặc Google để mở tính năng gửi SOS chống báo giả và nhận mã PIN bảo vệ 2 chiều.';
+    if (loginBtn) loginBtn.hidden = false;
+    if (logoutBtn) logoutBtn.hidden = true;
+  }
+}
+
+async function syncCitizenSession() {
+  if (!appSafetyState.citizenToken) {
+    appSafetyState.citizenProfile = null;
+    appSafetyState.myTickets = [];
+    updateCitizenAuthUi();
+    renderMySosTickets();
+    renderResponderInbox();
+    return;
+  }
+  try {
+    const res = await fetch('/api/sos-dispatch?action=me', {
+      headers: { Authorization: `Bearer ${appSafetyState.citizenToken}` }
+    });
+    const data = await res.json();
+    if (res.ok && data?.ok) {
+      appSafetyState.citizenProfile = data.profile;
+      appSafetyState.myTickets = data.myTickets || [];
+    } else {
+      localStorage.removeItem(CITIZEN_TOKEN_KEY);
+      appSafetyState.citizenToken = '';
+      appSafetyState.citizenProfile = null;
+      appSafetyState.myTickets = [];
+    }
+  } catch {
+    // offline keep cached
+  }
+  updateCitizenAuthUi();
+  renderMySosTickets();
+  await loadResponderInboxIfVerified();
+}
+
+async function loadResponderInboxIfVerified() {
+  const box = document.getElementById('responder-inbox-box');
+  if (!box) return;
+  const p = appSafetyState.citizenProfile;
+  if (!p || !['verified_responder', 'official_unit'].includes(p.trustTier)) {
+    box.innerHTML = `<p class="muted-body">Khóa bảo mật Zero-Trust: Chỉ <strong>Đội xung kích / Tình nguyện viên đã thẩm định</strong> mới được xem danh sách ca cần hỗ trợ trong ô lưới Geohash để ngăn kẻ xấu lợi dụng rình mò người gặp nạn.</p>`;
+    return;
+  }
+  try {
+    const { lat, lng } = appSafetyState.sosCoords || state.zone;
+    const res = await fetch(`/api/sos-dispatch?action=responder_inbox&lat=${lat}&lng=${lng}`, {
+      headers: { Authorization: `Bearer ${appSafetyState.citizenToken}` }
+    });
+    const data = await res.json();
+    if (res.ok && data?.ok) {
+      appSafetyState.responderInbox = data.tickets || [];
+      renderResponderInbox();
+    } else {
+      box.innerHTML = `<p class="muted-body">${esc(data?.error || 'Không tải được hộp thư điều phối.')}</p>`;
+    }
+  } catch {
+    box.innerHTML = `<p class="muted-body">Đang ngoại tuyến.</p>`;
+  }
+}
+
+function renderMySosTickets() {
+  const box = document.getElementById('my-sos-tickets-box');
+  if (!box) return;
+  if (!appSafetyState.myTickets.length) {
+    box.innerHTML = `<p class="muted-body">Bạn chưa có yêu cầu SOS nào đang mở.</p>`;
+    return;
+  }
+  box.innerHTML = appSafetyState.myTickets
+    .map((t) => {
+      const active = !t.shreddedLocation;
+      const respondersHtml = (t.assignedSummary || []).length
+        ? t.assignedSummary
+            .map(
+              (r) => `
+              <div class="field-status-note" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;">
+                <span><strong>${esc(r.fullName)}</strong> (${esc(r.organization)}) · ${r.pinVerified ? 'Đã khớp PIN tại chỗ' : 'Đang di chuyển tới'}</span>
+                ${
+                  active
+                    ? `<button type="button" class="checkin-btn js-report-sos-abuse" data-tid="${esc(t.id)}" data-rid="${esc(r.responderId)}">Báo lợi dụng / Đòi tiền</button>`
+                    : ''
+                }
+              </div>`
+            )
+            .join('')
+        : `<p class="field-hint">Đang phát tín hiệu tới Hệ thống Trung tâm &amp; mời đợt 1 trong ô lưới ${esc(t.coarseGeohash5)}...</p>`;
+
+      return `
+        <article class="place-card">
+          <div class="place-card-top">
+            <h3 class="place-card-title">${esc(t.categoryLabel)}</h3>
+            <span class="source-tag ${active ? 'tone-community' : 'tone-verified'}">${
+              t.status === 'locked_full'
+                ? `Đã khóa đủ ${t.slotsFilled}/${t.maxResponders} chỗ (Chống tắc đường)`
+                : t.shreddedLocation
+                  ? 'Đã an toàn · Đã xóa trắng tọa độ'
+                  : `${t.slotsFilled}/${t.maxResponders} người nhận`
+            }</span>
+          </div>
+          <p class="place-card-desc">${esc(t.policyReason)}</p>
+          ${
+            active && t.safetyPin
+              ? `<div style="margin:6px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                   <span class="pin-code-box">PIN: ${esc(t.safetyPin)}</span>
+                   <span class="field-hint">Yêu cầu người tới hỗ trợ đọc đúng 4 số này trước khi tiếp nhận.</span>
+                 </div>`
+              : ''
+          }
+          ${respondersHtml}
+          ${
+            active
+              ? `<div class="place-card-actions" style="margin-top:6px;">
+                   <button type="button" class="btn btn-sm btn-primary js-resolve-sos" data-tid="${esc(t.id)}">Tôi đã an toàn (Xóa trắng tọa độ)</button>
+                   <a href="tel:112" class="btn btn-sm btn-secondary">Gọi 112</a>
+                 </div>`
+              : ''
+          }
+        </article>`;
+    })
+    .join('');
+}
+
+function renderResponderInbox() {
+  const box = document.getElementById('responder-inbox-box');
+  if (!box) return;
+  const p = appSafetyState.citizenProfile;
+  if (!p || !['verified_responder', 'official_unit'].includes(p.trustTier)) return;
+
+  const list = appSafetyState.responderInbox || [];
+  if (list.length === 0) {
+    box.innerHTML = `<p class="muted-body">Hiện không có yêu cầu SOS nào còn trống hạn ngạch quanh ô lưới Geohash hiện tại.</p>`;
+    return;
+  }
+
+  box.innerHTML = list
+    .map((t) => {
+      const mine = (t.assignedSummary || []).find((r) => r.responderId === p.id);
+      return `
+        <article class="place-card">
+          <div class="place-card-top">
+            <h3 class="place-card-title">${esc(t.categoryLabel)}</h3>
+            <span class="place-card-dist">Còn ${t.slotsRemaining}/${t.maxResponders} chỗ</span>
+          </div>
+          <p class="place-card-desc">
+            Khu vực ước lượng: <strong>${esc(t.areaHint)}</strong><br>
+            ${
+              t.locationUnlocked
+                ? `<span style="color:var(--ok-ink);font-weight:600;">Đã mở khóa tọa độ phiên: ${t.exactLat.toFixed(5)}°N, ${t.exactLng.toFixed(5)}°E</span>`
+                : `Vùng làm mờ bảo vệ quyền riêng tư (~${t.privacyRadiusM}m quanh ${t.fuzzyLat}°N, ${t.fuzzyLng}°E — chỉ mở tọa độ thật sau khi khóa chỗ)`
+            }
+            ${t.note ? `<br>Ghi chú: ${esc(t.note)}` : ''}
+          </p>
+          <div class="place-card-actions" style="margin-top:6px;">
+            ${
+              !mine
+                ? `<button type="button" class="btn btn-sm btn-primary js-claim-sos-slot" data-tid="${esc(t.id)}">Nhận hỗ trợ 0 đồng (Khóa 1/${t.maxResponders} chỗ)</button>`
+                : !mine.pinVerified
+                  ? `<input type="text" maxlength="4" class="text-input mono-num js-pin-input-${esc(t.id)}" style="width:94px;min-height:31px;padding:3px 8px;" placeholder="PIN 4 số">
+                     <button type="button" class="btn btn-sm btn-primary js-verify-sos-pin" data-tid="${esc(t.id)}">Đối chiếu PIN</button>`
+                  : `<span class="source-tag tone-verified">Đã xác thực PIN 2 chiều tại hiện trường</span>`
+            }
+          </div>
+        </article>`;
+    })
+    .join('');
+}
+
+function runProactiveAiEvaluation(customOverride = null) {
+  const coords = appSafetyState.sosCoords || state.zone;
+  const demGrid = state.hydroSim.demGrid;
+  const localElev = sampleAnyDemGrid(demGrid, coords.lat, coords.lng) ?? 11.5;
+  const grad = computeTerrainGradient(demGrid, coords.lat, coords.lng);
+  const stats = demGrid?.stats || { minM: 7, p50M: 13.5 };
+
+  const nearFloodDist = state.zonePoints
+    .filter((pt) => pt.layerGroup === 'risk' && pt.category === 'flood')
+    .reduce((best, pt) => Math.min(best, haversineMeters(coords.lat, coords.lng, Number(pt.lat), Number(pt.lng))), 999);
+
+  const rainHour = customOverride?.rainMmPerHour ?? (state.weather?.rainMm || 0);
+  const rainDay = customOverride?.dailyRainMm ?? (state.weather?.dailyRainMm || 0);
+  const elevUsed = customOverride?.elevM ?? localElev;
+
+  const hydro = computeHydrodynamicInstability({
+    elevM: elevUsed,
+    medianElevM: stats.p50M ?? 13.5,
+    minElevM: stats.minM ?? 7,
+    slopeDeg: grad?.slopeDeg ?? 1.2,
+    rainMmPerHour: rainHour,
+    dailyRainMm: rainDay,
+    nearFloodSpotMeters: customOverride?.nearFloodSpotMeters ?? nearFloodDist
+  });
+
+  const kin = customOverride?.kinematics || appSafetyState.kinematics;
+  const result = evaluateUserDistressProbability({
+    hydro,
+    slopeDeg: grad?.slopeDeg ?? 1.2,
+    dailyRainMm: rainDay,
+    apparentTempC: state.weather?.apparentTemp ?? 30,
+    pm25: state.aqi?.pm25 ?? 24,
+    kinematics: kin
+  });
+
+  const vEl = document.getElementById('ai-manning-v');
+  const dEl = document.getElementById('ai-depth-est');
+  const dvEl = document.getElementById('ai-dv-val');
+  const stEl = document.getElementById('ai-stability-lbl');
+  const kEl = document.getElementById('ai-kinematic-val');
+  const dwEl = document.getElementById('ai-dwell-lbl');
+  const prEl = document.getElementById('ai-distress-prob');
+  const qcEl = document.getElementById('ai-qcvn-lbl');
+  const hlEl = document.getElementById('ai-inference-headline');
+  const dsEl = document.getElementById('ai-inference-desc');
+
+  if (vEl) vEl.textContent = `${hydro.velocityMs.toFixed(2)} m/s`;
+  if (dEl) dEl.textContent = `Độ sâu ước tính: ~${Math.round(hydro.depthM * 100)} cm`;
+  if (dvEl) dvEl.textContent = `${hydro.dvProduct.toFixed(3)} m²/s`;
+  if (stEl) {
+    stEl.textContent =
+      hydro.vehicleStability === 'critical_float_or_sweep'
+        ? 'Nguy hiểm cuốn trôi (>0.35)'
+        : hydro.vehicleStability === 'high_stall_risk'
+          ? 'Dễ chết máy / trượt bánh'
+          : 'Ổn định phương tiện (<0.15)';
+  }
+  if (kEl) kEl.textContent = `${kin.currentSpeedKmh.toFixed(0)} km/h`;
+  if (dwEl) dwEl.textContent = kin.stationarySeconds > 0 ? `Đứng yên: ${Math.round(kin.stationarySeconds)} giây (trước đó ${Math.round(kin.prevSpeedKmh)} km/h)` : 'Di chuyển thông suốt';
+  if (prEl) prEl.textContent = `${result.probabilityPct}%`;
+  if (qcEl) {
+    qcEl.textContent = result.breakdown.qcvnCompliant
+      ? 'Đạt QCVN 05:2023/BTNMT'
+      : `Vượt QCVN 05:2023 (×${result.breakdown.qcvnAirRatio})`;
+  }
+  if (hlEl) hlEl.textContent = result.headline;
+  if (dsEl) dsEl.textContent = result.explanation;
+
+  if (result.triggerProactivePrompt) {
+    const dlg = document.getElementById('proactive-safety-dialog');
+    const reasonBox = document.getElementById('proactive-dlg-reason');
+    if (reasonBox) {
+      reasonBox.innerHTML = `<strong>${esc(result.headline)}</strong><br>${esc(result.explanation)}<br><span class="muted-meta">Cơ sở mô hình: Martínez-Gomariz et al. (2016) · Manning · Copernicus DEM 30m</span>`;
+    }
+    if (dlg && !dlg.open) dlg.showModal();
+  }
+}
+
+async function refreshSosAndAiPillar() {
+  const areaInp = document.getElementById('sos-area-hint');
+  if (areaInp && !areaInp.value.trim()) {
+    areaInp.value = state.vnZoneIntel?.admin?.postMerger?.fullLabel || state.zone.name;
+  }
+  runProactiveAiEvaluation();
+  try {
+    const { lat, lng } = appSafetyState.sosCoords || state.zone;
+    const shRes = await fetch(`/api/sos-dispatch?action=zone_shield_summary&lat=${lat}&lng=${lng}`);
+    const shJson = shRes.ok ? await shRes.json() : null;
+    const cntEl = document.getElementById('sos-zone-squad-count');
+    if (cntEl && shJson?.ok) cntEl.textContent = `${shJson.verifiedSquadsReadyCount}`;
+  } catch {
+    // ignore
+  }
+  await syncCitizenSession();
+}
+
+function bindSosAndAppEvents() {
+  // PWA Install Prompt chuẩn Mobile App
+  window.addEventListener('beforeinstallprompt', (ev) => {
+    ev.preventDefault();
+    appSafetyState.deferredInstallPrompt = ev;
+    const btn = document.getElementById('btn-install-pwa');
+    if (btn) btn.hidden = false;
+  });
+  document.getElementById('btn-install-pwa')?.addEventListener('click', async () => {
+    if (!appSafetyState.deferredInstallPrompt) return;
+    appSafetyState.deferredInstallPrompt.prompt();
+    await appSafetyState.deferredInstallPrompt.userChoice.catch(() => {});
+    appSafetyState.deferredInstallPrompt = null;
+    document.getElementById('btn-install-pwa').hidden = true;
+  });
+
+  // Hỗ trợ deep-link #sos từ PWA App Shortcut
+  if (location.hash === '#sos') {
+    setTimeout(() => switchPillar('sos'), 40);
+  }
+
+  const openAuthModal = () => {
+    if (appSafetyState.citizenProfile) {
+      switchPillar('sos');
+      return;
+    }
+    document.getElementById('citizen-auth-dialog')?.showModal();
+  };
+  document.getElementById('btn-open-account')?.addEventListener('click', openAuthModal);
+  document.getElementById('btn-sos-open-login')?.addEventListener('click', () => {
+    document.getElementById('citizen-auth-dialog')?.showModal();
+  });
+
+  document.querySelectorAll('[data-czauth]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const m = btn.dataset.czauth;
+      document.querySelectorAll('[data-czauth]').forEach((b) => b.classList.toggle('is-active', b === btn));
+      document.getElementById('citizen-login-form').hidden = m !== 'login';
+      document.getElementById('citizen-register-form').hidden = m !== 'register';
+    });
+  });
+
+  document.getElementById('btn-google-quick-auth')?.addEventListener('click', () => {
+    const box = document.getElementById('google-quick-fields');
+    if (box) box.hidden = !box.hidden;
+  });
+
+  document.getElementById('btn-google-quick-confirm')?.addEventListener('click', async () => {
+    const fullName = document.getElementById('gg-quick-name')?.value.trim() || 'Người dùng Google';
+    const email = document.getElementById('gg-quick-email')?.value.trim() || 'congdan.antoan@gmail.com';
+    const res = await fetch('/api/sos-dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'google_auth', quickGoogleProfile: { fullName, email } })
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      showToast(data?.error || 'Không thể đăng nhập bằng Google.');
+      return;
+    }
+    localStorage.setItem(CITIZEN_TOKEN_KEY, data.token);
+    appSafetyState.citizenToken = data.token;
+    document.getElementById('citizen-auth-dialog')?.close();
+    await syncCitizenSession();
+    showToast(`Xin chào ${data.profile.fullName}! Đã kích hoạt bảo vệ vị trí ẩn danh.`);
+  });
+
+  document.getElementById('citizen-login-form')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const fb = document.getElementById('cz-auth-feedback');
+    const res = await fetch('/api/sos-dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'login_citizen',
+        email: document.getElementById('cz-login-email')?.value,
+        password: document.getElementById('cz-login-pass')?.value
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      fb.hidden = false;
+      fb.className = 'form-feedback is-error';
+      fb.textContent = data?.error || 'Đăng nhập thất bại.';
+      return;
+    }
+    fb.hidden = true;
+    localStorage.setItem(CITIZEN_TOKEN_KEY, data.token);
+    appSafetyState.citizenToken = data.token;
+    document.getElementById('citizen-auth-dialog')?.close();
+    await syncCitizenSession();
+    showToast(`Đã đăng nhập: ${data.profile.fullName}`);
+  });
+
+  document.getElementById('citizen-register-form')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const res = await fetch('/api/sos-dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'register_citizen',
+        fullName: document.getElementById('cz-reg-name')?.value,
+        email: document.getElementById('cz-reg-email')?.value,
+        password: document.getElementById('cz-reg-pass')?.value,
+        requestResponderVetting: document.getElementById('cz-reg-volunteer')?.checked
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      showToast(data?.error || 'Không tạo được tài khoản.');
+      return;
+    }
+    localStorage.setItem(CITIZEN_TOKEN_KEY, data.token);
+    appSafetyState.citizenToken = data.token;
+    document.getElementById('citizen-auth-dialog')?.close();
+    await syncCitizenSession();
+    showToast('Đã tạo tài khoản cá nhân và đăng nhập thành công!');
+  });
+
+  document.getElementById('btn-sos-switch-squad')?.addEventListener('click', async () => {
+    const res = await fetch('/api/sos-dispatch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'demo_squad_session', squadId: 'SQUAD-HN-DONGNGAC' })
+    });
+    const data = await res.json();
+    if (res.ok && data?.ok) {
+      localStorage.setItem(CITIZEN_TOKEN_KEY, data.token);
+      appSafetyState.citizenToken = data.token;
+      await syncCitizenSession();
+      showToast('Đã chuyển sang phiên Đội Xung kích Đã xác minh — có thể kiểm thử Hộp thư nhận ca bên phải!');
+    }
+  });
+
+  document.getElementById('btn-sos-logout')?.addEventListener('click', () => {
+    localStorage.removeItem(CITIZEN_TOKEN_KEY);
+    appSafetyState.citizenToken = '';
+    appSafetyState.citizenProfile = null;
+    appSafetyState.myTickets = [];
+    updateCitizenAuthUi();
+    renderMySosTickets();
+    loadResponderInboxIfVerified();
+    showToast('Đã đăng xuất tài khoản.');
+  });
+
+  document.getElementById('btn-sos-use-gps')?.addEventListener('click', () => {
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => {
+        appSafetyState.sosCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        showToast('Đã lấy vị trí GPS cục bộ (chỉ gửi khi bạn bấm nút Gửi SOS).');
+      },
+      () => showToast('Đang dùng vị trí tâm vùng khoanh hiện tại.')
+    );
+  });
+
+  document.getElementById('sos-request-form')?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    if (!appSafetyState.citizenToken) {
+      document.getElementById('citizen-auth-dialog')?.showModal();
+      showToast('Vui lòng đăng nhập tài khoản cá nhân hoặc Google trước khi phát tín hiệu SOS.');
+      return;
+    }
+    const coords = appSafetyState.sosCoords || state.zone;
+    const fb = document.getElementById('sos-form-feedback');
+    const res = await fetch('/api/sos-dispatch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${appSafetyState.citizenToken}`
+      },
+      body: JSON.stringify({
+        action: 'create_sos',
+        lat: coords.lat,
+        lng: coords.lng,
+        category: document.getElementById('sos-category')?.value,
+        dispatchScope: document.getElementById('sos-dispatch-scope')?.value,
+        waterDepthM: Number(document.getElementById('sos-water-depth')?.value || 0.25),
+        areaHint: document.getElementById('sos-area-hint')?.value,
+        note: document.getElementById('sos-note')?.value
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      fb.hidden = false;
+      fb.className = 'form-feedback is-error';
+      fb.textContent = data?.error || 'Không gửi được tín hiệu SOS.';
+      return;
+    }
+    fb.hidden = false;
+    fb.className = 'form-feedback is-ok';
+    fb.textContent = `Đã phát tín hiệu ${data.ticket.id}! Mã đối chiếu an toàn 2 chiều của bạn là ${data.ticket.safetyPin}.`;
+    await syncCitizenSession();
+  });
+
+  document.getElementById('btn-refresh-sos-state')?.addEventListener('click', syncCitizenSession);
+
+  document.getElementById('btn-responder-heartbeat')?.addEventListener('click', async () => {
+    const coords = appSafetyState.sosCoords || state.zone;
+    const res = await fetch('/api/sos-dispatch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${appSafetyState.citizenToken}`
+      },
+      body: JSON.stringify({ action: 'responder_heartbeat', lat: coords.lat, lng: coords.lng })
+    });
+    const data = await res.json();
+    if (res.ok && data?.ok) {
+      showToast(`Đã báo trực tại ô lưới ẩn danh ${data.coarseGeohash5} (tự hủy sau 30 phút, không lưu GPS chính xác).`);
+      loadResponderInboxIfVerified();
+    } else {
+      showToast(data?.error || 'Chỉ Tình nguyện viên đã xác minh mới bật được báo trực.');
+    }
+  });
+
+  // Bật/tắt theo dõi GPS Hộ tống cục bộ trên thiết bị
+  document.getElementById('btn-toggle-ai-escort')?.addEventListener('click', () => {
+    const btn = document.getElementById('btn-toggle-ai-escort');
+    if (appSafetyState.escortWatchId !== null) {
+      navigator.geolocation?.clearWatch(appSafetyState.escortWatchId);
+      appSafetyState.escortWatchId = null;
+      btn.setAttribute('aria-pressed', 'false');
+      btn.textContent = 'Bật GPS Hộ tống';
+      showToast('Đã tắt theo dõi hộ tống GPS.');
+      return;
+    }
+    if (!('geolocation' in navigator)) {
+      showToast('Thiết bị không hỗ trợ cảm biến GPS.');
+      return;
+    }
+    btn.setAttribute('aria-pressed', 'true');
+    btn.textContent = 'Đang hộ tống GPS';
+    appSafetyState.escortWatchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        appSafetyState.sosCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const vKmh = Number.isFinite(pos.coords.speed) && pos.coords.speed >= 0 ? pos.coords.speed * 3.6 : 0;
+        if (vKmh <= 2.0) {
+          if (!appSafetyState.stationarySinceMs) appSafetyState.stationarySinceMs = Date.now();
+        } else {
+          appSafetyState.lastSpeedKmh = vKmh;
+          appSafetyState.stationarySinceMs = null;
+        }
+        const dwellS = appSafetyState.stationarySinceMs ? (Date.now() - appSafetyState.stationarySinceMs) / 1000 : 0;
+        appSafetyState.kinematics = {
+          prevSpeedKmh: Math.max(12, appSafetyState.lastSpeedKmh),
+          currentSpeedKmh: vKmh,
+          stationarySeconds: dwellS
+        };
+        runProactiveAiEvaluation();
+      },
+      () => showToast('Chưa nhận được tín hiệu GPS liên tục — bạn có thể bấm 3 kịch bản kiểm chứng bên dưới.')
+    );
+  });
+
+  // 3 kịch bản kiểm chứng mô hình AI Thủy động lực + Động học thực tế
+  document.querySelectorAll('.js-sim-kinematic').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.sim;
+      if (mode === 'normal_ride') {
+        runProactiveAiEvaluation({
+          elevM: 15,
+          rainMmPerHour: 4,
+          dailyRainMm: 12,
+          nearFloodSpotMeters: 600,
+          kinematics: { prevSpeedKmh: 24, currentSpeedKmh: 24, stationarySeconds: 0 }
+        });
+      } else if (mode === 'dry_redlight') {
+        runProactiveAiEvaluation({
+          elevM: 15,
+          rainMmPerHour: 0,
+          dailyRainMm: 0,
+          nearFloodSpotMeters: 800,
+          kinematics: { prevSpeedKmh: 28, currentSpeedKmh: 0, stationarySeconds: 95 }
+        });
+        showToast('Đường khô ráo: Dừng đèn đỏ 95 giây xác suất chỉ ~0% — Hệ thống KHÔNG báo động giả!');
+      } else if (mode === 'flood_stall') {
+        runProactiveAiEvaluation({
+          elevM: 8.2,
+          rainMmPerHour: 38,
+          dailyRainMm: 85,
+          nearFloodSpotMeters: 45,
+          kinematics: { prevSpeedKmh: 22, currentSpeedKmh: 0, stationarySeconds: 125 }
+        });
+      }
+    });
+  });
+
+  document.getElementById('btn-proactive-im-ok')?.addEventListener('click', () => {
+    document.getElementById('proactive-safety-dialog')?.close();
+    showToast('Đã ghi nhận bạn vẫn an toàn. Không có tín hiệu vị trí nào được gửi đi.');
+  });
+  document.getElementById('btn-proactive-need-sos')?.addEventListener('click', () => {
+    document.getElementById('proactive-safety-dialog')?.close();
+    switchPillar('sos');
+    document.getElementById('sos-note')?.focus();
+  });
+
+  // Sự kiện ủy quyền cho các nút Nhận ca, Đối chiếu PIN, Báo lợi dụng & Xóa trắng tọa độ
+  document.addEventListener('click', async (ev) => {
+    const claimBtn = ev.target.closest('.js-claim-sos-slot');
+    if (claimBtn) {
+      const res = await fetch('/api/sos-dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${appSafetyState.citizenToken}`
+        },
+        body: JSON.stringify({
+          action: 'claim_slot',
+          ticketId: claimBtn.dataset.tid,
+          pledgedFreeSupport: true
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data?.ok) {
+        showToast('Đã khóa 1 chỗ hỗ trợ (cam kết 0 đồng) và mở tọa độ tiếp cận!');
+        await loadResponderInboxIfVerified();
+      } else {
+        showToast(data?.error || 'Không nhận được ca.');
+      }
+      return;
+    }
+
+    const pinBtn = ev.target.closest('.js-verify-sos-pin');
+    if (pinBtn) {
+      const tid = pinBtn.dataset.tid;
+      const pinVal = document.querySelector(`.js-pin-input-${CSS.escape(tid)}`)?.value || '';
+      const res = await fetch('/api/sos-dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${appSafetyState.citizenToken}`
+        },
+        body: JSON.stringify({ action: 'verify_pin', ticketId: tid, pin: pinVal })
+      });
+      const data = await res.json();
+      if (res.ok && data?.ok) {
+        showToast('Đã khớp Mã PIN 4 số 2 chiều tại hiện trường!');
+        await loadResponderInboxIfVerified();
+      } else {
+        showToast(data?.error || 'Mã PIN không khớp.');
+      }
+      return;
+    }
+
+    const resolveBtn = ev.target.closest('.js-resolve-sos');
+    if (resolveBtn) {
+      const res = await fetch('/api/sos-dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${appSafetyState.citizenToken}`
+        },
+        body: JSON.stringify({ action: 'resolve_sos', ticketId: resolveBtn.dataset.tid })
+      });
+      const data = await res.json();
+      if (res.ok && data?.ok) {
+        showToast(data.message);
+        await syncCitizenSession();
+      }
+      return;
+    }
+
+    const abuseBtn = ev.target.closest('.js-report-sos-abuse');
+    if (abuseBtn) {
+      const res = await fetch('/api/sos-dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${appSafetyState.citizenToken}`
+        },
+        body: JSON.stringify({
+          action: 'report_abuse',
+          ticketId: abuseBtn.dataset.tid,
+          responderId: abuseBtn.dataset.rid,
+          reason: 'Người dùng báo cáo đòi tiền / hành vi đáng ngờ'
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data?.ok) {
+        showToast(data.message);
+        await syncCitizenSession();
+      }
+    }
+  });
+
+  syncCitizenSession();
 }
 
 function boot() {

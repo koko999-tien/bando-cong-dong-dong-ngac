@@ -143,7 +143,7 @@ function updateAuthUi(unlocked) {
     ? 'Phiên Bearer Token đang hoạt động. Mọi thao tác sẽ đồng bộ trực tiếp sang Web Chính.'
     : 'Web quản trị tách rời hoàn toàn khỏi trang người dân; mọi lệnh ghi đều ký Bearer Token.';
 
-  ['lock-notice-mod', 'lock-notice-research', 'lock-notice-broadcast'].forEach((id) => {
+  ['lock-notice-mod', 'lock-notice-research', 'lock-notice-broadcast', 'lock-notice-sos'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.hidden = unlocked;
   });
@@ -238,6 +238,16 @@ async function runClusterProbes() {
         return {
           ok: res.ok && data?.ok && Boolean(data?.admin || data?.vn2000Center),
           detail: `HTTP ${res.status} · ${post}${pop != null ? ` · Dân cư R=2km: ${Number(pop).toLocaleString('vi-VN')} người` : ''}`
+        };
+      }
+    },
+    {
+      name: 'Zero-Trust SOS & Privacy Dispatch (/api/sos-dispatch)',
+      run: async () => {
+        const { res, data } = await apiFetch('/api/sos-dispatch?action=health');
+        return {
+          ok: res.ok && data?.ok,
+          detail: `HTTP ${res.status} · MaxSlots=${data?.antiCongestionMaxSlots ?? 2} · ${data?.locationPrivacy || 'ok'}`
         };
       }
     }
@@ -433,6 +443,7 @@ async function syncAdminData() {
   state.reports = commRes.data.reports || [];
   state.moderationMap = commRes.data.moderationMap || {};
   state.auditLog = commRes.data.auditLog || [];
+  syncSosAdminOverview();
   state.studies = rqRes.data?.submissions || [];
 
   if (commRes.data.broadcast?.active && commRes.data.broadcast.message) {
@@ -954,8 +965,91 @@ function bindEvents() {
       } else {
         toast(data?.error || 'Lỗi thẩm định hồ sơ.');
       }
+      return;
+    }
+
+    const vetBtn = ev.target.closest('.js-vet-sos-acc');
+    if (vetBtn) {
+      if (!state.adminToken) return;
+      const { res, data } = await apiFetch('/api/sos-dispatch', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'admin_vet_account',
+          accountId: vetBtn.dataset.id,
+          trustTier: vetBtn.dataset.tier,
+          status: vetBtn.dataset.status || 'active'
+        })
+      });
+      if (res.ok && data?.ok) {
+        toast(`Đã cập nhật quyền ${vetBtn.dataset.tier} cho tài khoản ${vetBtn.dataset.id}.`);
+        syncSosAdminOverview();
+      } else {
+        toast(data?.error || 'Không thể cập nhật quyền tài khoản.');
+      }
     }
   });
+
+  document.getElementById('btn-reload-sos-ops')?.addEventListener('click', syncSosAdminOverview);
+}
+
+async function syncSosAdminOverview() {
+  if (!state.adminToken) return;
+  const { res, data } = await apiFetch('/api/sos-dispatch?action=admin_overview');
+  if (!res.ok || !data?.ok) return;
+
+  const activeSos = (data.tickets || []).filter((t) => !String(t.status).includes('shredded'));
+  const navCnt = document.getElementById('nav-cnt-sos');
+  if (navCnt) navCnt.textContent = String(activeSos.length);
+
+  const tBox = document.getElementById('ops-sos-tickets-list');
+  if (tBox) {
+    tBox.innerHTML =
+      (data.tickets || []).length === 0
+        ? `<p style="font-size:0.82rem;color:#64748B;">Hiện chưa có yêu cầu SOS nào phát sinh.</p>`
+        : data.tickets
+            .map(
+              (t) => `
+              <div class="item-card">
+                <div class="item-card-top">
+                  <h4>${esc(t.categoryLabel)} (${esc(t.id)})</h4>
+                  <span class="badge ${t.shreddedLocation ? 'badge-ok' : 'badge-warn'}">${esc(t.status)} · ${t.slotsFilled}/${t.maxResponders} chỗ</span>
+                </div>
+                <p style="margin:3px 0;font-size:0.78rem;color:#334155;">
+                  Người gửi: <strong>${esc(t.requesterName || '--')}</strong> · Vùng: ${esc(t.areaHint)} · PIN: <code class="mono">${esc(t.safetyPin || '****')}</code>
+                </p>
+                <p style="margin:2px 0;font-size:0.75rem;color:#64748B;">
+                  ${t.shreddedLocation ? 'Đã xóa trắng tọa độ chính xác sau khi đóng ca (Auto-Shred).' : `Tọa độ điều hành: ${t.exactLat}, ${t.exactLng}`}
+                </p>
+                ${
+                  (t.abuseReports || []).length
+                    ? `<p style="margin:4px 0 0;font-size:0.76rem;color:#BE123C;font-weight:700;">CẢNH BÁO VI PHẠM: ${esc(t.abuseReports.map((a) => `${a.responderId}: ${a.reason}`).join(' | '))}</p>`
+                    : ''
+                }
+              </div>`
+            )
+            .join('');
+  }
+
+  const aBox = document.getElementById('ops-sos-accounts-list');
+  if (aBox) {
+    aBox.innerHTML = (data.accounts || [])
+      .map(
+        (a) => `
+        <div class="item-card">
+          <div class="item-card-top">
+            <h4>${esc(a.fullName)} <small class="mono">(${esc(a.id)})</small></h4>
+            <span class="badge ${a.status === 'suspended' ? 'badge-err' : a.trustTier === 'citizen' ? 'badge-info' : 'badge-ok'}">${esc(a.trustTier)} · ${esc(a.status)}</span>
+          </div>
+          <p style="margin:2px 0 6px;font-size:0.76rem;color:#475569;">${esc(a.email)} · ${esc(a.organization || a.authProvider)} · Vi phạm: ${a.abuseFlags || 0}</p>
+          <div class="btn-row">
+            <button type="button" class="btn btn-sm btn-primary js-vet-sos-acc" data-id="${esc(a.id)}" data-tier="verified_responder" data-status="active">Cấp chuẩn Tình nguyện viên</button>
+            <button type="button" class="btn btn-sm js-vet-sos-acc" data-id="${esc(a.id)}" data-tier="official_unit" data-status="active">Cấp chuẩn Đội chính thức</button>
+            <button type="button" class="btn btn-sm btn-danger js-vet-sos-acc" data-id="${esc(a.id)}" data-tier="revoked" data-status="suspended">Khóa vĩnh viễn</button>
+          </div>
+        </div>`
+      )
+      .join('');
+  }
 }
 
 function boot() {

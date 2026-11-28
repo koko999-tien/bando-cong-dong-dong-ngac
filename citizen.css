@@ -329,6 +329,20 @@ a {
   border-color: #F43F5E;
   color: #FFFFFF;
 }
+.tool-pill-accent {
+  background: rgba(13, 148, 136, 0.22);
+  border-color: rgba(45, 212, 191, 0.45);
+  color: #5EEAD4;
+}
+.tool-pill-accent:hover {
+  background: var(--accent-solid);
+  border-color: var(--accent);
+  color: #FFFFFF;
+}
+
+button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:active, .filter-pill:active {
+  transform: scale(0.985);
+}
 
 .offline-strip {
   padding: 7px 14px;
@@ -1959,6 +1973,107 @@ a {
   line-height: 1.55;
 }
 
+/* ================= PHÂN HỆ APP: HỘ TỐNG AI & ĐIỀU PHỐI SOS ZERO-TRUST ================= */
+.sos-hero-banner {
+  background:
+    radial-gradient(circle at 88% 20%, rgba(225, 29, 72, 0.16), transparent 44%),
+    radial-gradient(circle at 12% 85%, rgba(13, 148, 136, 0.16), transparent 42%),
+    linear-gradient(135deg, #090F1E 0%, #16233E 100%);
+}
+.sos-shield-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sos-user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sos-guarantees-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+@media (min-width: 820px) {
+  .sos-guarantees-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.sos-guarantee-item {
+  background: var(--bg-dock);
+  border-radius: var(--radius-md);
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sos-guarantee-item strong {
+  font-size: 0.82rem;
+  color: var(--ink);
+}
+.sos-guarantee-item span {
+  font-size: 0.76rem;
+  color: var(--ink-secondary);
+  line-height: 1.44;
+}
+
+.sos-submit-btn {
+  background: #BE123C;
+  border-color: #BE123C;
+  color: #FFFFFF;
+  font-weight: 700;
+  width: 100%;
+}
+.sos-submit-btn:hover {
+  background: #9F1239;
+  border-color: #9F1239;
+}
+
+.pin-code-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: #090F1E;
+  color: #5EEAD4;
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.google-oauth-btn {
+  background: #FFFFFF;
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+  font-weight: 600;
+  min-height: 42px;
+}
+.google-oauth-btn:hover {
+  background: var(--bg-dock);
+  border-color: #94A3B8;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-muted);
+  font-size: 0.76rem;
+}
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.ai-guardian-card {
+  border-color: #CCFBF1;
+}
+
 /* ================= THANH ĐIỀU HƯỚNG MOBILE ================= */
 .mobile-pillar-nav {
   position: fixed;
@@ -1969,7 +2084,7 @@ a {
   background: var(--bg-chrome);
   border-top: 1px solid var(--border-chrome);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .mob-tab {
@@ -2100,7 +2215,31 @@ a {
   box-shadow: var(--shadow-hud);
 }
 
-/* ================= MÀN HÌNH NHỎ (< 640px) ================= */
+/* ================= MÀN HÌNH NHỎ (< 720px) & LAPTOP GỌN (< 1480px) ================= */
+@media (max-width: 1479px) {
+  .brand-sub-inline,
+  .hide-compact-desk {
+    display: none;
+  }
+  .pillar-btn {
+    padding: 5px 10px;
+    font-size: 0.79rem;
+  }
+}
+
+@media (max-width: 719px) {
+  .tool-pill-label {
+    display: none;
+  }
+  .tool-pill {
+    padding: 4px 9px;
+    min-width: 36px;
+  }
+  .topbar-actions {
+    gap: 5px;
+  }
+}
+
 @media (max-width: 639px) {
   .hud-telemetry-pill { display: none; }
   .map-overlay-controls {

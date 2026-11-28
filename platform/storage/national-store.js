@@ -243,6 +243,40 @@ export function signResearcherToken({ id, email, role = 'researcher', fullName =
   return `rs.${payloadB64}.${sig}`;
 }
 
+export function signCitizenToken({ id, email, fullName = '', authProvider = 'local', trustTier = 'citizen', organization = '' }) {
+  const secret = getAuthSecret();
+  const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
+  const payloadObj = { id, email, fullName, authProvider, trustTier, organization, exp };
+  const payloadB64 = Buffer.from(JSON.stringify(payloadObj), 'utf8').toString('base64url');
+  const sig = crypto.createHmac('sha256', secret).update(`cz.${payloadB64}`).digest('hex');
+  return `cz.${payloadB64}.${sig}`;
+}
+
+export function verifyCitizenToken(request) {
+  const auth = request.headers.get('authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
+  if (!token || !token.startsWith('cz.')) return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  let secret;
+  try {
+    secret = getAuthSecret();
+  } catch {
+    return null;
+  }
+  const expectedSig = crypto.createHmac('sha256', secret).update(`cz.${parts[1]}`).digest('hex');
+  try {
+    const a = Buffer.from(parts[2], 'hex');
+    const b = Buffer.from(expectedSig, 'hex');
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+    const decoded = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+    if (!decoded?.id || !Number.isFinite(decoded.exp) || Date.now() > decoded.exp) return null;
+    return decoded;
+  } catch {
+    return null;
+  }
+}
+
 export function verifyResearcherToken(request) {
   const auth = request.headers.get('authorization') || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7).trim() : '';
@@ -300,6 +334,18 @@ async function readLocalAll() {
   } catch {
     return { researchers: [], submissions: [], publications: [] };
   }
+}
+
+let localWriteChain = Promise.resolve();
+
+async function updateLocalKey(mutatorFn) {
+  localWriteChain = localWriteChain.then(async () => {
+    const cur = await readLocalAll();
+    await mutatorFn(cur);
+    await fs.mkdir(path.dirname(LOCAL_STORE_FILE), { recursive: true });
+    await fs.writeFile(LOCAL_STORE_FILE, JSON.stringify(cur, null, 2), 'utf8');
+  });
+  return localWriteChain;
 }
 
 async function writeLocalAll(data) {
@@ -430,4 +476,45 @@ export async function saveCustomPublications(list) {
   const local = await readLocalAll();
   local.publications = onlyCustom;
   await writeLocalAll(local);
+}
+
+export async function readGenericCollection(collectionKey, fallback = []) {
+  const safeKey = String(collectionKey || '').replace(/[^a-z0-9_-]/gi, '');
+  const backend = detectStorageBackend();
+  if (backend === 'supabase_postgis') {
+    return await readSupabaseCollection(safeKey, fallback);
+  }
+  if (backend === 'cloudflare_d1_edge') {
+    try {
+      const d1 = await readCloudflareD1Collections();
+      return d1?.[safeKey] !== undefined ? d1[safeKey] : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  if (backend === 'vercel_private_blob') {
+    return await readBlobJson(`national/${safeKey}.json`, fallback);
+  }
+  const local = await readLocalAll();
+  return local?.[safeKey] !== undefined ? local[safeKey] : fallback;
+}
+
+export async function writeGenericCollection(collectionKey, value) {
+  const safeKey = String(collectionKey || '').replace(/[^a-z0-9_-]/gi, '');
+  const backend = detectStorageBackend();
+  if (backend === 'supabase_postgis') {
+    await writeSupabaseCollection(safeKey, value);
+    return;
+  }
+  if (backend === 'cloudflare_d1_edge') {
+    await writeCloudflareD1Collection(safeKey, value);
+    return;
+  }
+  if (backend === 'vercel_private_blob') {
+    await writeBlobJson(`national/${safeKey}.json`, value);
+    return;
+  }
+  await updateLocalKey((local) => {
+    local[safeKey] = value;
+  });
 }

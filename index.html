@@ -40,6 +40,10 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
             <span>Bản đồ &amp; Cảnh báo</span>
           </button>
+          <button type="button" class="pillar-btn" data-pillar="sos">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 8v4M12 16h.01"></path></svg>
+            <span>Hộ tống &amp; SOS</span>
+          </button>
           <button type="button" class="pillar-btn" data-pillar="research">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 3h6v5l4.5 9A2 2 0 0 1 17.7 20H6.3a2 2 0 0 1-1.8-3L9 8V3z"></path></svg>
             <span>Cổng Nghiên cứu</span>
@@ -51,13 +55,21 @@
         </nav>
 
         <div class="topbar-actions">
-          <button type="button" id="btn-toggle-large-text" class="tool-pill" aria-pressed="false" title="Bật/tắt chế độ phóng to chữ và nút bấm">
-            <span class="mono-tag" aria-hidden="true">A+</span>
-            <span class="tool-pill-label">Chữ lớn</span>
+          <button type="button" id="btn-install-pwa" class="tool-pill tool-pill-accent" hidden title="Cài đặt thành ứng dụng độc lập trên màn hình chính">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span class="tool-pill-label">Cài App</span>
           </button>
-          <button type="button" class="tool-pill js-open-assistant" title="Giải thích tình hình khu vực theo dữ liệu hiện có">
+          <button type="button" id="btn-open-account" class="tool-pill" aria-label="Tài khoản cá nhân hoặc Google" title="Đăng nhập tài khoản cá nhân hoặc Google">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span id="topbar-account-label" class="tool-pill-label">Tài khoản</span>
+          </button>
+          <button type="button" id="btn-toggle-large-text" class="tool-pill" aria-pressed="false" aria-label="Chế độ chữ lớn" title="Bật/tắt chế độ phóng to chữ và nút bấm">
+            <span class="mono-tag" aria-hidden="true">A+</span>
+            <span class="tool-pill-label hide-compact-desk">Chữ lớn</span>
+          </button>
+          <button type="button" class="tool-pill js-open-assistant" aria-label="Trợ lý dữ liệu" title="Giải thích tình hình khu vực theo dữ liệu hiện có">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-            <span class="tool-pill-label">Trợ lý dữ liệu</span>
+            <span class="tool-pill-label">Trợ lý</span>
           </button>
           <button type="button" id="btn-open-emergency" class="tool-pill tool-pill-danger" title="Tổng đài khẩn cấp quốc gia">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
@@ -541,12 +553,16 @@
               </div>
             </div>
 
-            <!-- THANH TUA CHUỖI ẢNH RADAR MƯA 2 GIỜ QUA (HIỆN KHI BẬT RADAR MƯA) -->
+            <!-- THANH TUA CHUỖI ẢNH RADAR MƯA 2 GIỜ QUA (SVG THUẦN KHÔNG KÝ TỰ UNICODE THÔ) -->
             <div id="radar-timeline-bar" class="radar-timeline-bar" hidden role="region" aria-label="Điều khiển chuỗi thời gian Radar mưa">
               <span class="hydro-sim-tag">Radar 2h</span>
-              <button type="button" id="btn-radar-prev" class="rain-preset-btn" aria-label="Khung trước">◀</button>
-              <button type="button" id="btn-radar-play" class="rain-preset-btn is-active">▶ Phát động</button>
-              <button type="button" id="btn-radar-next" class="rain-preset-btn" aria-label="Khung tiếp">▶|</button>
+              <button type="button" id="btn-radar-prev" class="rain-preset-btn" aria-label="Khung trước">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              </button>
+              <button type="button" id="btn-radar-play" class="rain-preset-btn is-active">Phát động</button>
+              <button type="button" id="btn-radar-next" class="rain-preset-btn" aria-label="Khung tiếp">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
               <span id="radar-frame-time" class="mono-num">--:--</span>
             </div>
 
@@ -903,13 +919,198 @@
 
         <div id="publications-feed-list" class="news-feed-grid"></div>
       </section>
+
+      <!-- ======================================================================= -->
+      <!-- PHÂN HỆ APP MỚI: HỘ TỐNG HÀNH TRÌNH AI THỰC CHỨNG & ĐIỀU PHỐI SOS ZERO-TRUST -->
+      <!-- ======================================================================= -->
+      <section id="pillar-sos" class="pillar-section page-container" hidden aria-label="Hộ tống AI và Điều phối Hỗ trợ Khẩn cấp SOS">
+        <div class="section-banner sos-hero-banner">
+          <div>
+            <h1>Hộ tống Đường đi Thông minh &amp; Điều phối Cứu trợ Chống Tắc đường</h1>
+            <p>Thiết kế chuẩn hóa để vận hành trực tiếp hoặc đóng gói thành Ứng dụng Di động: Bảo vệ tuyệt đối vị trí người dùng bằng ô lưới ẩn danh tự hủy, khóa cứng hạn ngạch tối đa 2 người hỗ trợ tránh ùn tắc và xác thực 2 chiều chống kẻ xấu lợi dụng.</p>
+          </div>
+          <div class="sos-shield-badges">
+            <span class="hud-count-pill mono-num">Ẩn vị trí nền: Geohash-6 (Tự hủy 30p)</span>
+            <span class="hud-count-pill mono-num">Khóa trần: Tối đa 2 chỗ / ca</span>
+          </div>
+        </div>
+
+        <!-- THANH ĐỊNH DANH NGƯỜI DÙNG / GOOGLE & LÁ CHẮN QUYỀN RIÊNG TƯ -->
+        <div class="card-panel sos-identity-strip">
+          <div class="section-head-row">
+            <div class="sos-user-info">
+              <span id="sos-auth-dot" class="dot dot-amber" aria-hidden="true"></span>
+              <div>
+                <strong id="sos-profile-title">Chưa đăng nhập tài khoản cá nhân</strong>
+                <span id="sos-profile-sub" class="muted-meta" style="display:block;">Đăng nhập bằng tài khoản cá nhân hoặc Google để mở tính năng gửi SOS chống báo giả và nhận mã PIN bảo vệ 2 chiều.</span>
+              </div>
+            </div>
+            <div class="form-actions-row">
+              <button type="button" id="btn-sos-open-login" class="btn btn-primary btn-sm">Đăng nhập Cá nhân / Google</button>
+              <button type="button" id="btn-sos-switch-squad" class="btn btn-secondary btn-sm" title="Chuyển sang vai trò Đội xung kích đã xác minh để kiểm thử luồng nhận ca">Chế độ Đội Xung kích (Kiểm thử)</button>
+              <button type="button" id="btn-sos-logout" class="btn btn-secondary btn-sm" hidden>Đăng xuất</button>
+            </div>
+          </div>
+
+          <div class="sos-guarantees-grid">
+            <div class="sos-guarantee-item">
+              <strong>1. Chống tắc đường đám đông (K-Slot Lock)</strong>
+              <span>Không phát loa đại trà. Hệ thống chỉ mở tối đa 2 vị trí hỗ trợ gần nhất và tự động đóng luồng ngay khi đủ người nhận.</span>
+            </div>
+            <div class="sos-guarantee-item">
+              <strong>2. Chống kẻ xấu &amp; dịch vụ chặt chém</strong>
+              <span>Tài khoản lạ không thấy yêu cầu SOS. Chỉ Tình nguyện viên đã thẩm định &amp; cam kết 0 đồng mới nhận ca, đối chiếu PIN 4 số tại chỗ.</span>
+            </div>
+            <div class="sos-guarantee-item">
+              <strong>3. Không bao giờ lộ vị trí người tải App</strong>
+              <span>Không lưu GPS nền của người dùng (<span id="sos-zone-squad-count" class="mono-num">--</span> đội trực trong ô lưới thô; 0 tọa độ lộ ra ngoài). Vị trí phiên tự xóa trắng sau ca.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="research-two-col">
+          <!-- CỘT TRÁI: GỬI YÊU CẦU HỖ TRỢ KHẨN CẤP & TRẠNG THÁI MÃ PIN 2 CHIỀU -->
+          <div class="stack-panel">
+            <form id="sos-request-form" class="card-panel" novalidate>
+              <div class="section-head-row">
+                <h2 class="section-title">Phát Tín hiệu Cần Hỗ trợ Trên Đường (SOS)</h2>
+                <span class="source-tag tone-verified">Kênh kép: Hệ thống + Đội xác minh</span>
+              </div>
+
+              <div class="field-group">
+                <label for="sos-category" class="field-label">Tình huống đang gặp phải <span class="req">*</span></label>
+                <select id="sos-category" class="text-input">
+                  <option value="stalled_vehicle">Xe chết máy / Kẹt giữa đoạn đường ngập (Cần hỗ trợ đẩy/kéo nhẹ)</option>
+                  <option value="medical_heat">Sốc nhiệt / Mệt lả / Cần nước điện giải &amp; điểm nghỉ an toàn</option>
+                  <option value="trapped_deep_water">Nước dâng sâu &ge; 45 cm / Dòng chảy xiết (Chuyển thẳng 112/114)</option>
+                  <option value="landslide_hazard">Sạt lở đất / Cây lớn đổ chắn đường nguy hiểm</option>
+                  <option value="electrical_leak">Nghi rò điện / Dây điện đứt gần mặt nước</option>
+                </select>
+              </div>
+
+              <div class="two-col-fields">
+                <div class="field-group">
+                  <label for="sos-dispatch-scope" class="field-label">Chế độ bảo vệ người gặp nạn</label>
+                  <select id="sos-dispatch-scope" class="text-input">
+                    <option value="verified_peers">Hệ thống + Tối đa 2 Tình nguyện viên Đã xác minh</option>
+                    <option value="official_only">Chỉ Hệ thống &amp; Đội xung kích chính thức (Đi đêm / Đi một mình)</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <label for="sos-water-depth" class="field-label">Mức ngập ước tính tại chỗ</label>
+                  <select id="sos-water-depth" class="text-input">
+                    <option value="0.15">Ngập nhẹ mặt đường (~15 cm)</option>
+                    <option value="0.28" selected>Ngập nửa bánh xe (~25–30 cm)</option>
+                    <option value="0.50">Ngập quá yên / ngang đùi (&ge; 50 cm — Rất nguy hiểm)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="field-group">
+                <div class="field-label-row">
+                  <label for="sos-area-hint" class="field-label">Mô tả vị trí tương đối (chỉ hiện vùng làm mờ 300 m khi chờ nhận)</label>
+                  <button type="button" id="btn-sos-use-gps" class="text-btn">Lấy GPS hiện tại</button>
+                </div>
+                <input type="text" id="sos-area-hint" class="text-input" placeholder="VD: Đoạn gần cổng trường / đầu ngõ lớn...">
+              </div>
+
+              <div class="field-group">
+                <label for="sos-note" class="field-label">Ghi chú nhanh cho đội hỗ trợ</label>
+                <input type="text" id="sos-note" class="text-input" maxlength="220" placeholder="VD: Xe tay ga chết máy, đi 1 người, mặc áo mưa xanh...">
+              </div>
+
+              <div id="sos-form-feedback" class="form-feedback" hidden role="alert"></div>
+              <button type="submit" id="btn-submit-sos" class="btn btn-lg sos-submit-btn">Gửi Yêu cầu Hỗ trợ Bảo mật</button>
+            </form>
+
+            <!-- PHIẾU THEO DÕI CA SOS ĐANG MỞ CỦA TÔI (MÃ PIN 4 SỐ + XÓA TRẮNG TỌA ĐỘ + BÁO KẺ XẤU) -->
+            <div class="card-panel">
+              <div class="section-head-row">
+                <h2 class="section-title">Phiên Hỗ trợ Của Tôi &amp; Mã PIN Đối chiếu 2 Chiều</h2>
+                <button type="button" id="btn-refresh-sos-state" class="text-btn">Cập nhật</button>
+              </div>
+              <div id="my-sos-tickets-box" class="place-list">
+                <p class="muted-body">Bạn chưa có yêu cầu SOS nào đang mở.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- CỘT PHẢI: AI HỘ TỐNG HÀNH TRÌNH THỰC CHỨNG (D×V, MANNING, QCVN) + HỘP THƯ ĐỘI XUNG KÍCH -->
+          <div class="stack-panel">
+            <article class="card-panel ai-guardian-card">
+              <div class="section-head-row">
+                <div>
+                  <h2 class="section-title">AI Hộ tống &amp; Phát hiện Bất thường Hành trình (Thực chứng)</h2>
+                  <span class="muted-meta">Dựa trên thủy động lực học Manning, tiêu chuẩn mất ổn định Martínez-Gomariz (2016) &amp; QCVN 05:2023/BTNMT</span>
+                </div>
+                <button type="button" id="btn-toggle-ai-escort" class="btn btn-sm btn-primary" aria-pressed="false">Bật GPS Hộ tống</button>
+              </div>
+
+              <div class="env-grid">
+                <div class="env-card">
+                  <span class="env-card-label">Vận tốc chảy tràn (Manning)</span>
+                  <strong id="ai-manning-v" class="env-card-value mono-num">0.00 m/s</strong>
+                  <span id="ai-depth-est" class="env-card-desc">Độ sâu ước tính: 0 cm</span>
+                </div>
+                <div class="env-card">
+                  <span class="env-card-label">Tích số bất ổn định (D×V)</span>
+                  <strong id="ai-dv-val" class="env-card-value mono-num">0.000 m²/s</strong>
+                  <span id="ai-stability-lbl" class="env-card-desc">Ngưỡng trượt xe: 0.15 m²/s</span>
+                </div>
+                <div class="env-card">
+                  <span class="env-card-label">Động học di chuyển</span>
+                  <strong id="ai-kinematic-val" class="env-card-value mono-num">Đang chờ GPS</strong>
+                  <span id="ai-dwell-lbl" class="env-card-desc">Phát hiện dừng kẹt &ge; 90 giây</span>
+                </div>
+                <div class="env-card">
+                  <span class="env-card-label">Xác suất cần hỏi thăm</span>
+                  <strong id="ai-distress-prob" class="env-card-value mono-num">8%</strong>
+                  <span id="ai-qcvn-lbl" class="env-card-desc">Đang đối chiếu QCVN 05:2023</span>
+                </div>
+              </div>
+
+              <div id="ai-inference-banner" class="field-status-note">
+                <strong id="ai-inference-headline" style="display:block;color:var(--ink);">Chưa ghi nhận bất thường trên hành trình</strong>
+                <span id="ai-inference-desc">AI chỉ chạy cục bộ trên thiết bị (Edge Inference), không gửi lịch sử đường đi của bạn lên máy chủ khi bình thường.</span>
+              </div>
+
+              <div>
+                <span class="field-hint" style="display:block;margin-bottom:6px;">Kiểm chứng thực nghiệm mô hình AI với 3 kịch bản động học ngoài đời thực:</span>
+                <div class="filter-pills">
+                  <button type="button" class="filter-pill js-sim-kinematic" data-sim="normal_ride">Đi xe 24 km/h bình thường</button>
+                  <button type="button" class="filter-pill js-sim-kinematic" data-sim="dry_redlight">Dừng đèn đỏ 95s đường khô (Chống báo giả)</button>
+                  <button type="button" class="filter-pill js-sim-kinematic" data-sim="flood_stall">Đột ngột kẹt đứng 125s giữa rốn ngập mưa 85mm</button>
+                </div>
+              </div>
+            </article>
+
+            <!-- HỘP THƯ ĐIỀU PHỐI CHỈ MỞ CHO ĐỘI XUNG KÍCH / TÌNH NGUYỆN VIÊN ĐÃ XÁC MINH -->
+            <article class="card-panel">
+              <div class="section-head-row">
+                <div>
+                  <h2 class="section-title">Hộp thư Điều phối Tình nguyện viên Đã xác minh</h2>
+                  <span class="muted-meta">Tài khoản chưa thẩm định hoàn toàn bị chặn xem danh sách này</span>
+                </div>
+                <button type="button" id="btn-responder-heartbeat" class="btn btn-sm btn-secondary">Báo trực Ô lưới 30p</button>
+              </div>
+              <div id="responder-inbox-box" class="place-list">
+                <p class="muted-body">Chỉ mở cho Đội xung kích / Tình nguyện viên đã xác minh danh tính để chống kẻ xấu rình mò vị trí người gặp nạn.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <!-- ================= THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (ĐIỆN THOẠI) ================= -->
+    <!-- ================= THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (ĐIỆN THOẠI — 4 TAB CHUẨN APP) ================= -->
     <nav class="mobile-pillar-nav" aria-label="Điều hướng phân hệ trên điện thoại">
       <button type="button" class="mob-tab is-active" data-pillar="public" aria-current="page">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
         <span>Bản đồ</span>
+      </button>
+      <button type="button" class="mob-tab" data-pillar="sos">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M12 8v4M12 16h.01"></path></svg>
+        <span>SOS &amp; AI</span>
       </button>
       <button type="button" class="mob-tab" data-pillar="research">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 3h6v5l4.5 9A2 2 0 0 1 17.7 20H6.3a2 2 0 0 1-1.8-3L9 8V3z"></path></svg>
@@ -962,6 +1163,94 @@
         <a class="emerg-call-btn" href="tel:114"><strong>114 — Cứu hộ Cứu nạn &amp; PCCC</strong><span>Hỗ trợ người mắc kẹt trong vùng ngập / sự cố cháy nổ</span></a>
         <a class="emerg-call-btn" href="tel:113"><strong>113 — Cảnh sát Phản ứng Nhanh</strong><span>Hỗ trợ an ninh trật tự khẩn cấp</span></a>
         <a class="emerg-call-btn" href="tel:19001288"><strong>1900 1288 / 1900 6769 — Tổng đài Điện lực</strong><span>Báo sự cố rò điện, đứt dây điện khi mưa bão</span></a>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ================= HỘP THOẠI ĐĂNG NHẬP TÀI KHOẢN CÁ NHÂN HOẶC GOOGLE ================= -->
+  <dialog id="citizen-auth-dialog" class="citizen-dialog" aria-labelledby="cz-auth-title">
+    <div class="dialog-head">
+      <div>
+        <h2 id="cz-auth-title">Đăng nhập Ứng dụng An toàn Cá nhân</h2>
+        <span class="muted-meta">Xác thực danh tính chống báo giả &amp; bảo vệ kết nối cứu trợ 2 chiều</span>
+      </div>
+      <button type="button" class="icon-close" data-close-dialog="citizen-auth-dialog" aria-label="Đóng">×</button>
+    </div>
+    <div class="dialog-body">
+      <div class="google-signin-box">
+        <div id="google-gsi-mount"></div>
+        <button type="button" id="btn-google-quick-auth" class="btn btn-full google-oauth-btn">
+          <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.3-1.6 3.8-5.5 3.8-3.3 0-6-2.7-6-6s2.7-6 6-6c1.9 0 3.1.8 3.8 1.5l2.6-2.5C16.8 3.4 14.6 2.5 12 2.5 6.8 2.5 2.5 6.8 2.5 12s4.3 9.5 9.5 9.5c5.5 0 9.1-3.8 9.1-9.2 0-.6-.1-1.1-.2-1.6H12z"/></svg>
+          <span>Tiếp tục nhanh bằng Tài khoản Google</span>
+        </button>
+        <div id="google-quick-fields" class="stack-form" hidden style="margin-top:8px;">
+          <div class="two-col-fields">
+            <input type="text" id="gg-quick-name" class="text-input" autocomplete="name" placeholder="Tên hiển thị Google của bạn">
+            <input type="email" id="gg-quick-email" class="text-input" autocomplete="email" placeholder="ten.ban@gmail.com">
+          </div>
+          <button type="button" id="btn-google-quick-confirm" class="btn btn-primary btn-sm">Xác nhận phiên Google</button>
+        </div>
+      </div>
+
+      <div class="auth-divider"><span>hoặc dùng Tài khoản Cá nhân riêng</span></div>
+
+      <div class="segmented-switch auth-mode-switch" role="tablist">
+        <button type="button" class="seg-btn is-active" data-czauth="login">Đăng nhập</button>
+        <button type="button" class="seg-btn" data-czauth="register">Tạo tài khoản mới</button>
+      </div>
+
+      <form id="citizen-login-form" class="stack-form">
+        <div class="field-group">
+          <label for="cz-login-email" class="field-label">Email cá nhân</label>
+          <input type="email" id="cz-login-email" class="text-input" autocomplete="email" required placeholder="ban@email.com">
+        </div>
+        <div class="field-group">
+          <label for="cz-login-pass" class="field-label">Mật khẩu</label>
+          <input type="password" id="cz-login-pass" class="text-input" autocomplete="current-password" required minlength="8" placeholder="Tối thiểu 8 ký tự (cho phép dán)">
+        </div>
+        <div id="cz-auth-feedback" class="form-feedback" hidden role="alert"></div>
+        <button type="submit" class="btn btn-primary btn-full">Đăng nhập</button>
+      </form>
+
+      <form id="citizen-register-form" class="stack-form" hidden>
+        <div class="field-group">
+          <label for="cz-reg-name" class="field-label">Họ và tên <span class="req">*</span></label>
+          <input type="text" id="cz-reg-name" class="text-input" autocomplete="name" required placeholder="VD: Nguyễn Minh Tiến">
+        </div>
+        <div class="two-col-fields">
+          <div class="field-group">
+            <label for="cz-reg-email" class="field-label">Email <span class="req">*</span></label>
+            <input type="email" id="cz-reg-email" class="text-input" autocomplete="email" required placeholder="ban@email.com">
+          </div>
+          <div class="field-group">
+            <label for="cz-reg-pass" class="field-label">Mật khẩu (&ge; 8 ký tự) <span class="req">*</span></label>
+            <input type="password" id="cz-reg-pass" class="text-input" autocomplete="new-password" required minlength="8" placeholder="Cho phép trình quản lý mật khẩu">
+          </div>
+        </div>
+        <label class="toggle-check">
+          <input type="checkbox" id="cz-reg-volunteer">
+          <span>Đăng ký hồ sơ Tình nguyện viên hỗ trợ cộng đồng (Chờ Cổng Quản trị thẩm định danh tính trước khi được nhận ca).</span>
+        </label>
+        <button type="submit" class="btn btn-primary btn-full">Tạo tài khoản &amp; Đăng nhập</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- ================= HỘP THOẠI AI HỎI THĂM AN TOÀN CHỦ ĐỘNG (PROACTIVE CHECK-IN) ================= -->
+  <dialog id="proactive-safety-dialog" class="citizen-dialog" aria-labelledby="proactive-dlg-title">
+    <div class="dialog-head">
+      <div>
+        <h2 id="proactive-dlg-title">Kiểm tra An toàn Chủ động (AI Hộ tống)</h2>
+        <span class="muted-meta">Phát hiện dừng bất thường trong vùng có nguy cơ vật lý cao</span>
+      </div>
+      <button type="button" class="icon-close" data-close-dialog="proactive-safety-dialog" aria-label="Đóng">×</button>
+    </div>
+    <div class="dialog-body">
+      <div id="proactive-dlg-reason" class="route-reason-box"></div>
+      <p class="muted-body">Hệ thống KHÔNG tự ý phát tín hiệu vị trí của bạn nếu chưa có sự đồng ý. Hãy chọn trạng thái hiện tại:</p>
+      <div class="form-actions-row">
+        <button type="button" id="btn-proactive-im-ok" class="btn btn-secondary">Tôi vẫn an toàn (Tắt nhắc)</button>
+        <button type="button" id="btn-proactive-need-sos" class="btn btn-primary">Tôi đang gặp sự cố — Mở gửi SOS</button>
       </div>
     </div>
   </dialog>

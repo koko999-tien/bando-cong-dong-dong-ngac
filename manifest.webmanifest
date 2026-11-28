@@ -1,18 +1,32 @@
 {
-  "name": "Bản đồ Cộng đồng Mở — ĐH Mỏ - Địa chất (P. Đông Ngạc)",
-  "short_name": "Bản đồ Đông Ngạc",
-  "description": "Bản đồ cộng đồng cảnh báo ngập úng, nắng nóng và điểm trú an toàn trong bán kính 2 km quanh Trường ĐH Mỏ - Địa chất.",
+  "name": "VN Resilience Atlas — Bản đồ Địa không gian & Hộ tống An toàn Thiên tai",
+  "short_name": "VN Resilience",
+  "description": "Ứng dụng Địa không gian, Cảnh báo Thiên tai, Hộ tống Đường đi bằng AI Thủy động lực học & Điều phối SOS Chống Tắc đường Việt Nam.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#0f766e",
+  "orientation": "portrait-primary",
+  "background_color": "#090F1E",
+  "theme_color": "#090F1E",
   "lang": "vi",
+  "categories": ["navigation", "weather", "utilities", "government"],
   "icons": [
     {
       "src": "./icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Hộ tống AI & Gửi SOS Khẩn cấp",
+      "short_name": "SOS An toàn",
+      "url": "./index.html#sos"
+    },
+    {
+      "name": "Bản đồ Ngập & Cảnh báo Vùng",
+      "short_name": "Bản đồ",
+      "url": "./index.html#public"
     }
   ]
 }

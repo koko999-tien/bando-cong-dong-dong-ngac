@@ -26,6 +26,11 @@ import {
 } from '../platform/gis/hydro-surface.js';
 import { lookupCentralMeridian, wgs84ToVn2000Local, vn2000ToWgs84Local } from '../platform/gis/vn2000.js';
 import { GET as vnGisGET } from '../api/vn-gis.js';
+import { GET as sosGET, POST as sosPOST } from '../api/sos-dispatch.js';
+import {
+  computeHydrodynamicInstability,
+  evaluateUserDistressProbability
+} from '../platform/ai/distress-inference.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -283,12 +288,205 @@ try {
     'Bài nghiên cứu sau khi duyệt phải xuất hiện tự động trên Phần 3'
   );
 
-  console.log('VERIFIED VIETNAM NATIONAL 3-PILLAR PLATFORM TESTS PASSED:', {
+  // =========================================================================
+  // 5. KIỂM TOÁN BẢO MẬT ZERO-TRUST SOS (CHỐNG TẮC ĐƯỜNG, CHỐNG KẺ XẤU, ẨN VỊ TRÍ) & AI THỰC CHỨNG
+  // =========================================================================
+  const mkSosPost = (body, headers = {}) =>
+    new Request('http://localhost/api/sos-dispatch', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-forwarded-for': '198.51.100.88', ...headers },
+      body: JSON.stringify(body)
+    });
+
+  // 5A. Không ai xem được bản đồ vị trí người tải App (exposedUserCoordinates === 0)
+  const shieldRes = await (await sosGET(new Request('http://localhost/api/sos-dispatch?action=zone_shield_summary&lat=21.072514&lng=105.77387'))).json();
+  assert.equal(shieldRes.ok, true);
+  assert.equal(shieldRes.exposedUserCoordinates, 0, 'Tuyệt đối không lộ bất kỳ tọa độ người dùng nào');
+
+  // 5B. Đăng nhập Google cho người gặp nạn & Đăng ký tài khoản thường (kẻ lạ chưa xác minh)
+  const victimAuth = await (
+    await sosPOST(mkSosPost({ action: 'google_auth', quickGoogleProfile: { fullName: 'Nguyễn An Toàn', email: 'antoan.user@gmail.com' } }))
+  ).json();
+  assert.equal(victimAuth.ok, true);
+
+  const strangerAuth = await (
+    await sosPOST(
+      mkSosPost({
+        action: 'register_citizen',
+        fullName: 'Tài Khoản Chưa Duyệt',
+        email: 'stranger@example.vn',
+        password: 'Password#12345',
+        requestResponderVetting: true
+      })
+    )
+  ).json();
+  assert.equal(strangerAuth.ok, true);
+  assert.equal(strangerAuth.profile.trustTier, 'pending_responder');
+
+  // Kẻ lạ chưa được Ops Console thẩm định CỐ TÌNH đọc hộp thư SOS -> BỊ CHẶN 403!
+  const blockedInbox = await sosGET(
+    new Request('http://localhost/api/sos-dispatch?action=responder_inbox&lat=21.0725&lng=105.7738', {
+      headers: { Authorization: `Bearer ${strangerAuth.token}` }
+    })
+  );
+  assert.equal(blockedInbox.status, 403, 'Tài khoản chưa thẩm định tuyệt đối không được xem danh sách người cần cứu trợ');
+
+  // 5C. Sự cố ngập quá sâu (>= 55 cm) -> Tự động khóa luồng dân sự (maxResponders = 0) chuyển thẳng 112!
+  const deepSos = await (
+    await sosPOST(
+      mkSosPost(
+        { action: 'create_sos', lat: 21.0725, lng: 105.7738, category: 'trapped_deep_water', waterDepthM: 0.55 },
+        { Authorization: `Bearer ${victimAuth.token}` }
+      )
+    )
+  ).json();
+  assert.equal(deepSos.ticket.maxResponders, 0, 'Ngập nguy hiểm tính mạng phải khóa luồng cá nhân tự phát');
+  assert.equal(deepSos.ticket.escalate112, true);
+
+  // 5D. Sự cố chết máy thông thường -> Khóa cứng K=2 chỗ chống tắc đường + Làm mờ tọa độ trước khi nhận
+  const stallSos = await (
+    await sosPOST(
+      mkSosPost(
+        { action: 'create_sos', lat: 21.072514, lng: 105.77387, category: 'stalled_vehicle', waterDepthM: 0.26, areaHint: 'Đầu Phố Viên' },
+        { Authorization: `Bearer ${victimAuth.token}` }
+      )
+    )
+  ).json();
+  assert.equal(stallSos.ticket.maxResponders, 2);
+  assert.equal(stallSos.ticket.safetyPin.length, 4, 'Phải sinh Mã PIN đối chiếu 4 chữ số');
+
+  // Phiên Đội xung kích 1 xem hộp thư trước khi nhận: CHỈ thấy tọa độ làm mờ, KHÔNG thấy tọa độ thật!
+  const squad1 = await (await sosPOST(mkSosPost({ action: 'demo_squad_session', squadId: 'SQUAD-HN-DONGNGAC' }))).json();
+  const inboxBefore = await (
+    await sosGET(
+      new Request('http://localhost/api/sos-dispatch?action=responder_inbox&lat=21.0725&lng=105.7738', {
+        headers: { Authorization: `Bearer ${squad1.token}` }
+      })
+    )
+  ).json();
+  const seenTicket = inboxBefore.tickets.find((t) => t.id === stallSos.ticket.id);
+  assert.ok(seenTicket, 'Đội xung kích cùng ô Geohash phải thấy ca đang mở');
+  assert.equal(seenTicket.locationUnlocked, false, 'Trước khi nhận ca tuyệt đối không mở khóa tọa độ chính xác');
+  assert.equal(seenTicket.exactLat, undefined, 'Không được trả exactLat khi chưa khóa slot');
+  assert.equal(seenTicket.safetyPin, undefined, 'Người ứng cứu không được biết trước safetyPin của nạn nhân');
+
+  // Ops Console duyệt thêm 2 tình nguyện viên để kiểm chứng khóa trần K=2 chỗ chống ùn tắc
+  const r2Reg = await (
+    await sosPOST(mkSosPost({ action: 'register_citizen', fullName: 'TNV Hai', email: 'tnv2@vn.org', password: 'Password#12345' }))
+  ).json();
+  const r3Reg = await (
+    await sosPOST(mkSosPost({ action: 'register_citizen', fullName: 'TNV Ba', email: 'tnv3@vn.org', password: 'Password#12345' }))
+  ).json();
+  await sosPOST(
+    mkSosPost(
+      { action: 'admin_vet_account', accountId: r2Reg.profile.id, trustTier: 'verified_responder', status: 'active' },
+      { Authorization: 'Bearer local-dev-admin-token' }
+    )
+  );
+  await sosPOST(
+    mkSosPost(
+      { action: 'admin_vet_account', accountId: r3Reg.profile.id, trustTier: 'verified_responder', status: 'active' },
+      { Authorization: 'Bearer local-dev-admin-token' }
+    )
+  );
+  const r2Login = await (await sosPOST(mkSosPost({ action: 'login_citizen', email: 'tnv2@vn.org', password: 'Password#12345' }))).json();
+  const r3Login = await (await sosPOST(mkSosPost({ action: 'login_citizen', email: 'tnv3@vn.org', password: 'Password#12345' }))).json();
+
+  // Người 1 nhận chỗ (1/2) -> Mở khóa tọa độ phiên
+  const claim1 = await (
+    await sosPOST(
+      mkSosPost({ action: 'claim_slot', ticketId: stallSos.ticket.id, pledgedFreeSupport: true }, { Authorization: `Bearer ${squad1.token}` })
+    )
+  ).json();
+  assert.equal(claim1.ticket.slotsFilled, 1);
+  assert.equal(claim1.ticket.locationUnlocked, true);
+
+  // Người 2 nhận chỗ (2/2) -> Đủ hạn ngạch -> Chuyển sang locked_full
+  const claim2 = await (
+    await sosPOST(
+      mkSosPost({ action: 'claim_slot', ticketId: stallSos.ticket.id, pledgedFreeSupport: true }, { Authorization: `Bearer ${r2Login.token}` })
+    )
+  ).json();
+  assert.equal(claim2.ticket.slotsFilled, 2);
+  assert.equal(claim2.ticket.status, 'locked_full');
+
+  // Người 3 cố bấm nhận thêm -> BỊ CHẶN 409 CONFLICT (Chống kéo đám đông gây tắc đường!)
+  const claim3Res = await sosPOST(
+    mkSosPost({ action: 'claim_slot', ticketId: stallSos.ticket.id, pledgedFreeSupport: true }, { Authorization: `Bearer ${r3Login.token}` })
+  );
+  assert.equal(claim3Res.status, 409, 'Đủ 2 người hỗ trợ phải khóa cứng không cho người thứ 3 nhận thêm gây tắc đường');
+
+  // Đối chiếu PIN 4 số tại hiện trường
+  const badPinRes = await sosPOST(
+    mkSosPost({ action: 'verify_pin', ticketId: stallSos.ticket.id, pin: '0000' }, { Authorization: `Bearer ${squad1.token}` })
+  );
+  if (stallSos.ticket.safetyPin !== '0000') assert.equal(badPinRes.status, 400);
+  const goodPin = await (
+    await sosPOST(
+      mkSosPost({ action: 'verify_pin', ticketId: stallSos.ticket.id, pin: stallSos.ticket.safetyPin }, { Authorization: `Bearer ${squad1.token}` })
+    )
+  ).json();
+  assert.equal(goodPin.ok, true);
+
+  // Nạn nhân báo cáo TNV 2 đòi tiền chặt chém -> Khóa vĩnh viễn TNV 2 ngay lập tức!
+  const abuseRes = await (
+    await sosPOST(
+      mkSosPost(
+        { action: 'report_abuse', ticketId: stallSos.ticket.id, responderId: r2Reg.profile.id, reason: 'Đòi phí kéo xe trái cam kết' },
+        { Authorization: `Bearer ${victimAuth.token}` }
+      )
+    )
+  ).json();
+  assert.equal(abuseRes.ok, true);
+  const bannedCheck = await sosGET(
+    new Request('http://localhost/api/sos-dispatch?action=responder_inbox&lat=21.0725&lng=105.7738', {
+      headers: { Authorization: `Bearer ${r2Login.token}` }
+    })
+  );
+  assert.equal(bannedCheck.status, 403, 'Tài khoản bị tố cáo lợi dụng phải bị tước quyền ngay lập tức');
+
+  // Nạn nhân xác nhận đã an toàn -> Tọa độ thật bị XÓA TRẮNG ngay lập tức (Auto-Shred)!
+  const resolved = await (
+    await sosPOST(mkSosPost({ action: 'resolve_sos', ticketId: stallSos.ticket.id }, { Authorization: `Bearer ${victimAuth.token}` }))
+  ).json();
+  assert.equal(resolved.ticket.shreddedLocation, true);
+  assert.equal(resolved.ticket.locationUnlocked, false);
+  assert.equal(resolved.ticket.exactLat, undefined, 'Sau khi kết thúc ca, tọa độ chính xác phải bị xóa trắng hoàn toàn');
+
+  // 5E. Kiểm chứng mô hình AI Thủy động lực (Manning + Martínez-Gomariz 2016) & Chống báo động giả
+  const dryHydro = computeHydrodynamicInstability({ elevM: 15, medianElevM: 13.5, rainMmPerHour: 0, dailyRainMm: 0 });
+  const redLightCheck = evaluateUserDistressProbability({
+    hydro: dryHydro,
+    kinematics: { prevSpeedKmh: 28, currentSpeedKmh: 0, stationarySeconds: 95 }
+  });
+  assert.equal(redLightCheck.triggerProactivePrompt, false, 'Dừng đèn đỏ 95 giây ở đường khô ráo tuyệt đối KHÔNG được báo động giả');
+
+  const floodHydro = computeHydrodynamicInstability({
+    elevM: 8.0,
+    medianElevM: 13.5,
+    minElevM: 7.2,
+    slopeDeg: 1.8,
+    rainMmPerHour: 40,
+    dailyRainMm: 88,
+    nearFloodSpotMeters: 40
+  });
+  assert.ok(floodHydro.depthM >= 0.24 && floodHydro.dvProduct >= 0.15, 'Rốn ngập mưa lớn phải vượt ngưỡng mất ổn định xe hai bánh');
+  const stallAnomaly = evaluateUserDistressProbability({
+    hydro: floodHydro,
+    slopeDeg: 1.8,
+    dailyRainMm: 88,
+    kinematics: { prevSpeedKmh: 22, currentSpeedKmh: 0, stationarySeconds: 125 }
+  });
+  assert.equal(stallAnomaly.triggerProactivePrompt, true, 'Đột ngột dừng kẹt 125s giữa rốn ngập sâu phải kích hoạt hỏi thăm an toàn chủ động');
+
+  console.log('VERIFIED VIETNAM NATIONAL 4-PILLAR + ZERO-TRUST SOS + HYDRO-AI TESTS PASSED:', {
     provincesCovered: uniqueProvinces.size,
     dongNgacPointsInZone: inDongNgac.length,
     daNangPublishedAfterReview: afterDaNang.features.length,
     canThoZeroLagIsolation: afterCanTho.features.length,
-    part3PublishedResearchInCentral: pubRes.items.length
+    zeroExposedUserCoords: shieldRes.exposedUserCoordinates === 0,
+    antiCongestionSlotCap2: claim3Res.status === 409,
+    proactiveAiDistressPct: stallAnomaly.probabilityPct
   });
 } finally {
   await fs.rm(localSimPath, { force: true }).catch(() => {});

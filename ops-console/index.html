@@ -55,8 +55,12 @@
         <button type="button" class="ops-nav-btn" data-view="broadcast">
           <span>4. Phát Cảnh báo Khẩn cấp</span>
         </button>
+        <button type="button" class="ops-nav-btn" data-view="sos">
+          <span>5. Điều phối SOS &amp; Duyệt TNV</span>
+          <span id="nav-cnt-sos" class="nav-count">0</span>
+        </button>
         <button type="button" class="ops-nav-btn" data-view="sandbox">
-          <span>5. API Sandbox &amp; Nhật ký</span>
+          <span>6. API Sandbox &amp; Nhật ký</span>
         </button>
       </nav>
 
@@ -457,6 +461,8 @@
                 <option value="GET|/api/research-portal?action=review_queue">GET /api/research-portal?action=review_queue (Yêu cầu Bearer)</option>
                 <option value="GET|/api/vn-gis?action=zone_intel&lat=21.072514&lng=105.77387&radiusKm=2">GET /api/vn-gis?action=zone_intel (Địa chính + Dân số + VN2000)</option>
                 <option value="GET|/api/vn-gis?action=wgs84_to_vn2000&lat=16.030263&lng=107.904724&centralMeridian=107.75&zoneWidth=3">GET /api/vn-gis?action=wgs84_to_vn2000</option>
+                <option value="GET|/api/sos-dispatch?action=zone_shield_summary&lat=21.072514&lng=105.77387">GET /api/sos-dispatch?action=zone_shield_summary (Zero-Standing-Location)</option>
+                <option value="GET|/api/sos-dispatch?action=admin_overview">GET /api/sos-dispatch?action=admin_overview (Yêu cầu Bearer)</option>
                 <option value="GET|https://vn-resilience-api.vn-resilience-edge.workers.dev/health">GET Cloudflare Edge Worker (/health)</option>
               </select>
             </div>
@@ -500,6 +506,41 @@
             </table>
           </div>
         </article>
+      </section>
+
+      <!-- ================= VIEW 5B: ZERO-TRUST SOS & RESPONDER VETTING ================= -->
+      <section id="view-sos" class="ops-view" hidden>
+        <div class="view-head">
+          <div>
+            <h1>Giám sát Điều phối SOS Chống Tắc đường &amp; Thẩm định Tình nguyện viên</h1>
+            <p>Quản lý hạn ngạch K=2 chỗ hỗ trợ, tự hủy tọa độ sau ca và duyệt/khóa quyền Tình nguyện viên chống kẻ xấu trục lợi.</p>
+          </div>
+          <button type="button" id="btn-reload-sos-ops" class="btn btn-primary">Đồng bộ SOS &amp; Tài khoản</button>
+        </div>
+
+        <div id="lock-notice-sos" class="lock-banner">
+          Mở khóa ADMIN_PASSCODE ở cột trái để xem chi tiết ca SOS thời gian thực, cấp huy hiệu Tình nguyện viên xác minh hoặc khóa vĩnh viễn tài khoản vi phạm.
+        </div>
+
+        <div class="two-col-equal">
+          <article class="card">
+            <div class="card-head">
+              <h2 class="card-title">Danh sách Ca SOS &amp; Trạng thái Khóa Luồng</h2>
+            </div>
+            <div id="ops-sos-tickets-list">
+              <p style="font-size:0.82rem;color:#64748B;">Mở khóa quyền Quản trị để tải danh sách điều phối SOS.</p>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2 class="card-title">Thẩm định Đội Xung kích / Tình nguyện viên (Anti-Scam)</h2>
+            </div>
+            <div id="ops-sos-accounts-list">
+              <p style="font-size:0.82rem;color:#64748B;">Mở khóa quyền Quản trị để duyệt hoặc thu hồi quyền cứu trợ.</p>
+            </div>
+          </article>
+        </div>
       </section>
     </main>
   </div>

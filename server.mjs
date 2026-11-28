@@ -310,6 +310,20 @@ const server = http.createServer(async (req, res) => {
       res.end();
       return;
     }
+    if ((req.url || '').startsWith('/api/sos-dispatch')) {
+      const mod = await import('./api/sos-dispatch.js');
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      const webReq = new Request(`http://localhost:${PORT}${req.url}`, {
+        method: req.method,
+        headers: req.headers,
+        body: ['GET', 'HEAD', 'OPTIONS'].includes(req.method) ? undefined : Buffer.concat(chunks)
+      });
+      const webRes = req.method === 'POST' ? await mod.POST(webReq) : req.method === 'OPTIONS' ? await mod.OPTIONS(webReq) : await mod.GET(webReq);
+      res.writeHead(webRes.status, Object.fromEntries(webRes.headers.entries()));
+      res.end(await webRes.text());
+      return;
+    }
     if ((req.url || '').startsWith('/api/vn-gis')) {
       const mod = await import('./api/vn-gis.js');
       const webReq = new Request(`http://localhost:${PORT}${req.url}`, {
