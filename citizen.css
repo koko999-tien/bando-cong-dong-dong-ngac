@@ -2074,6 +2074,227 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   border-color: #CCFBF1;
 }
 
+/* ================= ZERO-TYPING ONE-THUMB CRISIS CONTROLS ================= */
+.hud-sos-pill {
+  border-color: rgba(244, 63, 94, 0.55);
+  background: rgba(136, 19, 55, 0.86);
+  color: #FFE4E6;
+}
+.hud-sos-pill:hover {
+  background: #BE123C;
+  border-color: #FB7185;
+  color: #FFFFFF;
+}
+.sos-quick-jump {
+  background: #BE123C;
+  border-color: #BE123C;
+  color: #FFFFFF;
+}
+.sos-quick-jump:hover {
+  background: #9F1239;
+  color: #FFFFFF;
+}
+
+.sos-autoloc-bar {
+  background: var(--bg-dock);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sos-autoloc-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.sos-autoloc-main strong {
+  display: block;
+  font-size: 0.83rem;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+.sos-sit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.sos-sit-tile {
+  min-height: 68px;
+  padding: 11px 12px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-surface);
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+.sos-sit-tile:hover {
+  border-color: #94A3B8;
+  background: var(--bg-dock);
+}
+.sos-sit-tile.is-active {
+  border-color: #BE123C;
+  background: #FFF1F2;
+  box-shadow: 0 0 0 1px #BE123C;
+}
+.sos-sit-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.sos-sit-icon.is-warn { background: #FFF7ED; color: #C2410C; }
+.sos-sit-icon.is-ok { background: #ECFDF5; color: #059669; }
+.sos-sit-icon.is-danger { background: #FFE4E6; color: #BE123C; }
+.sos-sit-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.sos-sit-copy strong {
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.28;
+}
+.sos-sit-copy span {
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+  line-height: 1.3;
+}
+
+.depth-tap-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.depth-tap-btn {
+  min-height: 44px;
+  padding: 5px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-dock);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.77rem;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.depth-tap-btn:hover { border-color: #0284C7; }
+.depth-tap-btn.is-active {
+  background: #0284C7;
+  border-color: #0284C7;
+  color: #FFFFFF;
+}
+
+.scope-tap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.scope-tap-btn {
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-dock);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.77rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.scope-tap-btn.is-active {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #FFFFFF;
+}
+
+.quick-context-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ctx-chip {
+  min-height: 38px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-dock);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.ctx-chip:hover { border-color: var(--accent); }
+.ctx-chip.is-active {
+  background: var(--accent-solid);
+  border-color: var(--accent-solid);
+  color: #FFFFFF;
+}
+.ctx-chip-mic.is-recording {
+  background: #BE123C;
+  border-color: #BE123C;
+  color: #FFFFFF;
+}
+
+.optional-note-details {
+  margin-top: 2px;
+}
+.optional-note-details summary {
+  display: inline-block;
+}
+
+.sos-giant-cta {
+  width: 100%;
+  min-height: 62px;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #E11D48 0%, #BE123C 100%);
+  border: 1px solid #9F1239;
+  color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  box-shadow: 0 8px 20px -4px rgba(190, 18, 60, 0.45);
+}
+.sos-giant-cta:hover {
+  background: linear-gradient(135deg, #BE123C 0%, #9F1239 100%);
+}
+.sos-cta-main {
+  font-size: 0.96rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.sos-cta-sub {
+  font-size: 0.73rem;
+  font-weight: 500;
+  color: #FFE4E6;
+}
+
 /* ================= THANH ĐIỀU HƯỚNG MOBILE ================= */
 .mobile-pillar-nav {
   position: fixed;
@@ -2215,6 +2436,12 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
   box-shadow: var(--shadow-hud);
 }
 
+@media (max-width: 1519px) {
+  .hud-telemetry-pill {
+    display: none;
+  }
+}
+
 /* ================= MÀN HÌNH NHỎ (< 720px) & LAPTOP GỌN (< 1480px) ================= */
 @media (max-width: 1479px) {
   .brand-sub-inline,
@@ -2241,16 +2468,25 @@ button:active, .btn:active, .pillar-btn:active, .subtab-btn:active, .zone-chip:a
 }
 
 @media (max-width: 639px) {
-  .hud-telemetry-pill { display: none; }
-  .map-overlay-controls {
+  .hud-telemetry-pill,
+  .hud-sos-pill { display: none; }
+  .map-hud-topbar {
     top: 8px;
     left: 8px;
     right: 8px;
+  }
+  .map-overlay-controls {
+    width: 100%;
     justify-content: space-between;
+    gap: 5px;
   }
   .hud-basemap-seg .map-ctrl-btn {
-    padding: 3px 7px;
-    font-size: 0.7rem;
+    padding: 3px 6px;
+    font-size: 0.69rem;
+  }
+  .hud-layers-trigger {
+    padding: 4px 8px;
+    font-size: 0.72rem;
   }
   .zone-suggestions { right: 0; }
 }

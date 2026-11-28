@@ -306,7 +306,28 @@ function switchPublicTab(tabName) {
     renderHousingCheck();
   } else if (next === 'route') {
     setTimeout(() => routeMap?.invalidateSize(), 60);
+  } else if (next === 'report') {
+    const locInp = document.getElementById('rep-location-name');
+    if (locInp && !locInp.value.trim()) {
+      locInp.value = resolveAutoLocationLabel(state.reportPin.lat, state.reportPin.lng);
+    }
   }
+}
+
+function resolveAutoLocationLabel(lat, lng) {
+  const adminLabel = state.vnZoneIntel?.admin?.postMerger?.fullLabel || state.zone?.name || 'Khu vực Việt Nam';
+  let best = null;
+  for (const pt of state.zonePoints || []) {
+    const d = haversineMeters(Number(lat), Number(lng), Number(pt.lat), Number(pt.lng));
+    if (d <= 600 && (!best || d < best.d)) {
+      best = { name: pt.name, d };
+    }
+  }
+  if (best) {
+    const shortName = String(best.name || '').split('(')[0].trim();
+    return `Gần ${shortName} (~${Math.round(best.d)} m) · ${adminLabel}`;
+  }
+  return adminLabel;
 }
 
 function applyLargeTextMode(enabled) {
@@ -725,6 +746,15 @@ function renderVnCadastralCard() {
       : post?.population != null
         ? `~${Number(post.population).toLocaleString('vi-VN')} cư dân cấp xã`
         : `R=${state.zone.radiusKm} km`;
+
+  const sosLocText = document.getElementById('sos-auto-loc-text');
+  const sosHintInp = document.getElementById('sos-area-hint');
+  if (sosLocText && sosHintInp) {
+    const c = appSafetyState.sosCoords || state.zone;
+    const label = resolveAutoLocationLabel(c.lat, c.lng);
+    sosLocText.textContent = label;
+    sosHintInp.value = label;
+  }
 }
 
 function renderRiverDischargeChart() {
@@ -1589,16 +1619,19 @@ async function stripExifClientSide(file) {
 async function handleNationalReportSubmit(e) {
   e.preventDefault();
   const fb = document.getElementById('rep-form-feedback');
-  const locName = (document.getElementById('rep-location-name')?.value || '').trim();
+  const rawLoc = (document.getElementById('rep-location-name')?.value || '').trim();
+  const locName = rawLoc.length >= 3 ? rawLoc : resolveAutoLocationLabel(state.reportPin.lat, state.reportPin.lng);
   const consent = document.getElementById('rep-consent')?.checked;
   const category = document.querySelector('input[name="repCategory"]:checked')?.value || 'flood';
   const waterScale = document.getElementById('rep-water-scale')?.value || 'half_wheel';
-  const notes = (document.getElementById('rep-notes')?.value || '').trim();
+  const repChips = [...document.querySelectorAll('.js-rep-chip.is-active')].map((b) => b.dataset.text).filter(Boolean);
+  const rawNotes = (document.getElementById('rep-notes')?.value || '').trim();
+  const notes = [...repChips, rawNotes].filter(Boolean).join(' · ');
 
-  if (locName.length < 3 || !consent) {
+  if (!consent) {
     fb.hidden = false;
     fb.className = 'form-feedback is-error';
-    fb.textContent = locName.length < 3 ? 'Vui lòng nhập tên vị trí (tối thiểu 3 ký tự).' : 'Vui lòng tích ô đồng ý chia sẻ ẩn danh.';
+    fb.textContent = 'Vui lòng giữ chọn ô xác nhận thông tin trung thực.';
     return;
   }
 
@@ -1632,6 +1665,12 @@ async function handleNationalReportSubmit(e) {
     fb.className = 'form-feedback is-ok';
     fb.textContent = 'Đã tiếp nhận phản ánh! Điểm mới hiển thị trong vùng khoanh với nhãn “Phản ánh cộng đồng (chờ kiểm chứng)”.';
     document.getElementById('national-report-form').reset();
+    document.querySelectorAll('.js-rep-chip.is-active').forEach((b) => {
+      b.classList.remove('is-active');
+      b.setAttribute('aria-pressed', 'false');
+    });
+    const locInp = document.getElementById('rep-location-name');
+    if (locInp) locInp.value = resolveAutoLocationLabel(state.reportPin.lat, state.reportPin.lng);
     state.reportPhotoDataUrl = '';
     refreshActiveZoneData({ flyMap: false });
   } catch {
@@ -2495,13 +2534,19 @@ function bindEvents() {
   });
   document.getElementById('btn-rep-use-zone')?.addEventListener('click', () => {
     state.reportPin = { lat: state.zone.lat, lng: state.zone.lng };
-    document.getElementById('rep-location-status').textContent = `Đã gắn vị trí tại tâm vùng ${state.zone.name} (tự làm tròn ~20 m).`;
+    const lbl = resolveAutoLocationLabel(state.reportPin.lat, state.reportPin.lng);
+    const inp = document.getElementById('rep-location-name');
+    if (inp) inp.value = lbl;
+    document.getElementById('rep-location-status').textContent = `Đã gắn vị trí tại ${lbl} (tự làm tròn ~20 m).`;
   });
   document.getElementById('btn-rep-use-gps')?.addEventListener('click', () => {
     navigator.geolocation?.getCurrentPosition(
       (pos) => {
         state.reportPin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        document.getElementById('rep-location-status').textContent = 'Đã lấy GPS hiện tại (tự làm tròn ~20 m).';
+        const lbl = resolveAutoLocationLabel(state.reportPin.lat, state.reportPin.lng);
+        const inp = document.getElementById('rep-location-name');
+        if (inp) inp.value = lbl;
+        document.getElementById('rep-location-status').textContent = `Đã lấy GPS hiện tại · ${lbl} (tự làm tròn ~20 m).`;
       },
       () => showToast('Không lấy được GPS — hãy chấm trực tiếp trên bản đồ.')
     );
@@ -2517,11 +2562,21 @@ function bindEvents() {
         reportMap.on('click', (ev) => {
           state.reportPin = { lat: ev.latlng.lat, lng: ev.latlng.lng };
           reportMarker.setLatLng(ev.latlng);
-          document.getElementById('rep-location-status').textContent = 'Đã chọn điểm trên bản đồ (tự làm tròn ~20 m).';
+          const lbl = resolveAutoLocationLabel(state.reportPin.lat, state.reportPin.lng);
+          const inp = document.getElementById('rep-location-name');
+          if (inp) inp.value = lbl;
+          document.getElementById('rep-location-status').textContent = `Đã chọn điểm: ${lbl} (tự làm tròn ~20 m).`;
         });
       }
       setTimeout(() => reportMap.invalidateSize(), 60);
     }
+  });
+  document.querySelectorAll('.js-rep-chip').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const next = !btn.classList.contains('is-active');
+      btn.classList.toggle('is-active', next);
+      btn.setAttribute('aria-pressed', String(next));
+    });
   });
   document.getElementById('rep-photo')?.addEventListener('change', async (ev) => {
     const file = ev.target.files?.[0];
@@ -2954,6 +3009,7 @@ const appSafetyState = {
   myTickets: [],
   responderInbox: [],
   sosCoords: null,
+  pendingAutoSubmitSos: false,
   deferredInstallPrompt: null,
   escortWatchId: null,
   lastSpeedKmh: 0,
@@ -3234,14 +3290,28 @@ function runProactiveAiEvaluation(customOverride = null) {
 }
 
 async function refreshSosAndAiPillar() {
+  const coords = appSafetyState.sosCoords || state.zone;
+  const locLabel = resolveAutoLocationLabel(coords.lat, coords.lng);
+  const locTextEl = document.getElementById('sos-auto-loc-text');
   const areaInp = document.getElementById('sos-area-hint');
-  if (areaInp && !areaInp.value.trim()) {
-    areaInp.value = state.vnZoneIntel?.admin?.postMerger?.fullLabel || state.zone.name;
+  if (locTextEl) locTextEl.textContent = locLabel;
+  if (areaInp) areaInp.value = locLabel;
+
+  // Mặc định thông minh ban đêm (21h-06h): ưu tiên Đội chính thức nếu người dùng chưa tự chọn lại
+  const hr = new Date().getHours();
+  if ((hr >= 21 || hr < 6) && !appSafetyState._scopeTouched) {
+    const scInp = document.getElementById('sos-dispatch-scope');
+    if (scInp) scInp.value = 'official_only';
+    document.querySelectorAll('.js-sos-scope').forEach((b) => {
+      const act = b.dataset.val === 'official_only';
+      b.classList.toggle('is-active', act);
+      b.setAttribute('aria-pressed', String(act));
+    });
   }
+
   runProactiveAiEvaluation();
   try {
-    const { lat, lng } = appSafetyState.sosCoords || state.zone;
-    const shRes = await fetch(`/api/sos-dispatch?action=zone_shield_summary&lat=${lat}&lng=${lng}`);
+    const shRes = await fetch(`/api/sos-dispatch?action=zone_shield_summary&lat=${coords.lat}&lng=${coords.lng}`);
     const shJson = shRes.ok ? await shRes.json() : null;
     const cntEl = document.getElementById('sos-zone-squad-count');
     if (cntEl && shJson?.ok) cntEl.textContent = `${shJson.verifiedSquadsReadyCount}`;
@@ -3249,6 +3319,66 @@ async function refreshSosAndAiPillar() {
     // ignore
   }
   await syncCitizenSession();
+}
+
+function updateSosComposedPreview() {
+  const chips = [...document.querySelectorAll('.js-sos-chip.is-active')].map((b) => b.dataset.text).filter(Boolean);
+  const manual = (document.getElementById('sos-note')?.value || '').trim();
+  const prev = document.getElementById('sos-composed-preview');
+  const combined = [...chips, manual].filter(Boolean).join(' · ');
+  if (prev) {
+    prev.textContent = combined
+      ? `Tình trạng gửi đi: ${combined}`
+      : 'Tình trạng gửi đi: Tự động theo thẻ tình huống bạn chạm (không bắt buộc chọn thêm).';
+  }
+  return combined;
+}
+
+async function submitSosNow() {
+  const coords = appSafetyState.sosCoords || state.zone;
+  const fb = document.getElementById('sos-form-feedback');
+  const btn = document.getElementById('btn-submit-sos');
+  const areaHint = (document.getElementById('sos-area-hint')?.value || '').trim() || resolveAutoLocationLabel(coords.lat, coords.lng);
+  const composedNote = updateSosComposedPreview();
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch('/api/sos-dispatch', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${appSafetyState.citizenToken}`
+      },
+      body: JSON.stringify({
+        action: 'create_sos',
+        lat: coords.lat,
+        lng: coords.lng,
+        category: document.getElementById('sos-category')?.value || 'stalled_vehicle',
+        dispatchScope: document.getElementById('sos-dispatch-scope')?.value || 'verified_peers',
+        waterDepthM: Number(document.getElementById('sos-water-depth')?.value || 0.28),
+        areaHint,
+        note: composedNote || 'Yêu cầu hỗ trợ khẩn cấp 1 chạm'
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) {
+      if (fb) {
+        fb.hidden = false;
+        fb.className = 'form-feedback is-error';
+        fb.textContent = data?.error || 'Không gửi được tín hiệu SOS.';
+      }
+      return;
+    }
+    if (fb) {
+      fb.hidden = false;
+      fb.className = 'form-feedback is-ok';
+      fb.textContent = `Đã phát tín hiệu ${data.ticket.id}! Mã PIN đối chiếu an toàn 2 chiều của bạn: ${data.ticket.safetyPin}.`;
+    }
+    showToast(`Đã gửi SOS (${data.ticket.id}) — PIN bảo vệ: ${data.ticket.safetyPin}`);
+    await syncCitizenSession();
+  } finally {
+    if (btn) btn.disabled = false;
+    appSafetyState.pendingAutoSubmitSos = false;
+  }
 }
 
 function bindSosAndAppEvents() {
@@ -3293,14 +3423,20 @@ function bindSosAndAppEvents() {
     });
   });
 
-  document.getElementById('btn-google-quick-auth')?.addEventListener('click', () => {
+  document.getElementById('btn-google-custom-toggle')?.addEventListener('click', () => {
     const box = document.getElementById('google-quick-fields');
     if (box) box.hidden = !box.hidden;
   });
 
-  document.getElementById('btn-google-quick-confirm')?.addEventListener('click', async () => {
-    const fullName = document.getElementById('gg-quick-name')?.value.trim() || 'Người dùng Google';
-    const email = document.getElementById('gg-quick-email')?.value.trim() || 'congdan.antoan@gmail.com';
+  const executeQuickGoogleSignIn = async (customName, customEmail) => {
+    let profile = readJson('vn_resilience_quick_gg_v1', null);
+    if (!profile || !profile.email) {
+      const tag = Math.floor(1000 + Math.random() * 9000);
+      profile = { fullName: `Người dùng Di động ${tag}`, email: `sos.citizen.${tag}@gmail.com` };
+      writeJson('vn_resilience_quick_gg_v1', profile);
+    }
+    const fullName = customName || profile.fullName;
+    const email = customEmail || profile.email;
     const res = await fetch('/api/sos-dispatch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3316,6 +3452,19 @@ function bindSosAndAppEvents() {
     document.getElementById('citizen-auth-dialog')?.close();
     await syncCitizenSession();
     showToast(`Xin chào ${data.profile.fullName}! Đã kích hoạt bảo vệ vị trí ẩn danh.`);
+    if (appSafetyState.pendingAutoSubmitSos) {
+      await submitSosNow();
+    }
+  };
+
+  document.getElementById('btn-google-quick-auth')?.addEventListener('click', () => {
+    executeQuickGoogleSignIn('', '');
+  });
+
+  document.getElementById('btn-google-quick-confirm')?.addEventListener('click', async () => {
+    const fullName = document.getElementById('gg-quick-name')?.value.trim();
+    const email = document.getElementById('gg-quick-email')?.value.trim();
+    await executeQuickGoogleSignIn(fullName, email);
   });
 
   document.getElementById('citizen-login-form')?.addEventListener('submit', async (ev) => {
@@ -3343,6 +3492,7 @@ function bindSosAndAppEvents() {
     document.getElementById('citizen-auth-dialog')?.close();
     await syncCitizenSession();
     showToast(`Đã đăng nhập: ${data.profile.fullName}`);
+    if (appSafetyState.pendingAutoSubmitSos) await submitSosNow();
   });
 
   document.getElementById('citizen-register-form')?.addEventListener('submit', async (ev) => {
@@ -3368,6 +3518,7 @@ function bindSosAndAppEvents() {
     document.getElementById('citizen-auth-dialog')?.close();
     await syncCitizenSession();
     showToast('Đã tạo tài khoản cá nhân và đăng nhập thành công!');
+    if (appSafetyState.pendingAutoSubmitSos) await submitSosNow();
   });
 
   document.getElementById('btn-sos-switch-squad')?.addEventListener('click', async () => {
@@ -3396,11 +3547,112 @@ function bindSosAndAppEvents() {
     showToast('Đã đăng xuất tài khoản.');
   });
 
+  // Chọn bằng 1 chạm: Tình huống SOS, Mực nước, Thẻ hoàn cảnh, Giọng nói & Phạm vi bảo vệ
+  document.querySelectorAll('.js-sos-cat').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.val;
+      const inp = document.getElementById('sos-category');
+      if (inp) inp.value = val;
+      document.querySelectorAll('.js-sos-cat').forEach((b) => {
+        const act = b === btn;
+        b.classList.toggle('is-active', act);
+        b.setAttribute('aria-pressed', String(act));
+      });
+      if (val === 'trapped_deep_water') {
+        const dInp = document.getElementById('sos-water-depth');
+        if (dInp) dInp.value = '0.55';
+        document.querySelectorAll('.js-sos-depth').forEach((d) => {
+          const act = d.dataset.val === '0.55';
+          d.classList.toggle('is-active', act);
+          d.setAttribute('aria-pressed', String(act));
+        });
+      }
+    });
+  });
+
+  document.querySelectorAll('.js-sos-depth').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const val = btn.dataset.val;
+      const inp = document.getElementById('sos-water-depth');
+      if (inp) inp.value = val;
+      document.querySelectorAll('.js-sos-depth').forEach((b) => {
+        const act = b === btn;
+        b.classList.toggle('is-active', act);
+        b.setAttribute('aria-pressed', String(act));
+      });
+    });
+  });
+
+  document.querySelectorAll('.js-sos-scope').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      appSafetyState._scopeTouched = true;
+      const val = btn.dataset.val;
+      const inp = document.getElementById('sos-dispatch-scope');
+      if (inp) inp.value = val;
+      document.querySelectorAll('.js-sos-scope').forEach((b) => {
+        const act = b === btn;
+        b.classList.toggle('is-active', act);
+        b.setAttribute('aria-pressed', String(act));
+      });
+    });
+  });
+
+  document.querySelectorAll('.js-sos-chip').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const next = !btn.classList.contains('is-active');
+      btn.classList.toggle('is-active', next);
+      btn.setAttribute('aria-pressed', String(next));
+      updateSosComposedPreview();
+    });
+  });
+  document.getElementById('sos-note')?.addEventListener('input', updateSosComposedPreview);
+
+  document.getElementById('btn-sos-voice')?.addEventListener('click', () => {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
+      showToast('Trình duyệt này chưa hỗ trợ nhận giọng nói — bạn chỉ cần chạm các thẻ tình trạng có sẵn.');
+      return;
+    }
+    const micBtn = document.getElementById('btn-sos-voice');
+    const lbl = document.getElementById('sos-voice-label');
+    const rec = new SpeechRec();
+    rec.lang = 'vi-VN';
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    micBtn?.classList.add('is-recording');
+    if (lbl) lbl.textContent = 'Đang nghe...';
+    rec.onresult = (ev) => {
+      const txt = String(ev.results?.[0]?.[0]?.transcript || '').trim();
+      const noteInp = document.getElementById('sos-note');
+      if (txt && noteInp) {
+        noteInp.value = [noteInp.value.trim(), txt].filter(Boolean).join('. ').slice(0, 220);
+        updateSosComposedPreview();
+        showToast(`Đã ghi âm thành chữ: "${txt}"`);
+      }
+    };
+    rec.onerror = () => showToast('Chưa thu được giọng nói — bạn vẫn có thể chạm thẻ và bấm Phát tín hiệu ngay.');
+    rec.onend = () => {
+      micBtn?.classList.remove('is-recording');
+      if (lbl) lbl.textContent = 'Nói giọng nói (Rảnh tay)';
+    };
+    try {
+      rec.start();
+    } catch {
+      micBtn?.classList.remove('is-recording');
+      if (lbl) lbl.textContent = 'Nói giọng nói (Rảnh tay)';
+    }
+  });
+
   document.getElementById('btn-sos-use-gps')?.addEventListener('click', () => {
     navigator.geolocation?.getCurrentPosition(
       (pos) => {
         appSafetyState.sosCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        showToast('Đã lấy vị trí GPS cục bộ (chỉ gửi khi bạn bấm nút Gửi SOS).');
+        const lbl = resolveAutoLocationLabel(pos.coords.latitude, pos.coords.longitude);
+        const locTextEl = document.getElementById('sos-auto-loc-text');
+        const areaInp = document.getElementById('sos-area-hint');
+        if (locTextEl) locTextEl.textContent = lbl;
+        if (areaInp) areaInp.value = lbl;
+        showToast('Đã tự động định vị mốc đường phố gần nhất.');
       },
       () => showToast('Đang dùng vị trí tâm vùng khoanh hiện tại.')
     );
@@ -3409,40 +3661,12 @@ function bindSosAndAppEvents() {
   document.getElementById('sos-request-form')?.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     if (!appSafetyState.citizenToken) {
+      appSafetyState.pendingAutoSubmitSos = true;
       document.getElementById('citizen-auth-dialog')?.showModal();
-      showToast('Vui lòng đăng nhập tài khoản cá nhân hoặc Google trước khi phát tín hiệu SOS.');
+      showToast('Chạm "Đăng nhập 1 chạm với Tài khoản Google" để phát tín hiệu SOS ngay!');
       return;
     }
-    const coords = appSafetyState.sosCoords || state.zone;
-    const fb = document.getElementById('sos-form-feedback');
-    const res = await fetch('/api/sos-dispatch', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${appSafetyState.citizenToken}`
-      },
-      body: JSON.stringify({
-        action: 'create_sos',
-        lat: coords.lat,
-        lng: coords.lng,
-        category: document.getElementById('sos-category')?.value,
-        dispatchScope: document.getElementById('sos-dispatch-scope')?.value,
-        waterDepthM: Number(document.getElementById('sos-water-depth')?.value || 0.25),
-        areaHint: document.getElementById('sos-area-hint')?.value,
-        note: document.getElementById('sos-note')?.value
-      })
-    });
-    const data = await res.json();
-    if (!res.ok || !data?.ok) {
-      fb.hidden = false;
-      fb.className = 'form-feedback is-error';
-      fb.textContent = data?.error || 'Không gửi được tín hiệu SOS.';
-      return;
-    }
-    fb.hidden = false;
-    fb.className = 'form-feedback is-ok';
-    fb.textContent = `Đã phát tín hiệu ${data.ticket.id}! Mã đối chiếu an toàn 2 chiều của bạn là ${data.ticket.safetyPin}.`;
-    await syncCitizenSession();
+    await submitSosNow();
   });
 
   document.getElementById('btn-refresh-sos-state')?.addEventListener('click', syncCitizenSession);
