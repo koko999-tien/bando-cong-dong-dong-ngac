@@ -945,29 +945,26 @@ function renderPublicOverview({ flyMap = false } = {}) {
   if (state.weather) {
     document.getElementById('env-rain-val').textContent =
       state.weather.rainMm >= 0.5 ? `${state.weather.rainMm.toFixed(1)} mm/h` : `0 mm/h`;
-    document.getElementById('env-rain-desc').textContent = `Tổng ngày ${state.zone.province}: ~${Math.round(state.weather.dailyRainMm)} mm · Gió ${Math.round(state.weather.windKmh || 0)} km/h`;
-    document.getElementById('env-heat-val').textContent = `${Math.round(state.weather.temp)}°C / ${Math.round(state.weather.apparentTemp)}°C`;
-    document.getElementById('env-heat-desc').textContent =
-      state.weather.apparentTemp >= 38
-        ? 'Chỉ số nóng bức cao — tránh nắng gắt 11h–15h.'
-        : 'Nhiệt độ cảm nhận ngoài trời bình thường.';
+    document.getElementById('env-rain-desc').textContent = `Ngày ~${Math.round(state.weather.dailyRainMm)} mm · Gió ${Math.round(state.weather.windKmh || 0)} km/h`;
+    document.getElementById('env-heat-val').textContent = `${Math.round(state.weather.temp)}°C`;
+    document.getElementById('env-heat-desc').textContent = `Cảm nhận ${Math.round(state.weather.apparentTemp)}°C${state.weather.apparentTemp >= 38 ? ' · Nắng gắt' : ''}`;
   } else {
     document.getElementById('env-rain-val').textContent = '-- mm/h';
-    document.getElementById('env-rain-desc').textContent = `Đang đồng bộ mưa tại ${state.zone.province}...`;
+    document.getElementById('env-rain-desc').textContent = `Đang đồng bộ ${state.zone.province}...`;
     document.getElementById('env-heat-val').textContent = '--°C';
-    document.getElementById('env-heat-desc').textContent = `Đang tải nhiệt độ thực tế...`;
+    document.getElementById('env-heat-desc').textContent = `Đang tải nhiệt độ...`;
   }
 
   const aqiInfo = describeAqiPlain(state.aqi?.usAqi);
   document.getElementById('env-aqi-val').textContent = Number.isFinite(state.aqi?.usAqi)
-    ? `AQI ${Math.round(state.aqi.usAqi)}`
+    ? `${Math.round(state.aqi.usAqi)}`
     : '--';
   document.getElementById('env-aqi-desc').textContent = Number.isFinite(state.aqi?.pm25)
-    ? `${aqiInfo.headline} (PM2.5 ~${state.aqi.pm25.toFixed(1)} µg/m³)`
+    ? `${aqiInfo.headline} · PM2.5 ${Math.round(state.aqi.pm25)}`
     : aqiInfo.headline;
 
-  document.getElementById('env-zone-points-val').textContent = `${state.zonePoints.length} điểm · ${state.zoneCorridors.length} tuyến`;
-  document.getElementById('env-zone-points-desc').textContent = `${riskCount} rủi ro · ${safeCount} y tế/trú · ${state.osmWaterways.length} thủy hệ`;
+  document.getElementById('env-zone-points-val').textContent = `${state.zonePoints.length} điểm`;
+  document.getElementById('env-zone-points-desc').textContent = `${riskCount} rủi ro · ${safeCount} an toàn · ${state.zoneCorridors.length} tuyến`;
 
   const rainPct = state.weather ? Math.min(100, Math.max(6, Math.round((Number(state.weather.dailyRainMm || 0) / 120) * 100))) : 8;
   const heatPct = state.weather ? Math.min(100, Math.max(12, Math.round(((Number(state.weather.apparentTemp || 28) - 10) / 36) * 100))) : 40;
@@ -1510,22 +1507,23 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
 
   const ring = window.L.circle([state.zone.lat, state.zone.lng], {
     radius: state.zone.radiusKm * 1000,
-    color: '#0F766E',
-    weight: 2.3,
-    dashArray: '7 5',
-    fillColor: '#0F766E',
-    fillOpacity: 0.03
+    color: '#0F172A',
+    weight: 1.5,
+    opacity: 0.42,
+    fillColor: '#0D9488',
+    fillOpacity: 0.025
   }).addTo(zoneCircleLayer);
 
-  // Vành đai cự ly đồng tâm + Đa giác rốn trũng địa hình + Tuyến thoát hiểm nền cao
+  // Vành đai cự ly 1/2 tinh gọn + Đa giác rốn trũng địa hình + Tuyến thoát hiểm nền cao
   if (state.layers.basins) {
-    for (const frac of [0.25, 0.5, 0.75]) {
+    for (const frac of [0.5]) {
       const subKm = Math.round(state.zone.radiusKm * frac * 100) / 100;
       window.L.circle([state.zone.lat, state.zone.lng], {
         radius: subKm * 1000,
-        color: '#475569',
-        weight: 1,
-        dashArray: '4 6',
+        color: '#64748B',
+        weight: 0.9,
+        opacity: 0.35,
+        dashArray: '3 5',
         fill: false,
         interactive: false
       }).addTo(basinsLayer);
@@ -1547,10 +1545,11 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
     for (const basin of localBasins) {
       window.L.polygon(basin.coordinates, {
         color: '#0284C7',
-        weight: 1.7,
-        dashArray: '5 4',
+        weight: 1.1,
+        opacity: 0.55,
+        dashArray: '3 4',
         fillColor: '#0EA5E9',
-        fillOpacity: 0.13
+        fillOpacity: 0.09
       })
         .bindPopup(
           `<strong>${esc(basin.name)}</strong><br><small>Ngưỡng mưa tích nước tham chiếu: ~${basin.rainThresholdMm} mm · Cao độ nền: ${esc(String(basin.demRange || '').replace('DSM', ''))}</small>`
@@ -1635,7 +1634,14 @@ function renderZoneMapAndList({ flyMap = false } = {}) {
   if (state.layers.heatmap) heatmapLayer?.redraw();
 
   if (flyMap && ring.getBounds().isValid()) {
-    nationalMap.fitBounds(ring.getBounds(), { padding: [54, 54], maxZoom: 15 });
+    const layoutEl = document.getElementById('map-split-layout');
+    const hasFloatingSheet = window.innerWidth >= 1024 && layoutEl && !layoutEl.classList.contains('is-dock-collapsed');
+    nationalMap.fitBounds(
+      ring.getBounds(),
+      hasFloatingSheet
+        ? { paddingTopLeft: [424, 68], paddingBottomRight: [48, 76], maxZoom: 15 }
+        : { padding: [44, 44], maxZoom: 15 }
+    );
   }
 }
 
@@ -1673,6 +1679,11 @@ function renderPointCardHtml(pt, { expandedActions = false } = {}) {
     : '';
   const researchTag = pt.submissionId ? `<span class="source-tag tone-verified">Nghiên cứu</span>` : '';
   const osmTag = pt.isOsmLive ? `<span class="source-tag tone-model">OSM thực tế</span>` : '';
+  const statusPlain = pulse
+    ? (pulse.status === 'flooding' ? 'Đang ngập' : pulse.status === 'receding' ? 'Đang rút' : 'Khô ráo')
+    : pt.isOsmLive
+      ? 'OSM thực tế'
+      : ver.label;
 
   return `
     <article class="place-card ${cardType}">
@@ -1683,17 +1694,16 @@ function renderPointCardHtml(pt, { expandedActions = false } = {}) {
             <h3 class="place-card-title">${esc(pt.name)}</h3>
             <span class="place-card-dist">${esc(formatDistancePlain(pt.distanceMeters))}</span>
           </div>
-          <div class="place-card-meta">
-            ${
-              expandedActions
-                ? `<span class="source-tag ${pt.layerGroup === 'safe' ? 'tone-verified' : 'tone-community'}">${esc(catNames[pt.category] || 'Điểm ghi nhận')}</span>
+          ${
+            expandedActions
+              ? `<div class="place-card-meta">
+                   <span class="source-tag ${pt.layerGroup === 'safe' ? 'tone-verified' : 'tone-community'}">${esc(catNames[pt.category] || 'Điểm ghi nhận')}</span>
                    ${osmTag || `<span class="source-tag tone-${ver.badgeTone}">${esc(ver.label)}</span>`}
                    ${researchTag}
-                   ${pulseTag}`
-                : `<span class="source-tag ${pt.layerGroup === 'safe' ? 'tone-verified' : 'tone-community'}">${esc(catNames[pt.category] || 'Điểm ghi nhận')}</span>
-                   ${pulseTag || osmTag || `<span class="source-tag tone-${ver.badgeTone}">${esc(ver.label)}</span>`}`
-            }
-          </div>
+                   ${pulseTag}
+                 </div>`
+              : `<div class="place-card-meta-line${pulse?.status === 'flooding' ? ' is-live-alert' : ''}">${esc(catNames[pt.category] || 'Điểm ghi nhận')} · ${esc(statusPlain)}</div>`
+          }
           <p class="place-card-desc">${esc((pt.notes || '').slice(0, 165))}</p>
           <div class="place-card-actions">
             <button type="button" class="checkin-btn is-locate js-focus-map-pt" data-lat="${pt.lat}" data-lng="${pt.lng}" data-ptid="${esc(pt.id)}">Định vị</button>
@@ -2661,24 +2671,24 @@ async function loadLiveBasinBulletins(forceRefresh = false) {
     const basinCards = data.basins
       .map((b) => {
         const toneCls = b.alertLevel === 'emergency' ? 'tone-danger' : b.alertLevel === 'warning' || b.alertLevel === 'watch' ? 'tone-community' : 'tone-verified';
-        return `<div class="item-card" style="padding:10px;border:1px solid var(--border-subtle,#E2E8F0);border-radius:10px;background:var(--surface,#fff);">
+        return `<div class="basin-feed-item">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
             <strong style="font-size:0.84rem;">${esc(b.basinName)}</strong>
             <span class="source-tag ${toneCls}">${esc(b.alertLabel)}</span>
           </div>
-          <div class="muted-meta" style="margin-bottom:6px;">${esc(b.province)} · Mưa 24h: <strong class="mono-num">${b.rain24hMm} mm</strong> · Gió giật: <strong class="mono-num">${b.windGustKmh} km/h</strong>${b.riverDischargeMs != null ? ` · Lưu lượng: <strong class="mono-num">${b.riverDischargeMs} m³/s</strong>` : ''}</div>
+          <div class="muted-meta" style="margin-bottom:8px;">${esc(b.province)} · Mưa 24h: <strong class="mono-num">${b.rain24hMm} mm</strong> · Gió giật: <strong class="mono-num">${b.windGustKmh} km/h</strong>${b.riverDischargeMs != null ? ` · Lưu lượng: <strong class="mono-num">${b.riverDischargeMs} m³/s</strong>` : ''}</div>
           <button type="button" class="btn btn-sm btn-secondary js-open-pub-zone" data-lat="${b.lat}" data-lng="${b.lng}" data-radius="8" data-name="${esc(b.province)}">Xem trên Bản đồ</button>
         </div>`;
       })
       .join('');
     const gdacsCards = (data.gdacsAlerts || [])
       .map(
-        (g) => `<div class="item-card" style="padding:10px;border:1px solid #FCA5A5;border-radius:10px;background:#FFF1F2;">
+        (g) => `<div class="basin-feed-item is-gdacs">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;">
             <strong style="font-size:0.84rem;color:#9F1239;">GDACS: ${esc(g.eventType)}</strong>
             <span class="source-tag tone-danger">${esc(g.alertLevel)}</span>
           </div>
-          <div class="muted-meta" style="margin-bottom:6px;">${esc(g.name)}</div>
+          <div class="muted-meta" style="margin-bottom:8px;">${esc(g.name)}</div>
           <button type="button" class="btn btn-sm btn-secondary js-open-pub-zone" data-lat="${g.lat}" data-lng="${g.lng}" data-radius="12" data-name="Cảnh báo GDACS">Mở vị trí</button>
         </div>`
       )

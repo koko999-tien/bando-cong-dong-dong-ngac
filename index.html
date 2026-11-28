@@ -32,8 +32,7 @@
             </svg>
           </span>
           <div class="brand-copy">
-            <strong class="brand-title-sm">VN Resilience Atlas</strong>
-            <span class="brand-sub-inline">Dữ liệu Không gian &amp; An toàn Thiên tai Quốc gia</span>
+            <strong class="brand-title-sm">VN Resilience</strong>
           </div>
         </a>
 
@@ -96,12 +95,12 @@
         <!-- CHUYỂN CHẾ ĐỘ HIỂN THỊ TRÊN ĐIỆN THOẠI -->
         <div class="mobile-view-switch-bar">
           <div class="segmented-switch" role="group" aria-label="Chế độ xem bản đồ và dữ liệu">
-            <button type="button" class="seg-btn is-active" data-map-mode="map">Bản đồ trực quan</button>
-            <button type="button" class="seg-btn" data-map-mode="list">Dữ liệu &amp; Danh sách (<span id="mob-pts-count">0</span>)</button>
+            <button type="button" class="seg-btn is-active" data-map-mode="map">Bản đồ</button>
+            <button type="button" class="seg-btn" data-map-mode="list">Danh sách (<span id="mob-pts-count">0</span>)</button>
           </div>
           <div class="form-actions-row">
-            <button type="button" class="btn btn-sm sos-quick-jump" data-pillar="sos">SOS Cần hỗ trợ</button>
-            <button type="button" class="btn btn-sm btn-primary" data-pubtab-jump="report">+ Báo sự cố</button>
+            <button type="button" class="btn btn-sm sos-quick-jump" data-pillar="sos">SOS</button>
+            <button type="button" class="btn btn-sm btn-primary" data-pubtab-jump="report">+ Báo cáo</button>
           </div>
         </div>
 
@@ -233,7 +232,7 @@
                   <div class="env-card-head">
                     <span class="env-card-label">
                       <svg class="env-ico is-rain" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>
-                      Mưa hiện tại / Ngày
+                      Mưa hiện tại
                     </span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-rain-val">--</strong>
@@ -245,7 +244,7 @@
                   <div class="env-card-head">
                     <span class="env-card-label">
                       <svg class="env-ico is-heat" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path></svg>
-                      Nhiệt độ &amp; Cảm nhận
+                      Nhiệt độ
                     </span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-heat-val">--</strong>
@@ -257,7 +256,7 @@
                   <div class="env-card-head">
                     <span class="env-card-label">
                       <svg class="env-ico is-aqi" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"></path></svg>
-                      Không khí (US AQI)
+                      Không khí (AQI)
                     </span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-aqi-val">--</strong>
@@ -269,7 +268,7 @@
                   <div class="env-card-head">
                     <span class="env-card-label">
                       <svg class="env-ico is-pts" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
-                      Mật độ lớp bản đồ
+                      Trong vùng
                     </span>
                   </div>
                   <strong class="env-card-value mono-num" id="env-zone-points-val">--</strong>
@@ -280,7 +279,7 @@
 
               <section id="my-saved-places-card" class="telemetry-panel my-places-panel" aria-label="Địa điểm cá nhân lưu trên thiết bị">
                 <div class="section-head-row">
-                  <strong class="panel-label">Địa điểm Của Tôi (Lưu riêng tại máy)</strong>
+                  <strong class="panel-label">Địa điểm đã lưu</strong>
                   <button type="button" id="btn-safe-route-home" class="btn btn-sm btn-primary" hidden>Đường về Nhà an toàn</button>
                 </div>
                 <div id="my-places-slots" class="my-places-grid"></div>
@@ -623,11 +622,11 @@
 
             <!-- LA BÀN BẮC ĐỊA HÌNH CARTOGRAPHIC -->
             <div id="map-compass-rose" class="map-compass-rose" aria-hidden="true" title="Hướng Bắc Địa lý">
-              <svg width="38" height="38" viewBox="0 0 40 40">
-                <circle cx="20" cy="20" r="17.5" fill="rgba(9,15,30,0.72)" stroke="rgba(148,163,184,0.34)" stroke-width="1"/>
-                <polygon points="20,5 23.2,20 20,17.2 16.8,20" fill="#38BDF8"/>
-                <polygon points="20,35 23.2,20 20,22.8 16.8,20" fill="#64748B"/>
-                <text x="20" y="13" text-anchor="middle" fill="#FFFFFF" font-size="6.5" font-weight="800" font-family="sans-serif">N</text>
+              <svg width="36" height="36" viewBox="0 0 40 40">
+                <circle cx="20" cy="20" r="17.5" fill="rgba(255,255,255,0.88)" stroke="rgba(15,23,42,0.14)" stroke-width="1"/>
+                <polygon points="20,5 23.2,20 20,17.2 16.8,20" fill="#0F172A"/>
+                <polygon points="20,35 23.2,20 20,22.8 16.8,20" fill="#94A3B8"/>
+                <text x="20" y="13" text-anchor="middle" fill="#0F172A" font-size="6.5" font-weight="800" font-family="sans-serif">N</text>
               </svg>
             </div>
 
@@ -956,7 +955,7 @@
       <section id="pillar-news" class="pillar-section page-container" hidden aria-label="Bản tin Thiên tai và Công bố Nghiên cứu">
         <div class="news-header-banner">
           <div>
-            <h1>Bản tin Thiên tai &amp; Công bố Khoa học Mở Việt Nam</h1>
+            <h1>Bản tin Thiên tai &amp; Công bố Khoa học</h1>
             <p>Tổng hợp diễn biến thiên tai, cảnh báo khí tượng – thủy văn theo vùng miền và các công trình thực địa đã được Hội đồng kiểm định gắn lên bản đồ chính.</p>
           </div>
           <button type="button" id="btn-news-to-publish" class="btn btn-primary">Đóng góp Nghiên cứu</button>
@@ -1019,12 +1018,12 @@
       <section id="pillar-sos" class="pillar-section page-container" hidden aria-label="Hộ tống AI và Điều phối Hỗ trợ Khẩn cấp SOS">
         <div class="section-banner sos-hero-banner">
           <div>
-            <h1>Hộ tống Đường đi Thông minh &amp; Điều phối Cứu trợ Chống Tắc đường</h1>
-            <p>Phát tín hiệu hỗ trợ 1 chạm kèm mã PIN đối chiếu và tự động bảo vệ ẩn danh vị trí quanh ô lưới khu vực.</p>
+            <h1>Hộ tống Hành trình &amp; Điều phối Hỗ trợ Khẩn cấp</h1>
+            <p>Phát tín hiệu hỗ trợ nhanh kèm mã PIN đối chiếu và tự động bảo vệ ẩn danh vị trí quanh khu vực.</p>
           </div>
           <div class="sos-shield-badges">
-            <span class="hud-count-pill mono-num">Ẩn vị trí nền: Geohash-6 (Tự hủy 30p)</span>
-            <span class="hud-count-pill mono-num">Khóa trần: Tối đa 2 chỗ / ca</span>
+            <span class="hud-count-pill mono-num">Ẩn danh 300 m · Tự hủy 30p</span>
+            <span class="hud-count-pill mono-num">Giới hạn 2 người nhận / ca</span>
           </div>
         </div>
 
@@ -1039,9 +1038,9 @@
               </div>
             </div>
             <div class="form-actions-row">
-              <button type="button" id="btn-sos-open-login" class="btn btn-primary btn-sm">Đăng nhập Cá nhân / Google</button>
+              <button type="button" id="btn-sos-open-login" class="btn btn-primary btn-sm">Đăng nhập</button>
               <button type="button" id="btn-open-volunteer-ekyc" class="btn btn-secondary btn-sm" hidden>Đăng ký Tình nguyện viên</button>
-              <button type="button" id="btn-sos-switch-squad" class="btn btn-secondary btn-sm" title="Chuyển sang vai trò Đội xung kích đã xác minh để kiểm thử luồng nhận ca">Chế độ Đội Xung kích (Kiểm thử)</button>
+              <button type="button" id="btn-sos-switch-squad" class="btn btn-secondary btn-sm" title="Chuyển sang vai trò Đội xung kích đã xác minh để kiểm thử luồng nhận ca">Đội xung kích</button>
               <button type="button" id="btn-sos-logout" class="btn btn-secondary btn-sm" hidden>Đăng xuất</button>
               <button type="button" id="btn-sos-delete-account" class="btn btn-danger-outline btn-sm" hidden>Xóa tài khoản &amp; Dữ liệu</button>
             </div>
@@ -1077,8 +1076,8 @@
           <div class="stack-panel">
             <form id="sos-request-form" class="card-panel" novalidate>
               <div class="section-head-row">
-                <h2 class="section-title">Cần Hỗ trợ Khẩn cấp Trên Đường (1 Chạm — Không Cần Gõ Chữ)</h2>
-                <span class="source-tag tone-verified">Tự động định vị &amp; gửi trạng thái</span>
+                <h2 class="section-title">Gửi yêu cầu hỗ trợ khẩn cấp</h2>
+                <span class="source-tag tone-verified">Tự động định vị</span>
               </div>
 
               <div class="sos-autoloc-bar" id="sos-auto-loc-bar">
@@ -1178,15 +1177,15 @@
 
               <div id="sos-form-feedback" class="form-feedback" hidden role="alert"></div>
               <button type="submit" id="btn-submit-sos" class="btn sos-giant-cta">
-                <span class="sos-cta-main">PHÁT TÍN HIỆU CẦN HỖ TRỢ NGAY</span>
-                <span class="sos-cta-sub">1 chạm gửi thẳng vị trí &amp; mã PIN 4 số — Không cần gõ phím</span>
+                <span class="sos-cta-main">Gửi tín hiệu cần hỗ trợ</span>
+                <span class="sos-cta-sub">Tự động đính kèm vị trí làm mờ 300 m &amp; mã PIN 4 số</span>
               </button>
             </form>
 
             <!-- PHIẾU THEO DÕI CA SOS ĐANG MỞ CỦA TÔI (MÃ PIN 4 SỐ + XÓA TRẮNG TỌA ĐỘ + BÁO KẺ XẤU) -->
             <div class="card-panel">
               <div class="section-head-row">
-                <h2 class="section-title">Phiên Hỗ trợ Của Tôi &amp; Mã PIN Đối chiếu 2 Chiều</h2>
+                <h2 class="section-title">Yêu cầu đang mở &amp; Mã PIN</h2>
                 <button type="button" id="btn-refresh-sos-state" class="text-btn">Cập nhật</button>
               </div>
               <div id="my-sos-tickets-box" class="place-list">
@@ -1197,7 +1196,7 @@
             <!-- BẢN ĐỒ LÁ CHẮN QUYỀN RIÊNG TƯ 300M + LỐI THOÁT Y TẾ + TIN NHẮN SMS KHI MẤT 4G -->
             <div class="card-panel">
               <div class="section-head-row">
-                <h2 class="section-title">Bản đồ Lá chắn Ẩn danh 300 m &amp; Kênh Dự phòng SMS 112</h2>
+                <h2 class="section-title">Vùng ẩn danh 300 m &amp; SMS khẩn 112</h2>
                 <span class="source-tag tone-verified">Zero-Trust Live</span>
               </div>
               <div id="sos-live-map" class="mini-map-mount" style="height:228px;"></div>
@@ -1215,15 +1214,15 @@
             <article class="card-panel">
               <div class="section-head-row">
                 <div>
-                  <h2 class="section-title">Cảnh báo Hỗ trợ Gần Bạn (Phát thẳng Quanh khu vực)</h2>
-                  <span class="muted-meta">Người dùng đã đăng nhập bật nhận cảnh báo sẽ thấy ngay ca ngập nông quanh đây (tối đa 2 người nhận)</span>
+                  <h2 class="section-title">Ca cần hỗ trợ quanh bạn</h2>
+                  <span class="muted-meta">Hiển thị các ca ngập nông gần khu vực này (tối đa 2 người nhận)</span>
                 </div>
                 <div class="form-actions-row">
-                  <button type="button" id="btn-responder-heartbeat" class="btn btn-sm btn-secondary">Nhận cảnh báo gần đây (30p)</button>
-                  <button type="button" id="btn-enable-web-push" class="btn btn-sm btn-primary">Bật Chuông Đẩy Nền</button>
+                  <button type="button" id="btn-responder-heartbeat" class="btn btn-sm btn-secondary">Trực 30 phút</button>
+                  <button type="button" id="btn-enable-web-push" class="btn btn-sm btn-primary">Bật thông báo đẩy</button>
                 </div>
               </div>
-              <p id="web-push-status-note" class="field-hint" style="margin:4px 0 6px;">Nhấn "Bật Chuông Đẩy Nền" để nhận cảnh báo ngay cả khi tắt màn hình hoặc thu nhỏ trình duyệt.</p>
+              <p id="web-push-status-note" class="field-hint" style="margin:4px 0 6px;">Nhấn "Bật thông báo đẩy" để nhận cảnh báo ngay cả khi tắt màn hình hoặc thu nhỏ trình duyệt.</p>
               <div id="responder-inbox-box" class="place-list">
                 <p class="muted-body">Đăng nhập để tự động nhận cảnh báo khi có người gặp sự cố xe chết máy hoặc cần hỗ trợ ở gần khu vực của bạn.</p>
               </div>
@@ -1232,7 +1231,7 @@
             <article class="card-panel ai-guardian-card">
               <div class="section-head-row">
                 <div>
-                  <h2 class="section-title">AI Hộ tống &amp; Phát hiện Bất thường Hành trình (Thực chứng)</h2>
+                  <h2 class="section-title">Hộ tống hành trình tự động</h2>
                   <span class="muted-meta">Phân tích thủy lực dòng chảy &amp; chất lượng không khí cục bộ trên thiết bị</span>
                 </div>
                 <button type="button" id="btn-toggle-ai-escort" class="btn btn-sm btn-primary" aria-pressed="false">Bật GPS Hộ tống</button>
