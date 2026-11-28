@@ -4,6 +4,23 @@
   "regions": ["sin1"],
   "cleanUrls": false,
   "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/admin",
+      "destination": "https://vn-resilience-ops.vercel.app",
+      "permanent": false
+    },
+    {
+      "source": "/admin.html",
+      "destination": "https://vn-resilience-ops.vercel.app",
+      "permanent": false
+    },
+    {
+      "source": "/ops-console/(.*)",
+      "destination": "https://vn-resilience-ops.vercel.app/$1",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/sw.js",

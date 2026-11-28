@@ -10,6 +10,7 @@ import {
   validateImageDataUrl,
   createBoundedRateLimiter
 } from '../platform/security/validators.js';
+import { withCors, handleCorsPreflight } from '../platform/security/cors.js';
 
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const LIVE_PULSE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -203,7 +204,11 @@ async function appendServerAudit(action, detail) {
   await writePrivateJson('config/audit-log.json', cur.slice(0, 150));
 }
 
-export async function GET(request) {
+export async function OPTIONS(request) {
+  return handleCorsPreflight(request);
+}
+
+async function handleCommunityGet(request) {
   try {
     const url = new URL(request.url);
     const action = url.searchParams.get('action') || 'public_sync';
@@ -314,7 +319,9 @@ export async function GET(request) {
   }
 }
 
-export async function POST(request) {
+export const GET = withCors(handleCommunityGet);
+
+async function handleCommunityPost(request) {
   try {
     const body = await request.json();
     const action = body?.action || '';
@@ -639,3 +646,5 @@ export async function POST(request) {
     return Response.json({ ok: false, error: 'Lỗi xử lý máy chủ đám mây.' }, { status: 500 });
   }
 }
+
+export const POST = withCors(handleCommunityPost);

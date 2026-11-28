@@ -18,6 +18,7 @@ import {
   hasSpamContent,
   createBoundedRateLimiter
 } from '../platform/security/validators.js';
+import { withCors, handleCorsPreflight } from '../platform/security/cors.js';
 import {
   detectStorageBackend,
   hashPassword,
@@ -292,7 +293,11 @@ function sanitizeFeatureList(rawFeatures, submissionMeta) {
   return cleaned;
 }
 
-export async function GET(request) {
+export async function OPTIONS(request) {
+  return handleCorsPreflight(request);
+}
+
+async function handleResearchGet(request) {
   try {
     const url = new URL(request.url);
     const action = url.searchParams.get('action') || 'publications';
@@ -441,7 +446,9 @@ export async function GET(request) {
   }
 }
 
-export async function POST(request) {
+export const GET = withCors(handleResearchGet);
+
+async function handleResearchPost(request) {
   try {
     const body = await request.json();
     const action = String(body?.action || '');
@@ -754,3 +761,5 @@ export async function POST(request) {
     return Response.json({ ok: false, error: 'Lỗi xử lý máy chủ cổng nghiên cứu.' }, { status: 500 });
   }
 }
+
+export const POST = withCors(handleResearchPost);

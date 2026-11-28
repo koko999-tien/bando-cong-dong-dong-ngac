@@ -15,7 +15,7 @@ import {
   VIETNAM_VERIFIED_CORRIDORS,
   filterCorridorsInZone
 } from '../platform/data/vietnam-verified-hotspots.js';
-import { GET as researchGET, POST as researchPOST } from '../api/research-portal.js';
+import { GET as researchGET, POST as researchPOST, OPTIONS as researchOPTIONS } from '../api/research-portal.js';
 import { ensureZoneDemGrid, sampleAnyDemGrid } from '../platform/gis/hydro-surface.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -80,12 +80,44 @@ try {
   assert.ok(html.includes('data-map-layer="basins"'), 'Phải có nút bật/tắt Rốn trũng & Vành đai');
   assert.ok(html.includes('data-map-layer="heatmap"'), 'Phải có nút bật/tắt Nhiệt rủi ro');
   assert.ok(html.includes('id="hydro-sim-strip"'), 'Phải có thanh điều khiển mô phỏng mặt nước (USGS/NOAA style)');
-  assert.ok(html.includes('id="pillar-dev"'), 'Phải có Phân khu 4 Quản trị & Dev riêng biệt');
-  assert.ok(html.includes('id="dev-ops-workspace"'), 'Phải có không gian Quản trị đám mây & API Sandbox');
+  assert.ok(!html.includes('id="pillar-dev"'), 'Trang chính tuyệt đối KHÔNG được chứa khu vực Quản trị & Dev');
+  assert.ok(!html.includes('data-pillar="dev"'), 'Thanh điều hướng trang chính KHÔNG được hiện nút Quản trị & Dev');
+  assert.ok(!html.includes('id="reviewer-panel"'), 'Trang chính KHÔNG được chứa khung nhập ADMIN_PASSCODE');
+  assert.ok(!html.includes('ADMIN_PASSCODE'), 'Trang chính KHÔNG được lộ nhãn ADMIN_PASSCODE');
   assert.ok(html.includes('id="hourly-rain-bars"'), 'Phải có biểu đồ lượng mưa 24 giờ tới');
   assert.ok(!html.includes('Đề tài 08'), 'Phải bỏ nhãn bài tập Đề tài 08 trên nền tảng thực tế');
   assert.ok(!html.includes('Pre-test'), 'Phải bỏ thẻ khảo sát học thuật Pre-test');
   assert.ok(!html.includes('Video 45s'), 'Phải bỏ thẻ Video 45s sáo rỗng');
+
+  // 2A. KIỂM TRA WEB QUẢN TRỊ & DEV TÁCH RIÊNG HOÀN TOÀN (ops-console/) + CORS BẢO MẬT
+  const opsHtml = await fs.readFile(path.join(rootDir, 'ops-console', 'index.html'), 'utf8');
+  assert.ok(opsHtml.includes('VN Resilience Ops Console'), 'Phải có ứng dụng web Quản trị & Dev độc lập tại ops-console/');
+  assert.ok(opsHtml.includes('noindex, nofollow'), 'Web Quản trị riêng phải gắn thẻ chống lập chỉ mục tìm kiếm');
+
+  const corsAllowedPreflight = await researchOPTIONS(
+    new Request('http://localhost/api/research-portal', {
+      method: 'OPTIONS',
+      headers: { Origin: 'https://vn-resilience-ops.vercel.app' }
+    })
+  );
+  assert.equal(corsAllowedPreflight.status, 204);
+  assert.equal(
+    corsAllowedPreflight.headers.get('access-control-allow-origin'),
+    'https://vn-resilience-ops.vercel.app',
+    'API phải cho phép CORS từ tên miền Web Quản trị riêng https://vn-resilience-ops.vercel.app'
+  );
+
+  const corsBlockedPreflight = await researchOPTIONS(
+    new Request('http://localhost/api/research-portal', {
+      method: 'OPTIONS',
+      headers: { Origin: 'https://malicious-site.example.com' }
+    })
+  );
+  assert.equal(
+    corsBlockedPreflight.headers.get('access-control-allow-origin'),
+    null,
+    'API phải từ chối CORS từ tên miền lạ không ủy quyền'
+  );
 
   // 2B. KIỂM TRA LỚP MẶT PHỦ NGẬP NƯỚC ĐỊA HÌNH & CSS THANH CUỘN MẢNH (KHÔNG CÒN NÚT ▼ WINDOWS)
   const coreDem = await ensureZoneDemGrid(21.072514, 105.77387, 2);

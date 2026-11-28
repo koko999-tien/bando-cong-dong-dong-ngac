@@ -48,10 +48,6 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M10 6h8M10 10h8M10 14h5"></path></svg>
             <span>Bản tin &amp; Công bố</span>
           </button>
-          <button type="button" class="pillar-btn pillar-btn-dev" data-pillar="dev" title="Khu vực kỹ thuật, giám sát hạ tầng & điều hành dành cho Developer / Quản trị viên">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-            <span>Quản trị &amp; Dev</span>
-          </button>
         </nav>
 
         <div class="topbar-actions">
@@ -593,7 +589,6 @@
             </div>
             <div class="form-actions-row">
               <a href="./chuyen-gia.html" class="btn btn-sm btn-secondary">Mở Bàn phân tích Chuyên sâu</a>
-              <button type="button" id="btn-toggle-reviewer-box" class="btn btn-sm btn-secondary">Hội đồng kiểm duyệt</button>
               <button type="button" id="btn-rs-logout" class="btn btn-sm btn-secondary">Đăng xuất</button>
             </div>
           </div>
@@ -700,19 +695,6 @@
               </div>
             </div>
           </div>
-
-          <section id="reviewer-panel" class="card-panel" hidden aria-label="Bảng Kiểm duyệt Dữ liệu Nghiên cứu">
-            <div class="section-head-row">
-              <h2 class="section-title">Hội đồng Kiểm định — Phê duyệt Dữ liệu lên Bản đồ Chính</h2>
-              <button type="button" id="btn-close-reviewer-panel" class="text-btn">Thu gọn</button>
-            </div>
-            <div id="reviewer-auth-row" class="search-row">
-              <label for="reviewer-pass-input" class="sr-only">Mật khẩu Hội đồng kiểm duyệt</label>
-              <input type="password" id="reviewer-pass-input" class="text-input" placeholder="Nhập mã xác thực Hội đồng kiểm duyệt (ADMIN_PASSCODE)...">
-              <button type="button" id="btn-reviewer-login" class="btn btn-primary">Xác thực</button>
-            </div>
-            <div id="reviewer-queue-list" class="place-list" hidden></div>
-          </section>
         </div>
       </section>
 
@@ -761,242 +743,6 @@
 
         <div id="publications-feed-list" class="news-feed-grid"></div>
       </section>
-
-      <!-- ======================================================================= -->
-      <!-- PHÂN HỆ 4: KHU VỰC QUẢN TRỊ HỆ THỐNG & DEVELOPER CONSOLE                  -->
-      <!-- ======================================================================= -->
-      <section id="pillar-dev" class="pillar-section page-container" hidden aria-label="Trung tâm Kỹ thuật, Vận hành và Quản trị Hệ thống">
-        <div class="section-banner dev-banner">
-          <div>
-            <div class="dev-title-row">
-              <h1>Trung tâm Kỹ thuật &amp; Điều hành Hệ thống (Developer &amp; Admin Console)</h1>
-              <span id="dev-env-badge" class="mono-badge">Edge + Cloud Active</span>
-            </div>
-            <p>Giám sát sức khỏe API đa đám mây thời gian thực, kiểm tra bộ nhớ đệm không gian, quản trị dữ liệu cộng đồng, phê duyệt công trình nghiên cứu và phát cảnh báo khẩn cấp.</p>
-          </div>
-          <div class="form-actions-row">
-            <button type="button" id="btn-dev-run-health" class="btn btn-primary btn-sm">Ping toàn bộ Endpoint</button>
-            <button type="button" id="btn-dev-purge-sw" class="btn btn-secondary btn-sm">Làm mới Cache SW</button>
-            <a href="./chuyen-gia.html" class="btn btn-secondary btn-sm">Bàn GIS Chuyên sâu</a>
-          </div>
-        </div>
-
-        <!-- 4 CHỈ SỐ VẬN HÀNH KỸ THUẬT -->
-        <div class="dev-kpi-grid">
-          <div class="news-stat-box">
-            <strong id="dev-stat-features" class="mono-num">0</strong>
-            <span>Đối tượng không gian nền &amp; hành lang</span>
-          </div>
-          <div class="news-stat-box">
-            <strong id="dev-stat-latency" class="mono-num">-- ms</strong>
-            <span>Độ trễ trung bình cụm API</span>
-          </div>
-          <div class="news-stat-box">
-            <strong id="dev-stat-backend" class="mono-num">Đang dò...</strong>
-            <span>Tầng lưu trữ cơ sở dữ liệu</span>
-          </div>
-          <div class="news-stat-box">
-            <strong id="dev-stat-auth" class="mono-num">Chế độ Đọc</strong>
-            <span>Quyền điều hành hiện tại</span>
-          </div>
-        </div>
-
-        <!-- 2 BẢNG CHẨN ĐOÁN KỸ THUẬT TRỰC TIẾP -->
-        <div class="research-two-col">
-          <article class="card-panel">
-            <div class="section-head-row">
-              <h2 class="section-title">Ma trận Sức khỏe &amp; Độ trễ Dịch vụ (Live Telemetry)</h2>
-              <span id="dev-last-ping-time" class="muted-meta mono-num">Chưa đo</span>
-            </div>
-            <div class="dev-table-wrap">
-              <table class="dev-table">
-                <thead>
-                  <tr>
-                    <th>Dịch vụ / Endpoint</th>
-                    <th>Trạng thái</th>
-                    <th>Độ trễ</th>
-                    <th>Chi tiết phản hồi</th>
-                  </tr>
-                </thead>
-                <tbody id="dev-health-tbody">
-                  <tr><td colspan="4" class="muted-meta">Đang kiểm tra kết nối hệ thống...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </article>
-
-          <article class="card-panel">
-            <div class="section-head-row">
-              <h2 class="section-title">Sổ đăng ký Lớp Dữ liệu Không gian &amp; Sao lưu</h2>
-              <div class="form-actions-row">
-                <button type="button" id="btn-dev-export-geojson" class="btn btn-sm btn-secondary">Xuất .GeoJSON</button>
-                <button type="button" id="btn-dev-export-csv" class="btn btn-sm btn-secondary">Xuất .CSV</button>
-              </div>
-            </div>
-            <div class="dev-table-wrap">
-              <table class="dev-table">
-                <thead>
-                  <tr>
-                    <th>Mã lớp dữ liệu</th>
-                    <th>Số lượng</th>
-                    <th>Phân loại chuẩn</th>
-                  </tr>
-                </thead>
-                <tbody id="dev-registry-tbody"></tbody>
-              </table>
-            </div>
-          </article>
-        </div>
-
-        <!-- CỔNG MỞ KHÓA QUYỀN GHI QUẢN TRỊ VIÊN / DEVOPS (HMAC-SHA256) -->
-        <article class="card-panel dev-auth-panel">
-          <div class="section-head-row">
-            <div>
-              <h2 class="section-title">Quyền Điều hành Đám mây (Xác thực HMAC-SHA256)</h2>
-              <p class="muted-body">Mở khóa thao tác duyệt báo cáo cộng đồng, thêm điểm trực tiếp lên Cloud, duyệt hồ sơ nghiên cứu, phát cảnh báo khẩn và xem Nhật ký kiểm toán.</p>
-            </div>
-            <button type="button" id="btn-dev-logout" class="btn btn-sm btn-secondary" hidden>Khóa phiên Quản trị</button>
-          </div>
-
-          <form id="dev-login-form" class="search-row">
-            <label for="dev-pass-input" class="sr-only">Mã xác thực quản trị viên hệ thống</label>
-            <input type="password" id="dev-pass-input" class="text-input" autocomplete="current-password" placeholder="Nhập ADMIN_PASSCODE để mở khóa quyền điều hành hệ thống...">
-            <button type="submit" id="btn-dev-login" class="btn btn-primary">Mở khóa Dev / Admin</button>
-          </form>
-          <div id="dev-login-feedback" class="form-feedback" hidden role="alert"></div>
-
-          <!-- KHÔNG GIAN ĐIỀU HÀNH MỞ KHÓA SAU KHI XÁC THỰC -->
-          <div id="dev-ops-workspace" class="stack-panel" hidden>
-            <nav class="subtab-bar dev-subtabs" role="tablist" aria-label="Phân hệ điều hành quản trị">
-              <button type="button" class="subtab-btn is-active" data-devtab="mod">Kiểm duyệt &amp; Điểm bản đồ</button>
-              <button type="button" class="subtab-btn" data-devtab="research">Duyệt Nghiên cứu (<span id="dev-pending-studies-cnt">0</span>)</button>
-              <button type="button" class="subtab-btn" data-devtab="broadcast">Phát Cảnh báo Khẩn</button>
-              <button type="button" class="subtab-btn" data-devtab="api">API Sandbox &amp; Nhật ký</button>
-            </nav>
-
-            <!-- DEV TAB 1: KIỂM DUYỆT & THÊM ĐIỂM CLOUD -->
-            <div id="devpane-mod" class="stack-panel">
-              <div class="research-two-col">
-                <div class="stack-panel">
-                  <div class="search-row">
-                    <label for="dev-mod-search" class="sr-only">Tìm điểm cần kiểm duyệt</label>
-                    <input type="search" id="dev-mod-search" class="text-input text-input-compact" placeholder="Tìm theo tên điểm, tỉnh/thành hoặc mã ID...">
-                    <select id="dev-mod-filter" class="text-input text-input-compact" style="max-width:170px;" aria-label="Lọc trạng thái kiểm duyệt">
-                      <option value="all">Tất cả điểm</option>
-                      <option value="pending">Chờ duyệt (Hạng C)</option>
-                      <option value="approved">Đã xác thực (A/B)</option>
-                      <option value="hidden">Đã ẩn</option>
-                    </select>
-                  </div>
-                  <div id="dev-mod-list" class="place-list" style="max-height:420px;overflow-y:auto;"></div>
-                </div>
-
-                <form id="dev-add-point-form" class="card-panel" style="background:var(--bg-subtle);">
-                  <h3 class="section-title">Thêm / Ghi đè Điểm Trực tiếp lên Cloud</h3>
-                  <div class="field-group">
-                    <label for="dev-pt-name" class="field-label">Tên địa điểm / Điểm ngập / Trạm y tế <span class="req">*</span></label>
-                    <input type="text" id="dev-pt-name" class="text-input" required minlength="3" placeholder="VD: Điểm ngập đường Nguyễn Hữu Cảnh...">
-                  </div>
-                  <div class="two-col-fields">
-                    <div class="field-group">
-                      <label for="dev-pt-cat" class="field-label">Danh mục</label>
-                      <select id="dev-pt-cat" class="text-input">
-                        <option value="flood">Điểm ngập úng (Rủi ro)</option>
-                        <option value="landslide">Sạt lở / Hạ tầng nguy hiểm</option>
-                        <option value="heat">Nắng nóng / Môi trường</option>
-                        <option value="medical">Cơ sở y tế (An toàn)</option>
-                        <option value="shelter">Điểm trú kiên cố (An toàn)</option>
-                      </select>
-                    </div>
-                    <div class="field-group">
-                      <label for="dev-pt-province" class="field-label">Tỉnh / Thành phố</label>
-                      <input type="text" id="dev-pt-province" class="text-input" value="Hà Nội">
-                    </div>
-                  </div>
-                  <div class="two-col-fields">
-                    <div class="field-group">
-                      <label for="dev-pt-lat" class="field-label">Vĩ độ (WGS84 Lat) <span class="req">*</span></label>
-                      <input type="number" id="dev-pt-lat" class="text-input mono-num" step="0.000001" value="21.072514" required>
-                    </div>
-                    <div class="field-group">
-                      <label for="dev-pt-lng" class="field-label">Kinh độ (WGS84 Lng) <span class="req">*</span></label>
-                      <input type="number" id="dev-pt-lng" class="text-input mono-num" step="0.000001" value="105.77387" required>
-                    </div>
-                  </div>
-                  <div class="field-group">
-                    <label for="dev-pt-notes" class="field-label">Ghi chú kỹ thuật &amp; nguồn xác minh</label>
-                    <textarea id="dev-pt-notes" class="text-input" rows="2" placeholder="Nguồn xác minh thực địa / văn bản PCTT..."></textarea>
-                  </div>
-                  <div class="form-actions-row">
-                    <button type="button" id="btn-dev-use-active-zone" class="btn btn-sm btn-secondary">Lấy tọa độ tâm vùng đang xem</button>
-                    <button type="submit" class="btn btn-sm btn-primary">Ghi lên Cloud (Hạng A)</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            <!-- DEV TAB 2: DUYỆT HỒ SƠ NGHIÊN CỨU -->
-            <div id="devpane-research" class="stack-panel" hidden>
-              <p class="muted-body">Danh sách hồ sơ dữ liệu khoa học gửi từ Cổng Nghiên cứu. Khi bấm Duyệt, các điểm tọa độ tự động đồng bộ sang Bản đồ chính và bài viết lên mục Bản tin &amp; Công bố.</p>
-              <div id="dev-review-list" class="place-list"></div>
-            </div>
-
-            <!-- DEV TAB 3: PHÁT CẢNH BÁO KHẨN CẤP -->
-            <div id="devpane-broadcast" class="stack-panel" hidden>
-              <div class="two-col-fields">
-                <div class="field-group">
-                  <label for="dev-bc-level" class="field-label">Cấp độ cảnh báo điều hành</label>
-                  <select id="dev-bc-level" class="text-input">
-                    <option value="yellow">Cấp Vàng — Khuyến cáo theo dõi &amp; chủ động phòng tránh</option>
-                    <option value="red">Cấp Đỏ — Cảnh báo nguy cơ cao, hạn chế di chuyển qua vùng ngập/sạt lở</option>
-                  </select>
-                </div>
-                <div class="field-group">
-                  <label for="dev-bc-msg" class="field-label">Nội dung thông báo phát trực tiếp</label>
-                  <input type="text" id="dev-bc-msg" class="text-input" maxlength="260" placeholder="VD: Cảnh báo mưa lớn diện rộng chiều tối nay, tránh đi qua các hầm chui và ngõ trũng...">
-                </div>
-              </div>
-              <div class="form-actions-row">
-                <button type="button" id="btn-dev-bc-send" class="btn btn-primary">Phát thông báo trực tiếp</button>
-                <button type="button" id="btn-dev-bc-off" class="btn btn-secondary">Tắt thông báo đang phát</button>
-              </div>
-            </div>
-
-            <!-- DEV TAB 4: API SANDBOX & AUDIT LOG -->
-            <div id="devpane-api" class="stack-panel" hidden>
-              <div class="search-row">
-                <label for="dev-api-endpoint" class="sr-only">Chọn Endpoint kiểm thử</label>
-                <select id="dev-api-endpoint" class="text-input mono-num">
-                  <option value="/api/community?action=public_sync&lat=21.0725&lng=105.7739&radiusKm=2">GET /api/community?action=public_sync (Đông Ngạc)</option>
-                  <option value="/api/community?action=admin_full">GET /api/community?action=admin_full (Bearer Auth)</option>
-                  <option value="/api/research-portal?action=publications">GET /api/research-portal?action=publications (D1/Cloud)</option>
-                  <option value="/api/research-portal?action=zone_osm&lat=16.0544&lng=108.2022&radiusKm=5">GET /api/research-portal?action=zone_osm (Đà Nẵng OSM)</option>
-                  <option value="/api/research-portal?action=review_queue">GET /api/research-portal?action=review_queue (Bearer Auth)</option>
-                </select>
-                <button type="button" id="btn-dev-api-call" class="btn btn-primary">Gửi Request</button>
-              </div>
-              <pre id="dev-api-json-out" class="dev-json-viewer mono-num">// Chọn Endpoint và bấm "Gửi Request" để kiểm tra phản hồi JSON thực tế...</pre>
-
-              <h3 class="section-title">Nhật ký Kiểm toán Bảo mật &amp; Điều hành (Server Audit Log)</h3>
-              <div class="dev-table-wrap">
-                <table class="dev-table">
-                  <thead>
-                    <tr>
-                      <th>Thời gian</th>
-                      <th>Chế độ</th>
-                      <th>Hành động</th>
-                      <th>Chi tiết</th>
-                    </tr>
-                  </thead>
-                  <tbody id="dev-audit-tbody">
-                    <tr><td colspan="4" class="muted-meta">Chưa có bản ghi kiểm toán.</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </article>
-      </section>
     </main>
 
     <!-- ================= THANH ĐIỀU HƯỚNG DƯỚI ĐÁY (ĐIỆN THOẠI) ================= -->
@@ -1012,10 +758,6 @@
       <button type="button" class="mob-tab" data-pillar="news">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"></path><path d="M10 6h8M10 10h8M10 14h5"></path></svg>
         <span>Bản tin</span>
-      </button>
-      <button type="button" class="mob-tab" data-pillar="dev">
-        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-        <span>Dev / Q.Trị</span>
       </button>
     </nav>
   </div>

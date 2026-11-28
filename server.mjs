@@ -3,8 +3,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isSafeSubpath, cleanText } from './platform/security/validators.js';
+import { isAllowedOpsOrigin } from './platform/security/cors.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const STATIC_ROOT = process.env.STATIC_ROOT ? path.resolve(__dirname, process.env.STATIC_ROOT) : __dirname;
 const PORT = Number(process.env.PORT || 4173);
 const LOCAL_DB_PATH = path.join(__dirname, '.local-data', 'cloud-sim.json');
 const LOCAL_DEV_PASS = process.env.ADMIN_PASSCODE || 'local-dev-passcode';
@@ -285,12 +287,29 @@ async function handleLocalApi(req, res) {
 function resolveSafePath(urlPath) {
   const cleanUrl = decodeURIComponent(urlPath.split('?')[0]);
   const rel = cleanUrl === '/' ? 'index.html' : cleanUrl.replace(/^\/+/, '');
-  const target = path.resolve(__dirname, rel);
-  return isSafeSubpath(__dirname, target) ? target : null;
+  const target = path.resolve(STATIC_ROOT, rel);
+  return isSafeSubpath(STATIC_ROOT, target) ? target : null;
+}
+
+function applyNodeCors(req, res) {
+  const origin = req.headers.origin || '';
+  if (isAllowedOpsOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Max-Age', '86400');
+  }
+  res.setHeader('Vary', 'Origin');
 }
 
 const server = http.createServer(async (req, res) => {
   try {
+    applyNodeCors(req, res);
+    if (req.method === 'OPTIONS' && (req.url || '').startsWith('/api/')) {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
     if ((req.url || '').startsWith('/api/research-portal')) {
       const mod = await import('./api/research-portal.js');
       const chunks = [];
@@ -298,9 +317,9 @@ const server = http.createServer(async (req, res) => {
       const webReq = new Request(`http://localhost:${PORT}${req.url}`, {
         method: req.method,
         headers: req.headers,
-        body: ['GET', 'HEAD'].includes(req.method) ? undefined : Buffer.concat(chunks)
+        body: ['GET', 'HEAD', 'OPTIONS'].includes(req.method) ? undefined : Buffer.concat(chunks)
       });
-      const webRes = req.method === 'POST' ? await mod.POST(webReq) : await mod.GET(webReq);
+      const webRes = req.method === 'POST' ? await mod.POST(webReq) : req.method === 'OPTIONS' ? await mod.OPTIONS(webReq) : await mod.GET(webReq);
       res.writeHead(webRes.status, Object.fromEntries(webRes.headers.entries()));
       res.end(await webRes.text());
       return;

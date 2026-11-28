@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="theme-color" content="#0B1220">
+  <title>VN Resilience Ops — Cổng Kỹ thuật &amp; Điều hành Độc lập</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="./ops.css">
+</head>
+<body>
+  <header class="ops-topbar">
+    <div class="ops-brand">
+      <div class="ops-logo" aria-hidden="true">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>
+      </div>
+      <div>
+        <div class="ops-brand-title">
+          <span>VN Resilience Ops Console</span>
+          <span class="ops-env-pill">SEPARATE WEB PORTAL</span>
+        </div>
+        <span class="ops-brand-sub">Cổng Quản trị Đám mây, Thẩm định Khoa học &amp; Điều hành Kỹ thuật Độc lập</span>
+      </div>
+    </div>
+
+    <div class="ops-target-cluster">
+      <label for="ops-api-base" class="target-label">Máy chủ Đích:</label>
+      <input type="url" id="ops-api-base" class="target-input" placeholder="https://bando-cong-dong-dong-ngac.vercel.app">
+      <button type="button" id="btn-ops-apply-target" class="btn btn-sm btn-ghost-dark">Kết nối lại</button>
+      <span id="ops-auth-badge" class="auth-badge">Chế độ Chẩn đoán (Chỉ đọc)</span>
+      <a id="link-open-public-web" href="https://bando-cong-dong-dong-ngac.vercel.app" target="_blank" rel="noopener" class="btn btn-sm btn-primary">Mở Web Chính ↗</a>
+    </div>
+  </header>
+
+  <div class="ops-shell">
+    <!-- THANH ĐIỀU HƯỚNG TRÁI + KHÓA BẢO MẬT HMAC-SHA256 -->
+    <aside class="ops-sidebar" aria-label="Điều hướng phân hệ Quản trị và Kỹ thuật">
+      <nav class="ops-nav" role="tablist">
+        <button type="button" class="ops-nav-btn is-active" data-view="telemetry">
+          <span>1. Giám sát Hạ tầng &amp; Độ trễ</span>
+        </button>
+        <button type="button" class="ops-nav-btn" data-view="moderation">
+          <span>2. Kiểm duyệt &amp; Ghim Điểm</span>
+          <span id="nav-cnt-reports" class="nav-count">0</span>
+        </button>
+        <button type="button" class="ops-nav-btn" data-view="research">
+          <span>3. Duyệt Nghiên cứu &amp; Bản tin</span>
+          <span id="nav-cnt-studies" class="nav-count">0</span>
+        </button>
+        <button type="button" class="ops-nav-btn" data-view="broadcast">
+          <span>4. Phát Cảnh báo Khẩn cấp</span>
+        </button>
+        <button type="button" class="ops-nav-btn" data-view="sandbox">
+          <span>5. API Sandbox &amp; Nhật ký</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-auth-card">
+        <h3>Xác thực Quản trị (HMAC-SHA256)</h3>
+        <form id="ops-auth-form">
+          <label for="ops-pass-input" class="sr-only">Mã xác thực ADMIN_PASSCODE</label>
+          <input type="password" id="ops-pass-input" autocomplete="current-password" placeholder="Nhập ADMIN_PASSCODE...">
+          <div class="btn-row">
+            <button type="submit" id="btn-ops-login" class="btn btn-sm btn-primary" style="width:100%;">Mở khóa Quyền Ghi Cloud</button>
+            <button type="button" id="btn-ops-logout" class="btn btn-sm btn-danger" style="width:100%;" hidden>Khóa Phiên Quản trị</button>
+          </div>
+        </form>
+        <p id="ops-auth-msg" style="margin:8px 0 0;font-size:0.74rem;color:#94A3B8;">Web quản trị tách rời hoàn toàn khỏi trang người dân; mọi lệnh ghi đều ký Bearer Token.</p>
+      </div>
+    </aside>
+
+    <!-- KHÔNG GIAN LÀM VIỆC TRUNG TÂM -->
+    <main class="ops-main">
+      <!-- ================= VIEW 1: TELEMETRY & SPATIAL INSPECTOR ================= -->
+      <section id="view-telemetry" class="ops-view">
+        <div class="view-head">
+          <div>
+            <h1>Giám sát Hạ tầng Đa Đám mây &amp; Thanh tra Vùng Không gian</h1>
+            <p>Đo độ trễ trực tiếp tới cụm API Production (Vercel Serverless + Cloudflare Edge D1/KV + Open-Meteo Copernicus DEM + OSM).</p>
+          </div>
+          <div class="btn-row">
+            <button type="button" id="btn-probe-all" class="btn btn-primary">Ping toàn bộ Cụm Dịch vụ</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-lbl">Trạng thái Cụm API</span>
+            <strong id="kpi-cluster-status" class="kpi-val">Đang kiểm tra...</strong>
+            <span id="kpi-cluster-sub" class="kpi-sub">Cross-Origin CORS bảo mật</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-lbl">Độ trễ Trung bình (RTT)</span>
+            <strong id="kpi-avg-latency" class="kpi-val">-- ms</strong>
+            <span id="kpi-ping-clock" class="kpi-sub mono">Chưa đo</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-lbl">Tầng Lưu trữ Cơ sở Dữ liệu</span>
+            <strong id="kpi-storage-engine" class="kpi-val">--</strong>
+            <span class="kpi-sub">Cloudflare D1 / Vercel Blob</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-lbl">Ấn phẩm &amp; Phản ánh Cloud</span>
+            <strong id="kpi-cloud-records" class="kpi-val">0</strong>
+            <span id="kpi-broadcast-state" class="kpi-sub">Cảnh báo khẩn: Đang tắt</span>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <article class="card">
+            <div class="card-head">
+              <h2 class="card-title">Ma trận Sức khỏe Dịch vụ &amp; Độ trễ Thời gian thực</h2>
+            </div>
+            <div class="table-wrap">
+              <table class="ops-table">
+                <thead>
+                  <tr>
+                    <th>Dịch vụ / Endpoint</th>
+                    <th>Trạng thái</th>
+                    <th>Độ trễ</th>
+                    <th>Chi tiết Kỹ thuật</th>
+                  </tr>
+                </thead>
+                <tbody id="telemetry-tbody">
+                  <tr><td colspan="4">Đang gửi gói tin kiểm tra...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-head">
+              <h2 class="card-title">Thanh tra Dữ liệu Vùng Khoanh &amp; Xuất Chuẩn GIS</h2>
+            </div>
+            <div class="field">
+              <label for="inspector-zone-select">Chọn Vùng Đô thị / Lưu vực trên Web Chính</label>
+              <div class="btn-row">
+                <select id="inspector-zone-select" class="input" style="flex:1;">
+                  <option value="21.072514,105.77387,2,Đông Ngạc (Hà Nội)">Đông Ngạc — Bắc Từ Liêm, Hà Nội (R=2km)</option>
+                  <option value="21.0285,105.8542,5,Trung tâm Hà Nội">Trung tâm TP. Hà Nội (R=5km)</option>
+                  <option value="16.4637,107.5909,8,TP. Huế">TP. Huế — Lưu vực Sông Hương (R=8km)</option>
+                  <option value="16.0544,108.2022,8,TP. Đà Nẵng">TP. Đà Nẵng — Hải Châu / Liên Chiểu (R=8km)</option>
+                  <option value="10.7769,106.7009,10,TP. Hồ Chí Minh">TP. Hồ Chí Minh — Lưu vực Sài Gòn (R=10km)</option>
+                  <option value="10.0452,105.7469,8,TP. Cần Thơ">TP. Cần Thơ — Ninh Kiều / Cái Răng (R=8km)</option>
+                  <option value="22.3364,103.8438,10,Sa Pa (Lào Cai)">Sa Pa — Lào Cai (R=10km)</option>
+                </select>
+                <button type="button" id="btn-inspect-zone" class="btn btn-primary">Quét Vùng</button>
+              </div>
+            </div>
+            <div id="inspector-summary-box" class="item-card mono" style="font-size:0.78rem;">
+              Chọn khu vực và bấm "Quét Vùng" để kiểm tra số POI y tế/cứu hộ OSM, dữ liệu nghiên cứu đã duyệt và biên độ cao độ Copernicus GLO-30.
+            </div>
+            <div class="btn-row">
+              <button type="button" id="btn-export-zone-geojson" class="btn btn-sm">Xuất Vùng (.GeoJSON)</button>
+              <button type="button" id="btn-export-zone-csv" class="btn btn-sm">Xuất Vùng (.CSV)</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 2: COMMUNITY MODERATION & CLOUD MAP PIN-PICKER ================= -->
+      <section id="view-moderation" class="ops-view" hidden>
+        <div class="view-head">
+          <div>
+            <h1>Kiểm duyệt Phản ánh Cộng đồng &amp; Ghim Điểm Trực tiếp lên Web Chính</h1>
+            <p>Duyệt nâng hạng tin cậy (Hạng A/B), ẩn báo cáo rác và chấm tọa độ điểm ngập/y tế mới đồng bộ tức thì sang <code>bando-cong-dong-dong-ngac.vercel.app</code>.</p>
+          </div>
+          <button type="button" id="btn-reload-mod" class="btn">Làm mới Danh sách Cloud</button>
+        </div>
+
+        <div id="lock-notice-mod" class="lock-banner">
+          Bạn đang ở Chế độ Chỉ đọc. Hãy nhập <code>ADMIN_PASSCODE</code> ở khung bên trái để mở khóa thao tác duyệt bài và ghi điểm mới lên Cloud.
+        </div>
+
+        <div class="two-col">
+          <article class="card">
+            <div class="card-head">
+              <h2 class="card-title">Danh sách Phản ánh &amp; Điểm Điều hành trên Cloud</h2>
+              <div class="btn-row">
+                <input type="search" id="mod-filter-q" class="input" style="width:190px;" placeholder="Tìm mã ID, tên địa điểm...">
+                <select id="mod-filter-status" class="input" style="width:150px;">
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="pending">Chờ duyệt (Hạng C)</option>
+                  <option value="approved">Đang công khai</option>
+                  <option value="hidden">Đã ẩn</option>
+                </select>
+              </div>
+            </div>
+            <div id="mod-cards-box" style="max-height:520px;overflow-y:auto;"></div>
+          </article>
+
+          <article class="card">
+            <h2 class="card-title" style="margin-bottom:8px;">Ghim Điểm Mới / Ghi đè Trực tiếp lên Bản đồ Chính</h2>
+            <p style="margin:0 0 8px;font-size:0.78rem;color:var(--ink-muted);">Nhấp vào bất kỳ vị trí nào trên bản đồ bên dưới để lấy tọa độ chính xác và tự động tra cao độ Copernicus 30m:</p>
+            <div id="ops-picker-map" class="ops-minimap"></div>
+
+            <form id="ops-upsert-form">
+              <div class="field">
+                <label for="up-name">Tên điểm ngập / Sạt lở / Trạm y tế / Điểm sơ tán *</label>
+                <input type="text" id="up-name" class="input" required minlength="3" placeholder="VD: Điểm ngập ngã tư Phan Bội Châu – Huế">
+              </div>
+              <div class="field-row-2">
+                <div class="field">
+                  <label for="up-cat">Danh mục Lớp Bản đồ</label>
+                  <select id="up-cat" class="input">
+                    <option value="flood">Điểm ngập úng (Rủi ro)</option>
+                    <option value="landslide">Sạt lở / Lũ quét (Rủi ro)</option>
+                    <option value="traffic">Hạ tầng nguy hiểm / Cống hở</option>
+                    <option value="heat">Nắng nóng / Ô nhiễm</option>
+                    <option value="medical">Bệnh viện / Trạm y tế (An toàn)</option>
+                    <option value="shelter">Điểm sơ tán kiên cố (An toàn)</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="up-province">Tỉnh / Thành phố</label>
+                  <input type="text" id="up-province" class="input" value="Hà Nội" required>
+                </div>
+              </div>
+              <div class="field-row-2">
+                <div class="field">
+                  <label for="up-lat">Vĩ độ (WGS84 Lat) *</label>
+                  <input type="number" id="up-lat" class="input mono" step="0.000001" value="21.072514" required>
+                </div>
+                <div class="field">
+                  <label for="up-lng">Kinh độ (WGS84 Lng) *</label>
+                  <input type="number" id="up-lng" class="input mono" step="0.000001" value="105.773870" required>
+                </div>
+              </div>
+              <div class="field-row-2">
+                <div class="field">
+                  <label for="up-dem">Cao độ mặt đất (m)</label>
+                  <input type="number" id="up-dem" class="input mono" step="0.1" placeholder="Tự động tra...">
+                </div>
+                <div class="field">
+                  <label for="up-cite">Nguồn xác minh *</label>
+                  <input type="text" id="up-cite" class="input" value="Khảo sát & Điều hành Hệ thống" required>
+                </div>
+              </div>
+              <div class="field">
+                <label for="up-notes">Khuyến nghị an toàn hiển thị cho người dân</label>
+                <textarea id="up-notes" class="input" rows="2" placeholder="VD: Ngập ~35 cm khi mưa trên 60 mm/h, nên vòng qua trục đường cao ráo lân cận..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width:100%;">Đẩy Trực tiếp lên Bản đồ Chính (Hạng A)</button>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 3: RESEARCH PEER REVIEW & DISASTER NEWS PUBLISHER ================= -->
+      <section id="view-research" class="ops-view" hidden>
+        <div class="view-head">
+          <div>
+            <h1>Hội đồng Thẩm định Nghiên cứu &amp; Xuất bản Bản tin Thiên tai</h1>
+            <p>Kiểm duyệt các bộ dữ liệu nghiên cứu gửi từ Cổng Nghiên cứu và xuất bản bản tin thiên tai chính thức lên Phân hệ 3 của Web Chính.</p>
+          </div>
+          <button type="button" id="btn-reload-studies" class="btn">Tải lại Hàng đợi</button>
+        </div>
+
+        <div id="lock-notice-research" class="lock-banner">
+          Yêu cầu mở khóa <code>ADMIN_PASSCODE</code> ở thanh bên trái để xem hàng đợi thẩm định nghiên cứu và đăng bản tin mới.
+        </div>
+
+        <div class="two-col-equal">
+          <article class="card">
+            <h2 class="card-title" style="margin-bottom:10px;">Hàng đợi Hồ sơ Khoa học Chờ Kiểm định</h2>
+            <div id="research-queue-box" style="max-height:540px;overflow-y:auto;">
+              <p style="color:var(--ink-muted);">Đăng nhập quyền Quản trị để tải hàng đợi thẩm định.</p>
+            </div>
+          </article>
+
+          <article class="card">
+            <h2 class="card-title" style="margin-bottom:10px;">Đăng Bản tin Thiên tai / Cảnh báo Môi trường lên Web Chính</h2>
+            <form id="ops-news-form">
+              <div class="field">
+                <label for="nw-title">Tiêu đề Bản tin *</label>
+                <input type="text" id="nw-title" class="input" required minlength="8" placeholder="VD: Cảnh báo mưa lớn diện rộng khu vực Trung Trung Bộ...">
+              </div>
+              <div class="field-row-2">
+                <div class="field">
+                  <label for="nw-province">Tỉnh / Khu vực Trọng tâm *</label>
+                  <input type="text" id="nw-province" class="input" value="TP. Đà Nẵng" required>
+                </div>
+                <div class="field">
+                  <label for="nw-region">Vùng Địa lý</label>
+                  <select id="nw-region" class="input">
+                    <option value="bac">Miền Bắc</option>
+                    <option value="trung" selected>Miền Trung</option>
+                    <option value="tay-nguyen">Tây Nguyên</option>
+                    <option value="nam">Đông Nam Bộ</option>
+                    <option value="dbscl">Đồng bằng Sông Cửu Long</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field-row-2">
+                <div class="field">
+                  <label for="nw-hazard">Loại Hình Rủi ro</label>
+                  <select id="nw-hazard" class="input">
+                    <option value="flood">Ngập úng &amp; Lũ lụt</option>
+                    <option value="storm">Bão &amp; Áp thấp nhiệt đới</option>
+                    <option value="landslide">Lũ quét &amp; Sạt lở đất</option>
+                    <option value="heat">Nắng nóng gay gắt</option>
+                    <option value="salinity">Xâm nhập mặn</option>
+                    <option value="air_quality">Ô nhiễm không khí</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="nw-severity">Mức Độ Cảnh báo</label>
+                  <select id="nw-severity" class="input">
+                    <option value="high">Cao / Khẩn cấp</option>
+                    <option value="attention" selected>Chú ý theo dõi</option>
+                    <option value="info">Thông tin tham khảo</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field-row-2">
+                <div class="field">
+                  <label for="nw-lat">Vĩ độ Tâm Vùng *</label>
+                  <input type="number" id="nw-lat" class="input mono" step="0.0001" value="16.0544" required>
+                </div>
+                <div class="field">
+                  <label for="nw-lng">Kinh độ Tâm Vùng *</label>
+                  <input type="number" id="nw-lng" class="input mono" step="0.0001" value="108.2022" required>
+                </div>
+              </div>
+              <div class="field">
+                <label for="nw-source">Nguồn Cơ quan Phát hành *</label>
+                <input type="text" id="nw-source" class="input" value="Trung tâm Dự báo KTTV Quốc gia" required>
+              </div>
+              <div class="field">
+                <label for="nw-summary">Tóm tắt Ngắn hiển thị ngoài Danh sách *</label>
+                <textarea id="nw-summary" class="input" rows="2" required minlength="15" placeholder="Tóm tắt lượng mưa dự báo, thời gian cao điểm và các khu vực trũng cần lưu ý..."></textarea>
+              </div>
+              <div class="field">
+                <label for="nw-body">Nội dung Chi tiết &amp; Khuyến nghị Ứng phó</label>
+                <textarea id="nw-body" class="input" rows="3" placeholder="Chi tiết diễn biến và hướng dẫn an toàn cho người dân..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width:100%;">Xuất bản Bản tin lên Web Chính</button>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 4: EMERGENCY BROADCAST CONTROLLER ================= -->
+      <section id="view-broadcast" class="ops-view" hidden>
+        <div class="view-head">
+          <div>
+            <h1>Điều hành Thanh Cảnh báo Khẩn cấp Thời gian thực</h1>
+            <p>Phát hoặc gỡ băng rôn cảnh báo khẩn cấp hiển thị ngay trên đỉnh trang chủ <code>bando-cong-dong-dong-ngac.vercel.app</code>.</p>
+          </div>
+        </div>
+
+        <div id="lock-notice-broadcast" class="lock-banner">
+          Yêu cầu mở khóa <code>ADMIN_PASSCODE</code> để phát hoặc tắt cảnh báo khẩn cấp trên Web Chính.
+        </div>
+
+        <article class="card">
+          <div class="field-row-2">
+            <div class="field">
+              <label for="bc-preset">Mẫu kịch bản điều hành nhanh</label>
+              <select id="bc-preset" class="input">
+                <option value="">-- Tự nhập nội dung tùy chỉnh --</option>
+                <option value="red|CẢNH BÁO MƯA LỚN NGẬP SÂU: Nhiều tuyến ngõ trũng có nguy cơ ngập trên 30–50 cm trong 2 giờ tới. Hạn chế đi qua hầm chui và ngõ thấp.">[CẤP ĐỎ] Cảnh báo mưa lớn &amp; ngập sâu đô thị</option>
+                <option value="yellow|KHUYẾN CÁO THỜI TIẾT: Theo dõi mưa dông cục bộ và chất lượng không khí chiều tối nay; chủ động kiểm tra lộ trình trước khi di chuyển.">[CẤP VÀNG] Khuyến cáo mưa dông &amp; không khí</option>
+                <option value="info|THÔNG BÁO HỆ THỐNG: Đã cập nhật lớp mặt phủ ngập nước vệ tinh 30 m mới nhất cho 63 tỉnh/thành.">[THÔNG TIN] Cập nhật dữ liệu hệ thống</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="bc-level">Mức màu băng rôn hiển thị</label>
+              <select id="bc-level" class="input">
+                <option value="red">Đỏ Khẩn cấp (Nguy cơ cao)</option>
+                <option value="yellow" selected>Vàng Cảnh báo (Chú ý phòng tránh)</option>
+                <option value="info">Xanh Ngọc (Thông tin điều hành)</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="bc-message">Thông điệp phát trực tiếp tới người dân (tối đa 300 ký tự)</label>
+            <input type="text" id="bc-message" class="input" maxlength="300" placeholder="Nhập nội dung cảnh báo rõ ràng, ngắn gọn, dễ hiểu...">
+          </div>
+          <div class="btn-row">
+            <button type="button" id="btn-bc-publish" class="btn btn-primary">Phát Trực tiếp lên Web Chính</button>
+            <button type="button" id="btn-bc-clear" class="btn btn-danger">Gỡ Thanh Cảnh báo Ngay</button>
+          </div>
+        </article>
+      </section>
+
+      <!-- ================= VIEW 5: API SANDBOX & SERVER AUDIT LOG ================= -->
+      <section id="view-sandbox" class="ops-view" hidden>
+        <div class="view-head">
+          <div>
+            <h1>API Sandbox Kỹ thuật &amp; Nhật ký Kiểm toán Máy chủ</h1>
+            <p>Gửi truy vấn trực tiếp tới các Endpoint REST/JSON của nền tảng và đối chiếu nhật ký thao tác quản trị (`auditLog`).</p>
+          </div>
+        </div>
+
+        <article class="card">
+          <div class="card-head">
+            <h2 class="card-title">Trình Kiểm thử API Trực tiếp (REST / Edge Playground)</h2>
+          </div>
+          <div class="field-row-2">
+            <div class="field">
+              <label for="sb-preset">Endpoint Mẫu</label>
+              <select id="sb-preset" class="input mono">
+                <option value="GET|/api/community?action=public_sync&lat=21.0725&lng=105.7739&radiusKm=2">GET /api/community?action=public_sync (Đông Ngạc)</option>
+                <option value="GET|/api/community?action=admin_full">GET /api/community?action=admin_full (Yêu cầu Bearer)</option>
+                <option value="GET|/api/research-portal?action=publications">GET /api/research-portal?action=publications</option>
+                <option value="GET|/api/research-portal?action=zone_osm&lat=16.4637&lng=107.5909&radiusKm=6">GET /api/research-portal?action=zone_osm (TP. Huế)</option>
+                <option value="GET|/api/research-portal?action=review_queue">GET /api/research-portal?action=review_queue (Yêu cầu Bearer)</option>
+                <option value="GET|https://vn-resilience-api.vn-resilience-edge.workers.dev/health">GET Cloudflare Edge Worker (/health)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="sb-path">Đường dẫn hoặc URL Đầy đủ</label>
+              <div class="btn-row">
+                <select id="sb-method" class="input mono" style="width:92px;">
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                </select>
+                <input type="text" id="sb-path" class="input mono" style="flex:1;" value="/api/community?action=public_sync&lat=21.0725&lng=105.7739&radiusKm=2">
+                <button type="button" id="btn-sb-send" class="btn btn-primary">Gửi Request</button>
+              </div>
+            </div>
+          </div>
+          <div id="sb-body-wrap" class="field" hidden>
+            <label for="sb-body">JSON Request Body (POST)</label>
+            <textarea id="sb-body" class="input mono" rows="3">{"action":"admin_verify"}</textarea>
+          </div>
+          <pre id="sb-output" class="json-terminal">// Bấm "Gửi Request" để kiểm tra phản hồi JSON, mã HTTP và độ trễ...</pre>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2 class="card-title">Nhật ký Kiểm toán Máy chủ (Server Audit Log)</h2>
+            <button type="button" id="btn-reload-audit" class="btn btn-sm">Làm mới Nhật ký</button>
+          </div>
+          <div class="table-wrap">
+            <table class="ops-table">
+              <thead>
+                <tr>
+                  <th>Thời gian</th>
+                  <th>Môi trường</th>
+                  <th>Tác vụ</th>
+                  <th>Chi tiết ghi nhận</th>
+                </tr>
+              </thead>
+              <tbody id="audit-tbody">
+                <tr><td colspan="4">Mở khóa quyền Quản trị để đọc Nhật ký kiểm toán trên máy chủ.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div id="ops-toast" class="ops-toast" hidden role="status" aria-live="polite"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script type="module" src="./ops.js"></script>
+</body>
+</html>

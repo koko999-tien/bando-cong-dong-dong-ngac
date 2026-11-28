@@ -1400,75 +1400,8 @@ a { color: var(--primary); }
   background: var(--bg-navy);
   border-top: 1px solid var(--border-navy);
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-/* ================= TRUNG TÂM QUẢN TRỊ & DEV CONSOLE ================= */
-.pillar-btn-dev {
-  border-left: 1px solid rgba(255, 255, 255, 0.09);
-}
-.dev-banner {
-  background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
-  border-color: #94A3B8;
-}
-.dev-title-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.dev-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-.dev-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-}
-.dev-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-.dev-table th, .dev-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  vertical-align: middle;
-}
-.dev-table th {
-  background: var(--bg-subtle);
-  font-size: 0.73rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--ink-muted);
-  white-space: nowrap;
-}
-.dev-table tr:last-child td { border-bottom: 0; }
-.dev-json-viewer {
-  margin: 0;
-  padding: 12px;
-  max-height: 260px;
-  overflow: auto;
-  background: #0B1220;
-  color: #A7F3D0;
-  border: 1px solid #1E293B;
-  border-radius: var(--radius-md);
-  font-size: 0.77rem;
-  line-height: 1.45;
-}
-.dev-subtabs {
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
-}
-@media (min-width: 900px) {
-  .dev-kpi-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }
 .mob-tab {
   display: flex;
