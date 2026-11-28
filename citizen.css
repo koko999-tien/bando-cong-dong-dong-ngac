@@ -5,27 +5,27 @@
    ========================================================================== */
 
 :root {
-  /* Bề mặt trung tính phân tầng (Editorial Paper Ramp) */
-  --bg-page: #F7F7F5;
-  --bg-dock: #F3F4F6;
+  /* Bề mặt trung tính phân tầng (Editorial Paper & Slate Ramp) */
+  --bg-page: #F8FAFC;
+  --bg-dock: #F1F5F9;
   --bg-surface: #FFFFFF;
-  --bg-subtle: #F1F5F9;
-  --bg-glass: rgba(255, 255, 255, 0.88);
+  --bg-subtle: #F8FAFC;
+  --bg-glass: rgba(255, 255, 255, 0.86);
   --bg-glass-strong: rgba(255, 255, 255, 0.94);
   --bg-chrome: #FFFFFF;
-  --bg-chrome-elev: rgba(15, 23, 42, 0.045);
-  --bg-hud: rgba(255, 255, 255, 0.88);
+  --bg-chrome-elev: rgba(15, 23, 42, 0.04);
+  --bg-hud: rgba(255, 255, 255, 0.90);
   --bg-hud-solid: #FFFFFF;
 
   /* Đường viền cấu trúc siêu mảnh */
-  --border: rgba(15, 23, 42, 0.08);
-  --border-strong: rgba(15, 23, 42, 0.14);
-  --border-chrome: rgba(15, 23, 42, 0.08);
-  --border-hud: rgba(15, 23, 42, 0.10);
+  --border: rgba(15, 23, 42, 0.07);
+  --border-strong: rgba(15, 23, 42, 0.12);
+  --border-chrome: rgba(15, 23, 42, 0.07);
+  --border-hud: rgba(15, 23, 42, 0.09);
 
   /* Mực chữ độ tương phản cao (>= 4.5:1 WCAG AA) */
   --ink: #0F172A;
-  --ink-secondary: #475569;
+  --ink-secondary: #334155;
   --ink-muted: #64748B;
 
   /* Nhấn chủ đạo duy nhất: Thủy văn Ngọc lục bảo đậm */
@@ -63,10 +63,10 @@
   --radius-lg: 16px;
   --radius-pill: 999px;
 
-  --shadow-hud: 0 8px 28px -6px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.05);
-  --shadow-sheet: 0 20px 48px -12px rgba(15, 23, 42, 0.16), 0 2px 10px rgba(15, 23, 42, 0.05);
-  --shadow-float: 0 18px 40px -8px rgba(15, 23, 42, 0.14), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
-  --shadow-seg: 0 1px 3px rgba(15, 23, 42, 0.10), 0 1px 1px rgba(15, 23, 42, 0.06);
+  --shadow-hud: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  --shadow-sheet: 0 20px 40px -8px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow-float: 0 16px 36px -6px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+  --shadow-seg: 0 1px 2px rgba(15, 23, 42, 0.08), 0 1px 1px rgba(15, 23, 42, 0.04);
 
   --topbar-h: 52px;
   --nav-bottom-h: 58px;
